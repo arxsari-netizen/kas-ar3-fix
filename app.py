@@ -12,23 +12,24 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # Fungsi Load Data
 def load_data():
     try:
-        # Kita panggil satu-satu dengan proteksi
-        df_m = conn.read(worksheet="Pemasukan", ttl=0)
-        df_k = conn.read(worksheet="Pengeluaran", ttl=0)
-        df_w = conn.read(worksheet="Warga", ttl=0)
+        # Coba baca satu per satu untuk deteksi error
+        with st.spinner('Mengambil data dari Google Sheets...'):
+            df_m = conn.read(worksheet="Pemasukan", ttl=0)
+            df_k = conn.read(worksheet="Pengeluaran", ttl=0)
+            df_w = conn.read(worksheet="Warga", ttl=0)
         
-        # Bersihkan baris yang benar-benar kosong
+        # Bersihkan data
         df_m = df_m.dropna(how='all') if df_m is not None else pd.DataFrame()
         df_k = df_k.dropna(how='all') if df_k is not None else pd.DataFrame()
         df_w = df_w.dropna(how='all') if df_w is not None else pd.DataFrame()
         
-        # Tambah kolom pembantu
         if not df_m.empty:
             df_m['Tanggal_Obj'] = pd.to_datetime(df_m['Tanggal'], format="%d/%m/%Y %H:%M", errors='coerce')
         
         return df_m, df_k, df_w
     except Exception as e:
-        st.error(f"Koneksi Gagal: {e}")
+        st.error(f"⚠️ Detail Error: {e}")
+        st.info("Saran: Cek apakah nama tab di Google Sheets sudah benar (Pemasukan, Pengeluaran, Warga)")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 # Fungsi Simpan Data
