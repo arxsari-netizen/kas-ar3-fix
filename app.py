@@ -97,22 +97,27 @@ def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
 df_masuk, df_keluar, df_warga = load_data()
 
 # --- TAMPILAN DASHBOARD ---
+
 st.title("📊 Dashboard Kas Majelis AR3")
 
-if not df_masuk.empty:
-    in_k = df_masuk['Kas'].sum()
-    in_h = df_masuk['Hadiah'].sum()
-    out_k = df_keluar['Jumlah'][df_keluar['Kategori'] == 'Kas'].sum() if not df_keluar.empty else 0
-    out_h = df_keluar['Jumlah'][df_keluar['Kategori'] == 'Hadiah'].sum() if not df_keluar.empty else 0
+if not df_masuk.empty and 'Kas' in df_masuk.columns:
+    # Gunakan .get() agar jika kolom tidak ada, aplikasi tidak crash
+    in_k = df_masuk['Kas'].sum() if 'Kas' in df_masuk.columns else 0
+    in_h = df_masuk['Hadiah'].sum() if 'Hadiah' in df_masuk.columns else 0
+    
+    # Perbaikan perhitungan pengeluaran yang lebih aman
+    out_k = 0
+    out_h = 0
+    if not df_keluar.empty and 'Jumlah' in df_keluar.columns and 'Kategori' in df_keluar.columns:
+        out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
+        out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
 
     c1, c2, c3 = st.columns(3)
     c1.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
     c2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
     c3.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
 else:
-    st.info("Data belum tersedia. Pastikan Google Sheets sudah terisi header.")
-
-st.divider()
+    st.info("⚠️ Menunggu data... Pastikan Header di Google Sheets (Pemasukan, Pengeluaran, Warga) sudah benar.")
 
 # --- MENU NAVIGASI ---
 menu = st.sidebar.radio("Navigasi Menu", ["📥 Input Pemasukan", "📤 Input Pengeluaran", "📊 Laporan", "👥 Kelola Warga", "📜 Log Transaksi"])
