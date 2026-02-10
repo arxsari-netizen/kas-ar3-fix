@@ -122,26 +122,26 @@ else:
 # --- MENU NAVIGASI ---
 menu = st.sidebar.radio("Navigasi Menu", ["📥 Input Pemasukan", "📤 Input Pengeluaran", "📊 Laporan", "👥 Kelola Warga", "📜 Log Transaksi"])
 
-if menu == "📥 Input Pemasukan":
+elif menu == "📥 Input Pemasukan":
     st.subheader("Input Pembayaran Iuran")
     if not df_warga.empty:
-        list_warga = sorted(df_warga['Nama'].tolist())
-        nama_p = st.selectbox("Pilih Nama", list_warga)
-        role_p = df_warga.loc[df_warga['Nama'] == nama_p, 'Role'].values[0]
-        
-        with st.form("form_in", clear_on_submit=True):
-            st.info(f"Anggota: {nama_p} | Role: {role_p}")
-            nom = st.number_input("Nominal (Rp)", min_value=0, step=5000)
-            tipe = st.selectbox("Alokasi", ["Paket Lengkap"] if role_p == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
-            thn = st.selectbox("Tahun", [2024, 2025, 2026, 2027], index=2)
-            bln = st.selectbox("Mulai Bulan", ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"])
+        # Cek apakah kolom 'Nama' ada di dataframe
+        if 'Nama' in df_warga.columns and 'Role' in df_warga.columns:
+            list_warga = sorted(df_warga['Nama'].tolist())
+            nama_p = st.selectbox("Pilih Nama", list_warga)
             
-            if st.form_submit_button("Simpan Data"):
-                new_data = proses_bayar(nama_p, nom, thn, bln, tipe, role_p, df_masuk)
-                if not new_data.empty:
-                    df_masuk = pd.concat([df_masuk, new_data], ignore_index=True)
-                    save_data(df_masuk, df_keluar, df_warga)
-                    st.rerun()
+            # Ambil data role dengan cara yang lebih aman
+            role_p_data = df_warga.loc[df_warga['Nama'] == nama_p, 'Role']
+            if not role_p_data.empty:
+                role_p = role_p_data.values[0]
+                
+                with st.form("form_in", clear_on_submit=True):
+                    st.info(f"Anggota: {nama_p} | Role: {role_p}")
+                    # ... (lanjutkan isi form seperti sebelumnya)
+            else:
+                st.error("Data Role tidak ditemukan untuk nama ini.")
+        else:
+            st.error("Kolom 'Nama' atau 'Role' tidak ditemukan di tab Warga. Cek Header Google Sheets kamu.")
     else:
         st.warning("Tambahkan data warga dulu di menu 'Kelola Warga'")
 
