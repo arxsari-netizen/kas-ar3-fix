@@ -5,21 +5,27 @@ from datetime import datetime
 # --- 1. KONFIGURASI HALAMAN ---
 st.set_page_config(page_title="KAS AR3 ONLINE", page_icon="🏦", layout="wide")
 
-# --- 2. FUNGSI AMBIL DATA (MODE STABIL CSV) ---
+# --- 2. FUNGSI AMBIL DATA (DENGAN PEMBERSIH KOLOM) ---
 def load_data():
     try:
-        # Ambil URL dari Secrets
         raw_url = st.secrets["connections"]["gsheets"]["spreadsheet"]
         clean_url = raw_url.split("/edit")[0].split("/view")[0]
         csv_base = f"{clean_url}/export?format=csv"
         
-        # Baca tiap Sheet (Pemasukan di gid=0, sisanya pakai nama sheet)
+        # Baca data
         df_m = pd.read_csv(f"{csv_base}&gid=0")
         df_k = pd.read_csv(f"{csv_base}&sheet=Pengeluaran")
         df_w = pd.read_csv(f"{csv_base}&sheet=Warga")
         
-        # Konversi Tanggal untuk sortir
-        df_m['Tanggal_Obj'] = pd.to_datetime(df_m['Tanggal'], format="%d/%m/%Y %H:%M", errors='coerce')
+        # --- PEMBERSIH OTOMATIS (Mencegah KeyError) ---
+        # Menghapus spasi di awal/akhir nama kolom agar pas dengan kode
+        df_m.columns = df_m.columns.str.strip()
+        df_k.columns = df_k.columns.str.strip()
+        df_w.columns = df_w.columns.str.strip()
+        
+        # Pastikan kolom Tanggal aman
+        if 'Tanggal' in df_m.columns:
+            df_m['Tanggal_Obj'] = pd.to_datetime(df_m['Tanggal'], format="%d/%m/%Y %H:%M", errors='coerce')
         
         return df_m, df_k, df_w
     except Exception as e:
@@ -27,29 +33,23 @@ def load_data():
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 # --- 3. LOGIKA PEMBAGIAN KAS & HADIAH ---
+# (Tetap sama seperti sebelumnya)
 def hitung_otomatis(nama, nominal, thn, bln_mulai, tipe, role, df_existing):
     list_bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
     idx = list_bulan.index(bln_mulai)
     sisa = nominal
     data_baru = []
-    
     while sisa > 0:
         bulan_skrg = list_bulan[idx]
         if role == "Main Warga":
-            # Cek iuran bulan ini yang sudah masuk
             kondisi = (df_existing['Nama'] == nama) & (df_existing['Bulan'] == bulan_skrg) & (df_existing['Tahun'] == thn)
             sdh_bayar = df_existing[kondisi]['Total'].sum() if not df_existing[kondisi].empty else 0
             sdh_kas = df_existing[kondisi]['Kas'].sum() if not df_existing[kondisi].empty else 0
-            
             if sdh_bayar < 50000:
                 kekurangan = 50000 - sdh_bayar
                 bayar_ini = min(sisa, kekurangan)
-                
-                # Jatah Kas max 15rb/bulan
-                jatah_kas = max(0, 15000 - sdh_kas)
-                porsi_kas = min(bayar_ini, jatah_kas)
+                porsi_kas = min(bayar_ini, max(0, 15000 - sdh_kas))
                 porsi_hadiah = bayar_ini - porsi_kas
-                
                 data_baru.append({
                     'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
                     'Nama': nama, 'Tahun': thn, 'Bulan': bulan_skrg,
@@ -59,16 +59,8 @@ def hitung_otomatis(nama, nominal, thn, bln_mulai, tipe, role, df_existing):
                 })
                 sisa -= bayar_ini
         else:
-            # Warga Support
-            data_baru.append({
-                'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
-                'Nama': nama, 'Tahun': thn, 'Bulan': bulan_skrg,
-                'Total': sisa, 'Kas': sisa if tipe == "Hanya Kas" else 0,
-                'Hadiah': sisa if tipe == "Hanya Hadiah" else 0,
-                'Status': "SUPPORT", 'Tipe': tipe
-            })
+            data_baru.append({'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Nama': nama, 'Tahun': thn, 'Bulan': bulan_skrg, 'Total': sisa, 'Kas': sisa if tipe == "Hanya Kas" else 0, 'Hadiah': sisa if tipe == "Hanya Hadiah" else 0, 'Status': "SUPPORT", 'Tipe': tipe})
             sisa = 0
-            
         idx += 1
         if idx > 11: idx = 0; thn += 1
         if thn > 2030: break
@@ -79,19 +71,22 @@ df_masuk, df_keluar, df_warga = load_data()
 
 st.title("🏦 KAS AR3 ONLINE")
 
-# Bagian Saldo (Metric)
+# Perbaikan Logika Saldo (Lebih Aman dari Error)
 if not df_masuk.empty:
-    in_k = df_masuk['Kas'].sum()
-    in_h = df_masuk['Hadiah'].sum()
-    out_k = df_keluar['Jumlah'][df_keluar['Kategori'] == 'Kas'].sum() if not df_keluar.empty else 0
-    out_h = df_keluar['Jumlah'][df_keluar['Kategori'] == 'Hadiah'].sum() if not df_keluar.empty else 0
+    # Menggunakan .get() agar jika kolom tidak ditemukan, aplikasi tidak langsung mati
+    in_k = df_masuk['Kas'].sum() if 'Kas' in df_masuk.columns else 0
+    in_h = df_masuk['Hadiah'].sum() if 'Hadiah' in df_masuk.columns else 0
+    
+    out_k = 0
+    out_h = 0
+    if not df_keluar.empty and 'Kategori' in df_keluar.columns and 'Jumlah' in df_keluar.columns:
+        out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
+        out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
 
     c1, c2, c3 = st.columns(3)
     c1.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
     c2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
     c3.metric("🏦 TOTAL DANA", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
-
-st.divider()
 
 # Sidebar Navigasi
 menu = st.sidebar.radio("MENU UTAMA", ["📥 Input Masuk", "📤 Input Keluar", "📊 Laporan", "👥 Warga", "📜 Log"])
