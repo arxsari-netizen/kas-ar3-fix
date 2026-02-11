@@ -112,17 +112,60 @@ elif menu == "📤 Input Pengeluaran":
             st.success("Pengeluaran tercatat!")
             st.rerun()
 
-# 4. KELOLA WARGA
+# 4. KELOLA WARGA (DENGAN FITUR EDIT & HAPUS)
 elif menu == "👥 Kelola Warga":
     st.subheader("Manajemen Anggota")
-    with st.form("tambah_warga", clear_on_submit=True):
-        nama_baru = st.text_input("Nama Lengkap")
-        role_baru = st.selectbox("Role", ["Main Warga", "Warga Support"])
-        if st.form_submit_button("Tambah"):
-            if nama_baru:
-                new_w = pd.DataFrame([{'Nama': nama_baru, 'Role': role_baru}])
-                df_updated = pd.concat([df_warga, new_w], ignore_index=True)
-                save_to_cloud("Warga", df_updated)
-                st.success("Warga baru tersimpan!")
-                st.rerun()
+    
+    # --- TAB UNTUK ORGANISASI ---
+    tab_tambah, tab_edit_hapus = st.tabs(["➕ Tambah Warga", "⚙️ Edit / Hapus"])
+
+    with tab_tambah:
+        with st.form("tambah_warga", clear_on_submit=True):
+            nama_baru = st.text_input("Nama Lengkap")
+            role_baru = st.selectbox("Role", ["Main Warga", "Warga Support"], key="add_role")
+            if st.form_submit_button("Simpan"):
+                if nama_baru:
+                    new_w = pd.DataFrame([{'Nama': nama_baru, 'Role': role_baru}])
+                    df_updated = pd.concat([df_warga, new_w], ignore_index=True)
+                    save_to_cloud("Warga", df_updated)
+                    st.success("Warga baru tersimpan!")
+                    st.rerun()
+
+    with tab_edit_hapus:
+        if not df_warga.empty:
+            nama_pilih = st.selectbox("Pilih Nama Warga", df_warga['Nama'].tolist())
+            
+            # Ambil data warga yang dipilih
+            data_warga = df_warga[df_warga['Nama'] == nama_pilih].iloc[0]
+            
+            col_edit1, col_edit2 = st.columns(2)
+            with col_edit1:
+                nama_edit = st.text_input("Edit Nama", value=data_warga['Nama'])
+            with col_edit2:
+                role_edit = st.selectbox("Edit Role", ["Main Warga", "Warga Support"], 
+                                         index=0 if data_warga['Role'] == "Main Warga" else 1)
+            
+            c_btn1, c_btn2 = st.columns(2)
+            with c_btn1:
+                if st.button("💾 Simpan Perubahan"):
+                    # Update data di dataframe
+                    idx = df_warga[df_warga['Nama'] == nama_pilih].index
+                    df_warga.loc[idx, 'Nama'] = nama_edit
+                    df_warga.loc[idx, 'Role'] = role_edit
+                    save_to_cloud("Warga", df_warga)
+                    st.success("Data berhasil diperbarui!")
+                    st.rerun()
+            
+            with c_btn2:
+                # Tombol Hapus dengan Konfirmasi Singkat
+                if st.button("🗑️ Hapus Warga", type="primary"):
+                    df_warga = df_warga[df_warga['Nama'] != nama_pilih]
+                    save_to_cloud("Warga", df_warga)
+                    st.warning(f"Warga {nama_pilih} telah dihapus.")
+                    st.rerun()
+        else:
+            st.info("Belum ada data warga untuk diedit.")
+
+    st.divider()
+    st.write("### Daftar Warga")
     st.table(df_warga)
