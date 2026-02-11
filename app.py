@@ -89,12 +89,39 @@ elif menu == "Input Pemasukan":
                 st.rerun()
 
 elif menu == "Kelola Warga":
-    st.subheader("Daftar Warga")
-    with st.form("tambah_warga"):
+    st.subheader("👥 Manajemen Anggota")
+    
+    # Form Tambah Warga
+    with st.form("tambah_warga", clear_on_submit=True):
         nama_baru = st.text_input("Nama Lengkap")
         role_baru = st.selectbox("Role", ["Main Warga", "Warga Support"])
-        if st.form_submit_button("Tambah"):
-            new_warga = pd.concat([df_warga, pd.DataFrame([{'Nama': nama_baru, 'Role': role_baru}])], ignore_index=True)
-            conn.update(worksheet="Warga", data=new_warga)
-            st.rerun()
-    st.table(df_warga)
+        submit_warga = st.form_submit_button("Tambah Warga")
+        
+        if submit_warga:
+            if nama_baru:
+                # Membuat baris baru
+                new_row = pd.DataFrame([{'Nama': nama_baru, 'Role': role_baru}])
+                
+                # Menggabungkan dengan data lama
+                df_warga_updated = pd.concat([df_warga, new_row], ignore_index=True)
+                
+                try:
+                    # Update ke Google Sheets
+                    conn.update(worksheet="Warga", data=df_warga_updated)
+                    st.success(f"✅ {nama_baru} berhasil ditambahkan!")
+                    
+                    # PENTING: Paksa hapus cache agar data terbaru langsung ditarik
+                    st.cache_data.clear()
+                    st.rerun()
+                except Exception as e:
+                    st.error("Gagal menyimpan ke Cloud.")
+                    st.info("Pastikan link Google Sheets Anda sudah di-set ke 'Anyone with the link can EDIT'")
+            else:
+                st.warning("Nama tidak boleh kosong!")
+
+    st.divider()
+    st.write("### Daftar Warga Saat Ini")
+    if not df_warga.empty:
+        st.table(df_warga)
+    else:
+        st.info("Belum ada data warga.")
