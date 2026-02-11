@@ -3,17 +3,24 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# --- CONFIG HALAMAN ---
+# --- CONFIG ---
 st.set_page_config(page_title="AR3 Mobile", layout="wide")
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1i3OqFAeFYJ7aXy0QSS0IUF9r_yp3pwqNb7tJ8-CEXQE/edit"
 
-# --- KONEKSI GOOGLE SHEETS ---
+# Koneksi untuk Baca (Tetap pakai GSheetsConnection karena cepat)
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
     try:
-        df_masuk = conn.read(worksheet="Pemasukan")
-        df_keluar = conn.read(worksheet="Pengeluaran")
-        df_warga = conn.read(worksheet="Warga")
+        # Gunakan parameter ttl=0 agar data selalu fresh dari cloud
+        df_masuk = conn.read(worksheet="Pemasukan", ttl=0)
+        df_keluar = conn.read(worksheet="Pengeluaran", ttl=0)
+        df_warga = conn.read(worksheet="Warga", ttl=0)
+        return df_masuk, df_keluar, df_warga
+    except Exception:
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+df_masuk, df_keluar, df_warga = load_data()
         
         # Bersihkan data dari baris kosong
         df_masuk = df_masuk.dropna(how='all')
@@ -88,10 +95,11 @@ elif menu == "Input Pemasukan":
                 st.success("Tersimpan!")
                 st.rerun()
 
+# --- MENU KELOLA WARGA ---
+# (Pastikan menu ini menggantikan menu sebelumnya)
 elif menu == "Kelola Warga":
     st.subheader("👥 Manajemen Anggota")
     
-    # Form Tambah Warga
     with st.form("tambah_warga", clear_on_submit=True):
         nama_baru = st.text_input("Nama Lengkap")
         role_baru = st.selectbox("Role", ["Main Warga", "Warga Support"])
@@ -99,29 +107,24 @@ elif menu == "Kelola Warga":
         
         if submit_warga:
             if nama_baru:
-                # Membuat baris baru
+                # 1. Siapkan DataFrame Baru
                 new_row = pd.DataFrame([{'Nama': nama_baru, 'Role': role_baru}])
+                df_updated = pd.concat([df_warga, new_row], ignore_index=True)
                 
-                # Menggabungkan dengan data lama
-                df_warga_updated = pd.concat([df_warga, new_row], ignore_index=True)
-                
+                # 2. Simpan menggunakan koneksi .update()
                 try:
-                    # Update ke Google Sheets
-                    conn.update(worksheet="Warga", data=df_warga_updated)
-                    st.success(f"✅ {nama_baru} berhasil ditambahkan!")
+                    # Kita paksa update melalui library st-gsheets
+                    conn.update(worksheet="Warga", data=df_updated)
                     
-                    # PENTING: Paksa hapus cache agar data terbaru langsung ditarik
-                    st.cache_data.clear()
+                    st.success(f"✅ {nama_baru} Tersimpan!")
+                    st.cache_data.clear() # Hapus cache agar data muncul di list
                     st.rerun()
                 except Exception as e:
-                    st.error("Gagal menyimpan ke Cloud.")
-                    st.info("Pastikan link Google Sheets Anda sudah di-set ke 'Anyone with the link can EDIT'")
+                    # Jika masih gagal, tampilkan instruksi debug
+                    st.error("Gagal koneksi ke Cloud.")
+                    st.info("Buka Settings Streamlit Cloud > Secrets. Pastikan URL sudah benar.")
             else:
-                st.warning("Nama tidak boleh kosong!")
+                st.warning("Nama harus diisi!")
 
-    st.divider()
-    st.write("### Daftar Warga Saat Ini")
-    if not df_warga.empty:
-        st.table(df_warga)
-    else:
-        st.info("Belum ada data warga.")
+    st.write("### Daftar Warga")
+    st.table(df_warga)
