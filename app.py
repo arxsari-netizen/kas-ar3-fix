@@ -1,117 +1,52 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
 
-# --- CONFIG ---
-st.set_page_config(page_title="AR3 Mobile", layout="wide")
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1i3OqFAeFYJ7aXy0QSS0IUF9r_yp3pwqNb7tJ8-CEXQE/edit"
+# --- KONEKSI GSPREAD ---
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+creds_dict = st.secrets["gspread_credentials"]
+creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+client = gspread.authorize(creds)
 
-# Koneksi untuk Baca (Tetap pakai GSheetsConnection karena cepat)
-conn = st.connection("gsheets", type=GSheetsConnection)
+# Buka spreadsheet berdasarkan ID atau URL
+SHEET_ID = "1i3OqFAeFYJ7aXy0QSS0IUF9r_yp3pwqNb7tJ8-CEXQE"
+sh = client.open_by_key(SHEET_ID)
 
-def load_data():
-    try:
-        # Gunakan parameter ttl=0 agar data selalu fresh dari cloud
-        df_masuk = conn.read(worksheet="Pemasukan", ttl=0)
-        df_keluar = conn.read(worksheet="Pengeluaran", ttl=0)
-        df_warga = conn.read(worksheet="Warga", ttl=0)
-        return df_masuk, df_keluar, df_warga
-    except Exception:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+def load_data(sheet_name):
+    worksheet = sh.worksheet(sheet_name)
+    data = worksheet.get_all_records()
+    return pd.DataFrame(data)
 
-df_masuk, df_keluar, df_warga = load_data()
-        
-def safe_sum(df, column):
-    if not df.empty and column in df.columns:
-        return pd.to_numeric(df[column], errors='coerce').sum()
-    return 0
+def save_data(sheet_name, df):
+    worksheet = sh.worksheet(sheet_name)
+    worksheet.clear()
+    worksheet.update([df.columns.values.tolist()] + df.values.tolist())
 
 # --- LOAD DATA ---
-df_masuk, df_keluar, df_warga = load_data()
+df_masuk = load_data("Pemasukan")
+df_keluar = load_data("Pengeluaran")
+df_warga = load_data("Warga")
 
-# --- DASHBOARD ---
-st.title("📱 AR3 Kas Manager")
+st.title("📱 Kas AR3 - Cloud Mode")
 
-in_k = safe_sum(df_masuk, 'Kas')
-in_h = safe_sum(df_masuk, 'Hadiah')
+menu = st.sidebar.selectbox("Menu", ["Kelola Warga", "Monitor"])
 
-out_k = 0
-out_h = 0
-if not df_keluar.empty and 'Kategori' in df_keluar.columns:
-    out_k = pd.to_numeric(df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'], errors='coerce').sum()
-    out_h = pd.to_numeric(df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'], errors='coerce').sum()
-
-# Tampilan Ringkas untuk HP
-c1, c2 = st.columns(2)
-c1.metric("💰 KAS", f"Rp {in_k - out_k:,.0f}")
-c2.metric("🎁 HADIAH", f"Rp {in_h - out_h:,.0f}")
-st.divider()
-
-# --- MENU UTAMA ---
-menu = st.sidebar.selectbox("Pilih Menu", ["Dashboard", "Input Pemasukan", "Input Pengeluaran", "Kelola Warga"])
-
-if menu == "Dashboard":
-    st.subheader("Histori Terakhir")
-    if not df_masuk.empty:
-        st.write("Pemasukan:")
-        st.dataframe(df_masuk.tail(5), use_container_width=True)
-    else:
-        st.info("Belum ada data.")
-
-elif menu == "Input Pemasukan":
-    if df_warga.empty:
-        st.warning("Tambahkan nama warga dulu di menu 'Kelola Warga'")
-    else:
-        with st.form("form_bayar"):
-            nama = st.selectbox("Nama Warga", df_warga['Nama'].tolist())
-            nominal = st.number_input("Nominal Bayar", min_value=0, step=5000)
-            submit = st.form_submit_button("Simpan Data")
-            if submit:
-                # Logika simpan sederhana ke Google Sheets
-                new_data = pd.DataFrame([{
-                    'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    'Nama': nama,
-                    'Total': nominal,
-                    'Kas': nominal * 0.3, # Contoh alokasi 30%
-                    'Hadiah': nominal * 0.7,
-                    'Status': 'LUNAS'
-                }])
-                updated_df = pd.concat([df_masuk, new_data], ignore_index=True)
-                conn.update(worksheet="Pemasukan", data=updated_df)
-                st.success("Tersimpan!")
-                st.rerun()
-
-# --- MENU KELOLA WARGA ---
-# (Pastikan menu ini menggantikan menu sebelumnya)
-elif menu == "Kelola Warga":
-    st.subheader("👥 Manajemen Anggota")
-    
-    with st.form("tambah_warga", clear_on_submit=True):
+if menu == "Kelola Warga":
+    st.subheader("Manajemen Anggota")
+    with st.form("tambah_warga"):
         nama_baru = st.text_input("Nama Lengkap")
         role_baru = st.selectbox("Role", ["Main Warga", "Warga Support"])
-        submit_warga = st.form_submit_button("Tambah Warga")
-        
-        if submit_warga:
+        if st.form_submit_button("Simpan ke Cloud"):
             if nama_baru:
-                # 1. Siapkan DataFrame Baru
+                # Tambah data
                 new_row = pd.DataFrame([{'Nama': nama_baru, 'Role': role_baru}])
                 df_updated = pd.concat([df_warga, new_row], ignore_index=True)
                 
-                # 2. Simpan menggunakan koneksi .update()
-                try:
-                    # Kita paksa update melalui library st-gsheets
-                    conn.update(worksheet="Warga", data=df_updated)
-                    
-                    st.success(f"✅ {nama_baru} Tersimpan!")
-                    st.cache_data.clear() # Hapus cache agar data muncul di list
-                    st.rerun()
-                except Exception as e:
-                    # Jika masih gagal, tampilkan instruksi debug
-                    st.error("Gagal koneksi ke Cloud.")
-                    st.info("Buka Settings Streamlit Cloud > Secrets. Pastikan URL sudah benar.")
-            else:
-                st.warning("Nama harus diisi!")
+                # Simpan (GSpread sangat stabil untuk ini)
+                save_data("Warga", df_updated)
+                st.success("Tersimpan!")
+                st.rerun()
 
-    st.write("### Daftar Warga")
     st.table(df_warga)
