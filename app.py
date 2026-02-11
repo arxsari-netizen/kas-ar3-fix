@@ -11,15 +11,20 @@ st.set_page_config(page_title="AR3 Mobile", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
-    df_masuk = conn.read(worksheet="Pemasukan")
-    df_keluar = conn.read(worksheet="Pengeluaran")
-    df_warga = conn.read(worksheet="Warga")
+    try:
+        # Menghapus ttl="0" sementara untuk memastikan koneksi stabil
+        df_masuk = conn.read(worksheet="Pemasukan")
+        df_keluar = conn.read(worksheet="Pengeluaran")
+        df_warga = conn.read(worksheet="Warga")
     
-    # Konversi tanggal agar bisa diolah secara logis
-    df_masuk['Tanggal_Obj'] = pd.to_datetime(df_masuk['Tanggal'], format="%d/%m/%Y %H:%M", errors='coerce')
-    df_keluar['Tanggal_Obj'] = pd.to_datetime(df_keluar['Tanggal'], format="%d/%m/%Y %H:%M", errors='coerce')
-    return df_masuk, df_keluar, df_warga
-
+  # Konversi tanggal agar aman
+        df_masuk['Tanggal_Obj'] = pd.to_datetime(df_masuk['Tanggal'], format="%d/%m/%Y %H:%M", errors='coerce')
+        df_keluar['Tanggal_Obj'] = pd.to_datetime(df_keluar['Tanggal'], format="%d/%m/%Y %H:%M", errors='coerce')
+        return df_masuk, df_keluar, df_warga
+    except Exception as e:
+        st.error(f"Gagal memuat data: {e}")
+        st.info("Pastikan nama tab di Google Sheets adalah: Pemasukan, Pengeluaran, dan Warga")
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 def save_data(df_m, df_k, df_w):
     # Menghapus kolom temporary sebelum simpan ke cloud
     df_m_save = df_m.drop(columns=['Tanggal_Obj'], errors='ignore')
