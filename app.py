@@ -11,9 +11,9 @@ st.set_page_config(page_title="AR3 Mobile", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
-    df_masuk = conn.read(worksheet="Pemasukan", ttl="1")
-    df_keluar = conn.read(worksheet="Pengeluaran", ttl="1")
-    df_warga = conn.read(worksheet="Warga", ttl="1")
+    df_masuk = conn.read(worksheet="Pemasukan")
+    df_keluar = conn.read(worksheet="Pengeluaran")
+    df_warga = conn.read(worksheet="Warga")
     
     # Konversi tanggal agar bisa diolah secara logis
     df_masuk['Tanggal_Obj'] = pd.to_datetime(df_masuk['Tanggal'], format="%d/%m/%Y %H:%M", errors='coerce')
