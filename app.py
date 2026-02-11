@@ -22,19 +22,6 @@ def load_data():
 
 df_masuk, df_keluar, df_warga = load_data()
         
-        # Bersihkan data dari baris kosong
-        df_masuk = df_masuk.dropna(how='all')
-        df_keluar = df_keluar.dropna(how='all')
-        df_warga = df_warga.dropna(how='all')
-        
-        return df_masuk, df_keluar, df_warga
-    except Exception:
-        # Jika gagal baca/tab belum ada, buat dataframe kosong dengan kolom lengkap
-        df_m = pd.DataFrame(columns=['Tanggal', 'Nama', 'Tahun', 'Bulan', 'Total', 'Kas', 'Hadiah', 'Status', 'Tipe'])
-        df_k = pd.DataFrame(columns=['Tanggal', 'Kategori', 'Jumlah', 'Keterangan'])
-        df_w = pd.DataFrame(columns=['Nama', 'Role'])
-        return df_m, df_k, df_w
-
 def safe_sum(df, column):
     if not df.empty and column in df.columns:
         return pd.to_numeric(df[column], errors='coerce').sum()
