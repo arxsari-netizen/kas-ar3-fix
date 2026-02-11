@@ -86,16 +86,30 @@ def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
 # --- LOAD DATA AWAL ---
 df_masuk, df_keluar, df_warga = load_data()
 
-# --- UI DASHBOARD (MOBILE FRIENDLY) ---
+# --- DASHBOARD ATAS (VERSI AMAN) ---
 st.title("📱 Kas AR3 Mobile")
-in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
-out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
-out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
 
-st.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
-st.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
+# Fungsi pembantu untuk hitung sum yang aman jika kolom/data kosong
+def safe_sum(df, column):
+    if not df.empty and column in df.columns:
+        return pd.to_numeric(df[column], errors='coerce').sum()
+    return 0
 
-menu = st.sidebar.selectbox("Pilih Menu", ["Monitor", "Input Masuk", "Input Keluar", "Warga"])
+in_k = safe_sum(df_masuk, 'Kas')
+in_h = safe_sum(df_masuk, 'Hadiah')
+
+# Filter pengeluaran dengan aman
+out_k = 0
+out_h = 0
+if not df_keluar.empty and 'Kategori' in df_keluar.columns and 'Jumlah' in df_keluar.columns:
+    out_k = pd.to_numeric(df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'], errors='coerce').sum()
+    out_h = pd.to_numeric(df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'], errors='coerce').sum()
+
+# Tampilan Metric
+c1, c2 = st.columns(2)
+c1.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
+c2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
+st.divider()
 
 if menu == "Input Masuk":
     st.subheader("📥 Tambah Pemasukan")
