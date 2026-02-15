@@ -4,6 +4,52 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 
+# --- SISTEM LOGIN SEDERHANA ---
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+    st.session_state['role'] = None
+
+def login():
+    st.sidebar.title("🔐 Login Sistem")
+    with st.sidebar.form("login_form"):
+        user = st.text_input("Username")
+        pwd = st.text_input("Password", type="password")
+        if st.form_submit_button("Login"):
+            # Ganti username & password sesuai keinginan Anda
+            if user == "admin" and pwd == "admin123":
+                st.session_state['logged_in'] = True
+                st.session_state['role'] = "admin"
+                st.rerun()
+            elif user == "warga" and pwd == "warga123":
+                st.session_state['logged_in'] = True
+                st.session_state['role'] = "user"
+                st.rerun()
+            else:
+                st.error("Username/Password Salah")
+
+def logout():
+    st.session_state['logged_in'] = False
+    st.session_state['role'] = None
+    st.rerun()
+
+if not st.session_state['logged_in']:
+    login()
+    st.warning("Silakan login untuk mengakses data.")
+    st.stop() # Menghentikan aplikasi di sini jika belum login
+
+# --- JIKA SUDAH LOGIN, TAMPILKAN NAVIGASI BERDASARKAN ROLE ---
+st.sidebar.success(f"Login sebagai: {st.session_state['role'].upper()}")
+if st.sidebar.button("Logout"):
+    logout()
+
+# Filter Menu Berdasarkan Role
+if st.session_state['role'] == "admin":
+    list_menu = ["📊 Laporan & Monitoring", "📥 Input Pemasukan", "📤 Input Pengeluaran", "👥 Kelola Warga", "📜 Log Transaksi"]
+else:
+    list_menu = ["📊 Laporan & Monitoring", "📜 Log Transaksi"]
+
+menu = st.sidebar.radio("Navigasi", list_menu)
+
 # --- CONFIG HALAMAN ---
 st.set_page_config(page_title="Sistem Keuangan AR3 - Cloud", layout="wide")
 
