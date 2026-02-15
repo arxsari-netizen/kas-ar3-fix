@@ -138,7 +138,14 @@ df_keluar = load_data("Pengeluaran")
 df_warga = load_data("Warga")
 
 # --- DASHBOARD ATAS ---
-st.title("📊 Dashboard Keuangan AR3")
+# --- LOGO & JUDUL DASHBOARD ---
+# Menampilkan logo di tengah
+col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1]) # Membuat layout agar logo di tengah
+with col_logo2:
+    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", use_container_width=True)
+
+# Jika ingin tetap ada teks di bawah logo, tambahkan ini:
+st.markdown("<h3 style='text-align: center;'>Dashboard Keuangan AR3</h3>", unsafe_allow_html=True)
 in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
