@@ -162,6 +162,27 @@ if menu == "📊 Laporan & Monitoring":
         df_yr_out = df_keluar[df_keluar['Tahun_Log'] == str(thn_lap)]
         st.dataframe(df_yr_out, use_container_width=True)
 
+# --- DI DALAM MENU LAPORAN & MONITORING ---
+with tab1:
+    df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
+    if not df_yr_in.empty:
+        st.write("### 🟢 Status Kelunasan (Main Warga)")
+        
+        # Membuat pivot table dasar
+        rekap = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Total', aggfunc='sum').fillna(0)
+        
+        # --- PERBAIKAN URUTAN BULAN ---
+        bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", 
+                     "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+        
+        # Hanya ambil bulan yang memang ada di data, tapi urutkan sesuai urutan kalender
+        available_cols = [b for b in bln_order if b in rekap.columns]
+        rekap = rekap.reindex(columns=available_cols)
+        # -------------------------------
+        
+        st.dataframe(rekap.style.highlight_between(left=50000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
+
+
 # --- MENU: INPUT PEMASUKAN (LOGIKA CICILAN V15) ---
 elif menu == "📥 Input Pemasukan":
     st.subheader("Input Pembayaran")
