@@ -143,8 +143,6 @@ c2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
 c3.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
 st.divider()
 
-menu = st.sidebar.radio("Navigasi", ["📊 Laporan & Monitoring", "📥 Input Pemasukan", "📤 Input Pengeluaran", "👥 Kelola Warga", "📜 Log Transaksi"])
-
 # --- MENU: LAPORAN & MONITORING (LOGIKA V15) ---
 if menu == "📊 Laporan & Monitoring":
     st.subheader("📋 Laporan Keuangan Tahunan")
