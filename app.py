@@ -9,7 +9,7 @@ from datetime import datetime
 st.set_page_config(
     page_title="AR3 Keuangan",
     page_icon="https://github.com/arxsari-netizen/kas-ar3-fix/blob/b14e70c8ab476174faa3bd9bfdd229c76bab17e9/AR%20ROYHAAN.png", # Bisa pakai emoji atau URL gambar .png
-    layout="wide"
+    layout="wide")
 # --- CUSTOM ICON UNTUK HP (PWA) ---
 st.markdown(
     """
