@@ -8,16 +8,17 @@ from datetime import datetime
 # Harus di paling atas sebelum login
 st.set_page_config(
     page_title="AR3 Keuangan",
-    page_icon="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/b14e70c8ab476174faa3bd9bfdd229c76bab17e9/AR%20ROYHAAN.png",
+    page_icon="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png",
     layout="wide")
 
 # --- CUSTOM ICON UNTUK HP (PWA) ---
 st.markdown(
     """
     <head>
-        <link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/b14e70c8ab476174faa3bd9bfdd229c76bab17e9/AR%20ROYHAAN.png">
-        <link rel="icon" type="image/png" sizes="32x32" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/b14e70c8ab476174faa3bd9bfdd229c76bab17e9/AR%20ROYHAAN.png">
-        <link rel="icon" type="image/png" sizes="16x16" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/b14e70c8ab476174faa3bd9bfdd229c76bab17e9/AR%20ROYHAAN.png">
+    <meta name="theme-color" content="#00FF00">
+        <link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
     </head>
     """,
     unsafe_allow_html=True
