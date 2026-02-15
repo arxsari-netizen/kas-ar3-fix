@@ -140,7 +140,7 @@ df_warga = load_data("Warga")
 # --- DASHBOARD ATAS ---
 # --- LOGO & JUDUL DASHBOARD ---
 # --- LOGO DASHBOARD (UKURAN KECIL) ---
-col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1]) 
+col_logo1, col_logo2, col_logo3 = st.columns([2, 1, 1]) 
 with col_logo2:
     st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=75) # Ukuran dikecilkan ke 80 pixel
 
