@@ -65,7 +65,9 @@ if st.session_state['role'] == "admin":
     list_menu = ["📊 Laporan & Monitoring", "📥 Input Pemasukan", "📤 Input Pengeluaran", "👥 Kelola Warga", "📜 Log Transaksi"]
 else:
     list_menu = ["📊 Laporan & Monitoring", "📜 Log Transaksi"]
-
+# Menampilkan logo kecil di Sidebar
+st.sidebar.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=60)
+st.sidebar.markdown("---")
 menu = st.sidebar.radio("Navigasi", list_menu)
 
 # --- KONEKSI GSPREAD ---
@@ -139,13 +141,13 @@ df_warga = load_data("Warga")
 
 # --- DASHBOARD ATAS ---
 # --- LOGO & JUDUL DASHBOARD ---
-# Menampilkan logo di tengah
-col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1]) # Membuat layout agar logo di tengah
+# --- LOGO DASHBOARD (UKURAN KECIL) ---
+col_logo1, col_logo2, col_logo3 = st.columns([2, 1, 2]) # Menaikkan angka pinggir agar tengah makin kecil
 with col_logo2:
-    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", use_container_width=True)
+    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80) # Ukuran dikecilkan ke 80 pixel
 
-# Jika ingin tetap ada teks di bawah logo, tambahkan ini:
-st.markdown("<h3 style='text-align: center;'>Dashboard Keuangan AR3</h3>", unsafe_allow_html=True)
+# Judul tetap di bawah dengan ukuran lebih kecil (h4)
+st.markdown("<h4 style='text-align: center; margin-top: -20px;'>Dashboard Keuangan AR3</h4>", unsafe_allow_html=True)
 in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
