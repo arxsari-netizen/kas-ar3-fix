@@ -137,15 +137,23 @@ df_masuk = load_data("Pemasukan")
 df_keluar = load_data("Pengeluaran")
 df_warga = load_data("Warga")
 
-# --- DASHBOARD ATAS ---
-# --- LOGO & JUDUL DASHBOARD ---
-# --- LOGO DASHBOARD (UKURAN KECIL) ---
-col_logo1, col_logo2, col_logo3 = st.columns([2, 1, 1]) 
-with col_logo2:
-    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=75) # Ukuran dikecilkan ke 80 pixel
+# --- DASHBOARD ATAS (LOGO & JUDUL SEJAJAR) ---
+# Menggunakan perbandingan 1:4 agar logo kecil dan tulisan punya ruang luas
+col_head1, col_head2 = st.columns([1, 4]) 
 
-# Judul tetap di bawah dengan ukuran lebih kecil (h4)
-st.markdown("<h4 style='text-align: center; margin-top: -20px;'>Dashboard Keuangan AR3</h4>", unsafe_allow_html=True)
+with col_head1:
+    # Menampilkan logo dengan ukuran yang lebih proporsional untuk disejajarkan
+    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=60)
+
+with col_head2:
+    # Menggunakan Markdown dengan sedikit padding atas agar tulisan rata tengah dengan logo
+    st.markdown("""
+        <div style='display: flex; align-items: center; height: 60px;'>
+            <h3 style='margin: 0; color: #31333F; font-size: 22px;'>Dashboard Keuangan AR3</h3>
+        </div>
+    """, unsafe_allow_html=True)
+
+st.divider()
 in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
