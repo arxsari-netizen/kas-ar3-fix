@@ -137,32 +137,57 @@ df_masuk = load_data("Pemasukan")
 df_keluar = load_data("Pengeluaran")
 df_warga = load_data("Warga")
 
-# --- DASHBOARD ATAS (LOGO & JUDUL SEJAJAR) ---
-# Menggunakan perbandingan 1:4 agar logo kecil dan tulisan punya ruang luas
-col_head1, col_head2 = st.columns([1, 4]) 
-
-with col_head1:
-    # Menampilkan logo dengan ukuran yang lebih proporsional untuk disejajarkan
-    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=60)
-
-with col_head2:
-    # Menggunakan Markdown dengan sedikit padding atas agar tulisan rata tengah dengan logo
-    st.markdown("""
-        <div style='display: flex; align-items: center; height: 60px;'>
-            <h3 style='margin: 0; color: #31333F; font-size: 22px;'>Dashboard Keuangan AR3</h3>
-        </div>
-    """, unsafe_allow_html=True)
+# --- DASHBOARD ATAS (OPTIMASI DESKTOP & MOBILE) ---
+# Menggunakan CSS untuk memastikan perataan vertikal yang sempurna
+st.markdown("""
+    <style>
+    .header-container {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        padding: 10px 0;
+    }
+    .logo-img {
+        width: 70px;
+    }
+    .title-text {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #31333F;
+    }
+    @media (max-width: 640px) {
+        .title-text {
+            font-size: 20px;
+        }
+        .logo-img {
+            width: 50px;
+        }
+    }
+    </style>
+    <div class="header-container">
+        <img class="logo-img" src="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
+        <h1 class="title-text">Dashboard Keuangan AR3</h1>
+    </div>
+""", unsafe_allow_html=True)
 
 st.divider()
-in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
-out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
-out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
+# --- DASHBOARD METRIK (LEBIH RAPAT) ---
+# Gunakan kolom pembungkus agar metrik tidak "melar" di layar laptop
+_, col_main, _ = st.columns([0.1, 4, 0.1]) 
 
-c1, c2, c3 = st.columns(3)
-c1.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
-c2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
-c3.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
-st.divider()
+with col_main:
+    in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
+    out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
+    out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
+    with c2:
+        st.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
+    with c3:
+        st.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
 
 # --- LOGIKA MENU ---
 if menu == "📊 Laporan & Monitoring":
