@@ -140,9 +140,9 @@ df_warga = load_data("Warga")
 # --- DASHBOARD ATAS ---
 # --- LOGO & JUDUL DASHBOARD ---
 # --- LOGO DASHBOARD (UKURAN KECIL) ---
-col_logo1, col_logo2, col_logo3 = st.columns([2, 1, 2]) # Menaikkan angka pinggir agar tengah makin kecil
+col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1]) 
 with col_logo2:
-    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80) # Ukuran dikecilkan ke 80 pixel
+    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=75) # Ukuran dikecilkan ke 80 pixel
 
 # Judul tetap di bawah dengan ukuran lebih kecil (h4)
 st.markdown("<h4 style='text-align: center; margin-top: -20px;'>Dashboard Keuangan AR3</h4>", unsafe_allow_html=True)
