@@ -5,20 +5,20 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 
 # --- CONFIG HALAMAN ---
-# Harus di paling atas sebelum login
 st.set_page_config(
     page_title="AR3 Keuangan",
     page_icon="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png",
-    layout="wide")
+    layout="wide"
+)
 
-# --- CUSTOM ICON UNTUK HP (PWA) ---
+# --- MAGIC CODE UNTUK IKON HP (PWA) ---
 st.markdown(
     """
     <head>
-    <meta name="theme-color" content="#00FF00">
-        <link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
-        <link rel="icon" type="image/png" sizes="32x32" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
-        <link rel="icon" type="image/png" sizes="16x16" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
+        <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
+        <link rel="icon" href="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
     </head>
     """,
     unsafe_allow_html=True
