@@ -42,12 +42,15 @@ st.sidebar.success(f"Login sebagai: {st.session_state['role'].upper()}")
 if st.sidebar.button("Logout"):
     logout()
 
-# Filter Menu Berdasarkan Role
+# 1. Filter Menu berdasarkan Role
 if st.session_state['role'] == "admin":
+    # Admin punya akses ke semua menu asli v15
     list_menu = ["📊 Laporan & Monitoring", "📥 Input Pemasukan", "📤 Input Pengeluaran", "👥 Kelola Warga", "📜 Log Transaksi"]
 else:
+    # Warga HANYA bisa lihat Laporan dan Log
     list_menu = ["📊 Laporan & Monitoring", "📜 Log Transaksi"]
 
+# 2. Gunakan list_menu yang sudah difilter di sini
 menu = st.sidebar.radio("Navigasi", list_menu)
 
 # --- CONFIG HALAMAN ---
