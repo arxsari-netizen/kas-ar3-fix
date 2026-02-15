@@ -65,9 +65,7 @@ if st.session_state['role'] == "admin":
     list_menu = ["📊 Laporan & Monitoring", "📥 Input Pemasukan", "📤 Input Pengeluaran", "👥 Kelola Warga", "📜 Log Transaksi"]
 else:
     list_menu = ["📊 Laporan & Monitoring", "📜 Log Transaksi"]
-# Menampilkan logo kecil di Sidebar
-st.sidebar.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=60)
-st.sidebar.markdown("---")
+
 menu = st.sidebar.radio("Navigasi", list_menu)
 
 # --- KONEKSI GSPREAD ---
