@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#D4AF37" # Warna Emas (Metallic Gold)
+backgroundColor = "#FFFFFF" # Putih bersih untuk kesan profesional
+secondaryBackgroundColor = "#F8F9FA" # Abu-abu sangat muda untuk sidebar/kartu
+textColor = "#1A1A1A" # Hitam pekat untuk keterbacaan tinggi
+font = "sans serif"
