@@ -169,6 +169,21 @@ st.markdown("""
         <img class="logo-img" src="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
         <h1 class="title-text">Dashboard Keuangan AR3</h1>
     </div>
+    # --- DASHBOARD METRIK (PREMIUM LOOK) ---
+st.markdown("""
+    <style>
+    [data-testid="stMetric"] {
+        background: linear-gradient(135deg, #ffffff 0%, #f1f1f1 100%);
+        border: 1px solid #D4AF37;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+    }
+    [data-testid="stMetricLabel"] {
+        color: #D4AF37 !important;
+        font-weight: bold !important;
+    }
+    </style>
 """, unsafe_allow_html=True)
 
 st.divider()
