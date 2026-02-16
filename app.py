@@ -139,9 +139,31 @@ df_warga = load_data("Warga")
 
 # --- DASHBOARD ATAS (OPTIMASI DESKTOP & MOBILE) ---
 # Menggunakan CSS untuk memastikan perataan vertikal yang sempurna
-  # --- DASHBOARD METRIK (PREMIUM LOOK) ---
 st.markdown("""
     <style>
+    .header-container {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        padding: 10px 0;
+    }
+    .logo-img {
+        width: 70px;
+    }
+    .title-text {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #31333F;
+    }
+    @media (max-width: 640px) {
+        .title-text {
+            font-size: 20px;
+        }
+        .logo-img {
+            width: 50px;
+        }
+    }
     [data-testid="stMetric"] {
         background: linear-gradient(135deg, #ffffff 0%, #f1f1f1 100%);
         border: 1px solid #D4AF37;
@@ -160,6 +182,7 @@ st.markdown("""
     </div>
   
 """, unsafe_allow_html=True)
+
 
 st.divider()
 # --- DASHBOARD METRIK (LEBIH RAPAT) ---
