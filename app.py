@@ -139,37 +139,7 @@ df_warga = load_data("Warga")
 
 # --- DASHBOARD ATAS (OPTIMASI DESKTOP & MOBILE) ---
 # Menggunakan CSS untuk memastikan perataan vertikal yang sempurna
-st.markdown("""
-    <style>
-    .header-container {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        padding: 10px 0;
-    }
-    .logo-img {
-        width: 70px;
-    }
-    .title-text {
-        margin: 0;
-        font-size: 28px;
-        font-weight: 700;
-        color: #31333F;
-    }
-    @media (max-width: 640px) {
-        .title-text {
-            font-size: 20px;
-        }
-        .logo-img {
-            width: 50px;
-        }
-    }
-    </style>
-    <div class="header-container">
-        <img class="logo-img" src="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
-        <h1 class="title-text">Dashboard Keuangan AR3</h1>
-    </div>
-    # --- DASHBOARD METRIK (PREMIUM LOOK) ---
+  # --- DASHBOARD METRIK (PREMIUM LOOK) ---
 st.markdown("""
     <style>
     [data-testid="stMetric"] {
@@ -184,6 +154,11 @@ st.markdown("""
         font-weight: bold !important;
     }
     </style>
+    <div class="header-container">
+        <img class="logo-img" src="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png">
+        <h1 class="title-text">Dashboard Keuangan AR3</h1>
+    </div>
+  
 """, unsafe_allow_html=True)
 
 st.divider()
