@@ -35,17 +35,19 @@ def login():
         user = st.text_input("Username")
         pwd = st.text_input("Password", type="password")
         if st.form_submit_button("Login"):
-            if user == "admin" and pwd == "admin123":
+            # Mengambil data dari Streamlit Secrets
+            creds = st.secrets["credentials"]
+            
+            if user == creds["admin_user"] and pwd == creds["admin_password"]:
                 st.session_state['logged_in'] = True
                 st.session_state['role'] = "admin"
                 st.rerun()
-            elif user == "warga" and pwd == "warga123":
+            elif user == creds["warga_user"] and pwd == creds["warga_password"]:
                 st.session_state['logged_in'] = True
                 st.session_state['role'] = "user"
                 st.rerun()
             else:
                 st.error("Username/Password Salah")
-
 def logout():
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
