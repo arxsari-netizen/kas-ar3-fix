@@ -208,17 +208,36 @@ if menu == "📊 Laporan & Monitoring":
     thn_lap = st.selectbox("Pilih Tahun Laporan", list(range(2022, 2031)), index=4)
     tab1, tab2 = st.tabs(["📥 Pemasukan", "📤 Pengeluaran"])
     
-    with tab1:
+   with tab1:
         df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
         if not df_yr_in.empty:
-            st.write("### 🟢 Status Kelunasan (Main Warga)")
-            rekap = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Total', aggfunc='sum').fillna(0)
+            # Urutan Bulan
             bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-            available_cols = [b for b in bln_order if b in rekap.columns]
-            rekap = rekap.reindex(columns=available_cols)
-            st.dataframe(rekap.style.highlight_between(left=50000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
+            
+            # --- TABEL 1: KHUSUS KAS (15rb) ---
+            st.write("### 💰 Laporan Dana KAS (Rp 15.000/bln)")
+            rekap_kas = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
+            rekap_kas = rekap_kas.reindex(columns=[b for b in bln_order if b in rekap_kas.columns])
+            # Highlight hijau jika Kas sudah 15rb
+            st.dataframe(rekap_kas.style.highlight_between(left=15000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
+            
+            st.divider()
+
+            # --- TABEL 2: KHUSUS HADIAH (35rb) ---
+            st.write("### 🎁 Laporan Dana HADIAH (Rp 35.000/bln)")
+            rekap_hadiah = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0)
+            rekap_hadiah = rekap_hadiah.reindex(columns=[b for b in bln_order if b in rekap_hadiah.columns])
+            # Highlight hijau jika Hadiah sudah 35rb
+            st.dataframe(rekap_hadiah.style.highlight_between(left=35000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
+            
+            st.divider()
+            
+            # --- RINGKASAN TOTAL ---
+            st.write("### 👤 Ringkasan Total Kontribusi")
+            ringkasan = df_yr_in.groupby('Nama').agg({'Kas':'sum','Hadiah':'sum','Total':'sum'})
+            st.table(ringkasan.style.format("{:,.0f}"))
         else:
-            st.info("Tidak ada data pemasukan tahun ini.")
+            st.info("Belum ada data pemasukan tahun ini.")
 
     with tab2:
         # Tambahkan filter tahun untuk pengeluaran agar akurat
