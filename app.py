@@ -49,7 +49,6 @@ def login():
         .header-title { color: #1a1a1a; font-size: 18px; font-weight: 800; margin: 0; }
         .header-subtitle { color: #B8860B; font-size: 8px; font-weight: 700; letter-spacing: 1px; }
         .slogan-text { color: #B8860B; font-size: 11px; font-style: italic; font-weight: 600; margin-top: 8px; }
-        .login-card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 8px 30px rgba(0,0,0,0.04); }
         div.stButton > button {
             background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
             color: white !important; width: 100%; font-weight: 700; border: none; padding: 10px; border-radius: 8px;
@@ -88,7 +87,7 @@ if not st.session_state['logged_in']:
     login()
     st.stop()
 
-# --- 4. LOGIKA DATA & PROSES ---
+# --- 4. LOGIKA DATA (SPREADSHEET) ---
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(st.secrets["gspread_credentials"], scopes=scope)
 client = gspread.authorize(creds)
@@ -99,25 +98,34 @@ def load_data(sheet_name):
     df = pd.DataFrame(worksheet.get_all_records())
     numeric_cols = ['Total', 'Kas', 'Hadiah', 'Jumlah', 'Tahun']
     for col in numeric_cols:
-        if col in df.columns: df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        if col in df.columns: 
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     return df
 
-def save_to_cloud(sheet_name, df):
+def append_to_cloud(sheet_name, df_new):
+    """Menambah baris baru tanpa menghapus data lama (Lebih Aman)"""
+    worksheet = sh.worksheet(sheet_name)
+    worksheet.append_rows(df_new.values.tolist())
+
+def rewrite_cloud(sheet_name, df_full):
+    """Hanya digunakan untuk update total (seperti hapus warga)"""
     worksheet = sh.worksheet(sheet_name)
     worksheet.clear()
-    worksheet.update([df.columns.values.tolist()] + df.values.tolist())
+    worksheet.update([df_full.columns.values.tolist()] + df_full.values.tolist())
 
 def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
     list_bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
     idx_bln = list_bulan.index(bln)
     sisa = nominal
     data_baru = []
+    
     while sisa > 0:
         curr_bln = list_bulan[idx_bln]
         if role == "Main Warga":
             kondisi = (df_existing['Nama'] == nama) & (df_existing['Bulan'] == curr_bln) & (df_existing['Tahun'] == thn)
             sdh_bayar = df_existing[kondisi]['Total'].sum()
             sdh_kas = df_existing[kondisi]['Kas'].sum()
+            
             if sdh_bayar < 50000:
                 butuh = 50000 - sdh_bayar
                 bayar_ini = min(sisa, butuh)
@@ -132,6 +140,7 @@ def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
                 })
                 sisa -= bayar_ini
         else:
+            # Untuk Warga Support, langsung masukkan semua sisa ke satu entri
             data_baru.append({
                 'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
                 'Nama': nama, 'Tahun': thn, 'Bulan': curr_bln,
@@ -140,6 +149,7 @@ def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
                 'Status': "SUPPORT", 'Tipe': tipe
             })
             sisa = 0
+            
         idx_bln += 1
         if idx_bln > 11: 
             idx_bln = 0
@@ -147,7 +157,7 @@ def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
         if thn > 2030: break
     return pd.DataFrame(data_baru)
 
-# Load Data Awal
+# Load Data Utama
 df_masuk = load_data("Pemasukan")
 df_keluar = load_data("Pengeluaran")
 df_warga = load_data("Warga")
@@ -158,10 +168,7 @@ if st.sidebar.button("🚪 Logout"):
     st.session_state.clear()
     st.rerun()
 
-if st.session_state['role'] == "admin":
-    list_menu = ["📊 Laporan", "📥 Pemasukan", "📤 Pengeluaran", "👥 Kelola Warga", "📜 Log"]
-else:
-    list_menu = ["📊 Laporan", "📜 Log"]
+list_menu = ["📊 Laporan", "📥 Pemasukan", "📤 Pengeluaran", "👥 Kelola Warga", "📜 Log"] if st.session_state['role'] == "admin" else ["📊 Laporan", "📜 Log"]
 menu = st.sidebar.radio("Navigasi Utama", list_menu)
 
 # --- 6. METRIK DASHBOARD ---
@@ -170,126 +177,119 @@ out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
 
 st.markdown(f"## AR-ROYHAAN 3 DASHBOARD")
-c1, c2, c3 = st.columns(3)
-c1.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
-c2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
-c3.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
+m1, m2, m3 = st.columns(3)
+m1.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
+m2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
+m3.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
 st.divider()
 
 # --- 7. LOGIKA MENU ---
+
 if menu == "📊 Laporan":
-    st.subheader("📋 Laporan Keuangan Tahunan")
+    st.subheader("📋 Laporan Tahunan")
     thn_lap = st.selectbox("Pilih Tahun Laporan", list(range(2022, 2031)), index=4)
     tab1, tab2, tab3 = st.tabs(["📥 Pemasukan", "📤 Pengeluaran", "🏆 Ringkasan"])
 
+    # Filter Tahun
     df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
+    
+    # Helper untuk extract tahun dari string tanggal dd/mm/yyyy
+    def get_yr(d):
+        try: return int(str(d).split('/')[2].split(' ')[0])
+        except: return 0
+    df_keluar['Thn_Cek'] = df_keluar['Tanggal'].apply(get_yr)
+    df_yr_out = df_keluar[df_keluar['Thn_Cek'] == thn_lap]
+
     bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 
     with tab1:
         if not df_yr_in.empty:
-            st.write("### 💰 Dana KAS (Rp 15.000/bln)")
-            rekap_kas = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
-            rekap_kas = rekap_kas.reindex(columns=[b for b in bln_order if b in rekap_kas.columns])
-            st.dataframe(rekap_kas.style.highlight_between(left=15000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
+            st.write("### 💰 Dana KAS (Rp 15.000)")
+            rekap_k = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
+            cols_k = [b for b in bln_order if b in rekap_k.columns]
+            st.dataframe(rekap_k[cols_k].style.highlight_between(left=15000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
             
-            st.write("### 🎁 Dana HADIAH (Rp 35.000/bln)")
-            rekap_hadiah = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0)
-            rekap_hadiah = rekap_hadiah.reindex(columns=[b for b in bln_order if b in rekap_hadiah.columns])
-            st.dataframe(rekap_hadiah.style.highlight_between(left=35000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
-        else:
-            st.info("Data kosong.")
+            st.write("### 🎁 Dana HADIAH (Rp 35.000)")
+            rekap_h = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0)
+            cols_h = [b for b in bln_order if b in rekap_h.columns]
+            st.dataframe(rekap_h[cols_h].style.highlight_between(left=35000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
+        else: st.info("Tidak ada data.")
 
     with tab2:
-        df_keluar['Tahun_Log'] = pd.to_datetime(df_keluar['Tanggal'], dayfirst=True, errors='coerce').dt.year
-        df_yr_out = df_keluar[df_keluar['Tahun_Log'] == thn_lap]
         if not df_yr_out.empty:
             st.dataframe(df_yr_out[['Tanggal', 'Kategori', 'Jumlah', 'Keterangan']], use_container_width=True)
-        else:
-            st.info("Tidak ada pengeluaran.")
+        else: st.info("Tidak ada pengeluaran.")
 
     with tab3:
         if not df_yr_in.empty:
-            ringkasan = df_yr_in.groupby('Nama').agg({'Kas':'sum','Hadiah':'sum','Total':'sum'}).reset_index()
-            ringkasan['Status'] = ringkasan['Total'].apply(lambda x: "✅ LUNAS" if x >= 600000 else f"⚠️ -Rp {600000-x:,.0f}")
-            st.dataframe(ringkasan.style.format({"Kas": "{:,.0f}", "Hadiah": "{:,.0f}", "Total": "{:,.0f}"}), use_container_width=True)
-            
-            # Excel Download
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                ringkasan.to_excel(writer, index=False, sheet_name='Ringkasan')
-            st.download_button(label="📥 Download Excel", data=output.getvalue(), file_name=f'Laporan_{thn_lap}.xlsx')
+            rekap_all = df_yr_in.groupby('Nama').agg({'Kas':'sum','Hadiah':'sum','Total':'sum'}).reset_index()
+            rekap_all['Status'] = rekap_all['Total'].apply(lambda x: "✅ LUNAS" if x >= 600000 else f"⚠️ -Rp {600000-x:,.0f}")
+            st.table(rekap_all.style.format({"Kas": "{:,.0f}", "Hadiah": "{:,.0f}", "Total": "{:,.0f}"}))
 
 elif menu == "📥 Pemasukan":
-    st.subheader("Input Pembayaran Baru")
-    nama_p = st.selectbox("Pilih Anggota", sorted(df_warga['Nama'].tolist()))
-    role_p = df_warga.loc[df_warga['Nama'] == nama_p, 'Role'].values[0]
-    with st.form("in_form", clear_on_submit=True):
-        st.info(f"Anggota: {nama_p} ({role_p})")
-        nom = st.number_input("Nominal Pembayaran (Rp)", min_value=0, step=5000)
-        tp = st.selectbox("Alokasi", ["Paket Lengkap"] if role_p == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
-        thn = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
-        bln = st.selectbox("Bulan", bln_order)
-        if st.form_submit_button("✅ Simpan Data"):
+    st.subheader("📥 Input Pembayaran")
+    nama_sel = st.selectbox("Pilih Anggota", sorted(df_warga['Nama'].tolist()))
+    role_sel = df_warga.loc[df_warga['Nama'] == nama_sel, 'Role'].values[0]
+    
+    with st.form("form_in", clear_on_submit=True):
+        st.info(f"Role: {role_sel}")
+        nom = st.number_input("Nominal (Rp)", min_value=0, step=5000)
+        tp = st.selectbox("Alokasi", ["Paket Lengkap"] if role_sel == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
+        th = st.selectbox("Mulai Tahun", list(range(2022, 2031)), index=4)
+        bl = st.selectbox("Mulai Bulan", ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"])
+        
+        if st.form_submit_button("Simpan Pembayaran"):
             if nom > 0:
-                res = proses_bayar(nama_p, nom, thn, bln, tp, role_p, df_masuk)
-                save_to_cloud("Pemasukan", pd.concat([df_masuk, res], ignore_index=True))
-                st.success("Pembayaran Berhasil!")
+                res_df = proses_bayar(nama_sel, nom, th, bl, tp, role_sel, df_masuk)
+                append_to_cloud("Pemasukan", res_df)
+                st.success("Data Berhasil Ditambahkan!")
                 st.rerun()
 
 elif menu == "📤 Pengeluaran":
-    st.subheader("Catat Pengeluaran Dana")
-    with st.form("out_form"):
-        kat = st.radio("Sumber Dana", ["Kas", "Hadiah"])
-        jml = st.number_input("Nominal (Rp)", min_value=0)
-        ket = st.text_input("Keterangan Penggunaan")
+    st.subheader("📤 Catat Pengeluaran")
+    with st.form("form_out", clear_on_submit=True):
+        kat_out = st.radio("Sumber Dana", ["Kas", "Hadiah"])
+        jml_out = st.number_input("Jumlah (Rp)", min_value=0)
+        ket_out = st.text_input("Keterangan")
         if st.form_submit_button("Simpan Pengeluaran"):
-            if jml > 0 and ket:
-                new_o = pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Kategori': kat, 'Jumlah': jml, 'Keterangan': ket}])
-                save_to_cloud("Pengeluaran", pd.concat([df_keluar, new_o], ignore_index=True))
-                st.success("Tercatat!")
+            if jml_out > 0:
+                new_out_df = pd.DataFrame([{
+                    'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    'Kategori': kat_out, 'Jumlah': jml_out, 'Keterangan': ket_out
+                }])
+                append_to_cloud("Pengeluaran", new_out_df)
+                st.success("Pengeluaran Tercatat!")
                 st.rerun()
 
 elif menu == "👥 Kelola Warga":
-    st.subheader("👥 Manajemen Anggota")
+    st.subheader("👥 Kelola Anggota")
+    t1, t2 = st.tabs(["➕ Tambah", "🗑️ Hapus"])
     
-    # Membuat Tab untuk Tambah dan Hapus agar rapi
-    tab_tambah, tab_hapus = st.tabs(["➕ Tambah Anggota", "🗑️ Hapus Anggota"])
-    
-    with tab_tambah:
-        with st.form("add_w", clear_on_submit=True):
-            nw = st.text_input("Nama Lengkap")
-            rl = st.selectbox("Role", ["Main Warga", "Warga Support"])
-            if st.form_submit_button("Simpan Anggota Baru"):
-                if nw:
-                    # Cek apakah nama sudah ada
-                    if nw in df_warga['Nama'].values:
-                        st.error("Nama tersebut sudah terdaftar!")
-                    else:
-                        new_row = pd.DataFrame([{'Nama': nw, 'Role': rl}])
-                        df_updated = pd.concat([df_warga, new_row], ignore_index=True)
-                        save_to_cloud("Warga", df_updated)
-                        st.success(f"Berhasil menambah {nw}")
-                        st.rerun()
-                else:
-                    st.warning("Nama tidak boleh kosong!")
-
-    with tab_hapus:
+    with t1:
+        with st.form("f_add", clear_on_submit=True):
+            n_baru = st.text_input("Nama Lengkap")
+            r_baru = st.selectbox("Role", ["Main Warga", "Warga Support"])
+            if st.form_submit_button("Tambah Anggota"):
+                if n_baru and n_baru not in df_warga['Nama'].values:
+                    # Kita pakai rewrite karena data warga biasanya sedikit dan perlu struktur kolom yang bersih
+                    updated_w = pd.concat([df_warga, pd.DataFrame([{'Nama': n_baru, 'Role': r_baru}])], ignore_index=True)
+                    rewrite_cloud("Warga", updated_w)
+                    st.success("Anggota Ditambahkan!")
+                    st.rerun()
+                else: st.error("Nama tidak valid atau sudah ada.")
+                
+    with t2:
         if not df_warga.empty:
-            target_hapus = st.selectbox("Pilih Nama yang Akan Dihapus", sorted(df_warga['Nama'].tolist()))
-            st.warning(f"Tindakan ini akan menghapus **{target_hapus}** dari daftar warga.")
-            if st.button("🔥 Hapus Permanen"):
-                df_updated = df_warga[df_warga['Nama'] != target_hapus]
-                save_to_cloud("Warga", df_updated)
-                st.success(f"{target_hapus} telah dihapus.")
+            n_del = st.selectbox("Pilih Nama yang Dihapus", sorted(df_warga['Nama'].tolist()))
+            if st.button("Hapus Permanen"):
+                updated_w = df_warga[df_warga['Nama'] != n_del]
+                rewrite_cloud("Warga", updated_w)
+                st.success("Anggota Dihapus!")
                 st.rerun()
-        else:
-            st.info("Daftar warga kosong.")
 
-    st.divider()
-    st.write("### 📜 Daftar Anggota Saat Ini")
+    st.write("### 📜 Daftar Warga")
     st.table(df_warga)
 
 elif menu == "📜 Log":
-    st.subheader("Histori Transaksi")
-    st.write("### Pemasukan")
+    st.subheader("📜 Log Transaksi Pemasukan")
     st.dataframe(df_masuk.sort_index(ascending=False), use_container_width=True)
