@@ -135,41 +135,142 @@ c3.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
 st.divider()
 
 # --- 7. LOGIKA MENU ---
-if menu == "📊 Laporan":
-    st.subheader("📋 Monitoring Keuangan")
+if menu == "📊 Laporan & Monitoring":
+
+    st.subheader("📋 Laporan Keuangan Tahunan")
+
     thn_lap = st.selectbox("Pilih Tahun Laporan", list(range(2022, 2031)), index=4)
-    tab_ringkasan, tab_pemasukan, tab_pengeluaran = st.tabs(["🏆 Ringkasan", "📥 Masuk", "📤 Keluar"])
+
+    tab1, tab2 = st.tabs(["📥 Pemasukan", "📤 Pengeluaran"])
+
     
-    df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
-    
-    with tab_ringkasan:
-        st.write(f"### Status Pembayaran {thn_lap}")
+
+    with tab1:
+
+        df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
+
         if not df_yr_in.empty:
-            status_warga = df_yr_in.groupby('Nama').agg({'Kas':'sum','Hadiah':'sum','Total':'sum'}).reset_index()
-            status_warga['Status'] = status_warga['Total'].apply(lambda x: "✅ LUNAS" if x >= 600000 else f"⚠️ -Rp {600000-x:,.0f}")
-            st.dataframe(status_warga.style.format({"Kas": "{:,.0f}", "Hadiah": "{:,.0f}", "Total": "{:,.0f}"}), use_container_width=True)
+
+            # 1. Definisi urutan bulan yang benar
+
+            bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", 
+
+                         "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+
             
-            # Button Download
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                status_warga.to_excel(writer, index=False, sheet_name='Ringkasan')
-            st.download_button(label="📊 Download Excel", data=output.getvalue(), file_name=f'Kas_{thn_lap}.xlsx')
-        else:
-            st.warning("Belum ada data.")
 
-    with tab_pemasukan:
-        if not df_yr_in.empty:
-            bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-            st.write("### Detail Kas")
-            rkp_k = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
-            st.dataframe(rkp_k.reindex(columns=[b for b in bln_order if b in rkp_k.columns]).style.format("{:,.0f}"))
-        else:
-            st.info("Data Kosong")
+            # --- TABEL 1: KHUSUS KAS (15rb) ---
 
-    with tab_pengeluaran:
-        df_keluar['Tahun_Keluar'] = pd.to_datetime(df_keluar['Tanggal'], dayfirst=True).dt.year
-        df_yr_out = df_keluar[df_keluar['Tahun_Keluar'] == thn_lap]
-        st.table(df_yr_out)
+            st.write("### 💰 Laporan Dana KAS (Rp 15.000/bln)")
+
+            rekap_kas = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
+
+            
+
+            # 2. Paksa urutan kolom sesuai bln_order yang ada di data
+
+            existing_cols_kas = [b for b in bln_order if b in rekap_kas.columns]
+
+            rekap_kas = rekap_kas.reindex(columns=existing_cols_kas)
+
+            
+
+            st.dataframe(rekap_kas.style.highlight_between(left=15000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
+
+            
+
+            st.divider()
+
+
+
+            # --- TABEL 2: KHUSUS HADIAH (35rb) ---
+
+            st.write("### 🎁 Laporan Dana HADIAH (Rp 35.000/bln)")
+
+            rekap_hadiah = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0)
+
+            
+
+            # 3. Paksa urutan kolom sesuai bln_order yang ada di data
+
+            existing_cols_hadiah = [b for b in bln_order if b in rekap_hadiah.columns]
+
+            rekap_hadiah = rekap_hadiah.reindex(columns=existing_cols_hadiah)
+
+            
+
+            st.dataframe(rekap_hadiah.style.highlight_between(left=35000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
+
+            
+
+            st.divider()
+
+            
+
+            # --- RINGKASAN TOTAL ---
+
+            st.write("### 👤 Ringkasan Total Kontribusi")
+
+            ringkasan = df_yr_in.groupby('Nama').agg({'Kas':'sum','Hadiah':'sum','Total':'sum'})
+
+            st.table(ringkasan.style.format("{:,.0f}"))
+
+        else:
+
+            st.info("Belum ada data pemasukan tahun ini.")
+
+
+
+    with tab2:
+
+        df_keluar['Tahun_Log'] = df_keluar['Tanggal'].str.split('/').str[2].str.split(' ').str[0]
+
+        df_yr_out = df_keluar[df_keluar['Tahun_Log'] == str(thn_lap)]
+
+        if not df_yr_out.empty:
+
+            st.dataframe(df_yr_out[['Tanggal', 'Kategori', 'Jumlah', 'Keterangan']], use_container_width=True)
+
+        else:
+
+            st.info("Tidak ada data pengeluaran tahun ini.")
+
+
+
+elif menu == "📥 Input Pemasukan":
+
+    st.subheader("Input Pembayaran")
+
+    nama_p = st.selectbox("Pilih Nama", sorted(df_warga['Nama'].tolist()))
+
+    role_p = df_warga.loc[df_warga['Nama'] == nama_p, 'Role'].values[0]
+
+    with st.form("in_form", clear_on_submit=True):
+
+        st.write(f"Status: **{role_p}**")
+
+        nom = st.number_input("Nominal (Rp)", min_value=0, step=5000)
+
+        tipe = st.selectbox("Alokasi", ["Paket Lengkap"] if role_p == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
+
+        thn = st.selectbox("Tahun Mulai", list(range(2022, 2031)), index=4)
+
+        bln = st.selectbox("Bulan Mulai", ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"])
+
+        if st.form_submit_button("Simpan Pembayaran"):
+
+            res = proses_bayar(nama_p, nom, thn, bln, tipe, role_p, df_masuk)
+
+            if not res.empty:
+
+                df_updated = pd.concat([df_masuk, res], ignore_index=True)
+
+                save_to_cloud("Pemasukan", df_updated)
+
+                st.success("Pembayaran Berhasil Disimpan!")
+
+                st.rerun()
+
 
 elif menu == "📥 Pemasukan":
     st.subheader("Input Pembayaran")
