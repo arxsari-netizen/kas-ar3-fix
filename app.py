@@ -215,7 +215,6 @@ elif menu == "📥 Pemasukan":
     st.subheader("📥 Input Pembayaran")
     
     if not df_warga.empty:
-        # Pilihan nama ditaruh di luar form agar role_sel bisa terupdate otomatis saat nama diganti
         nama_sel = st.selectbox("Pilih Anggota", sorted(df_warga['Nama'].tolist()))
         role_sel = df_warga.loc[df_warga['Nama'] == nama_sel, 'Role'].values[0]
         
@@ -231,14 +230,33 @@ elif menu == "📥 Pemasukan":
                 th = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
                 bl = st.selectbox("Bulan", ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"])
             
-            # Tombol Submit (Pastikan sejajar di dalam 'with st.form')
             submit_bayar = st.form_submit_button("Simpan Pembayaran")
             
             if submit_bayar:
                 if nom > 0:
+                    # Proses hitung alokasi otomatis
                     res = proses_bayar(nama_sel, nom, th, bl, tp, role_sel, df_masuk)
+                    
+                    # Simpan ke cloud
                     append_to_cloud("Pemasukan", res)
-                    st.success(f"Pembayaran {nama_sel} Berhasil Disimpan!")
+                    
+                    # --- NOTIFIKASI DETAIL ---
+                    # Kita ambil info bulan awal & akhir yang terisi (jika bayar borongan)
+                    bln_awal = res['Bulan'].iloc[0]
+                    bln_akhir = res['Bulan'].iloc[-1]
+                    rentang = f"Bulan {bln_awal}" if len(res) == 1 else f"{bln_awal} s/d {bln_akhir}"
+                    
+                    st.success(f"""
+                        ✅ **Data Berhasil Disimpan ke Google Sheets!**
+                        * **Nama:** {nama_sel}
+                        * **Total:** Rp {nom:,.0f}
+                        * **Alokasi:** {rentang} ({th})
+                        * **Tipe:** {tp}
+                    """)
+                    
+                    # Beri jeda sedikit agar user bisa baca notif sebelum refresh
+                    import time
+                    time.sleep(2) 
                     st.rerun()
                 else:
                     st.error("Nominal tidak boleh 0!")
