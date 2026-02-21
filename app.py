@@ -3,7 +3,7 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
-import time  # Pindahkan ke sini biar rapi
+import time
 
 # --- 1. CONFIG HALAMAN ---
 st.set_page_config(
@@ -19,6 +19,14 @@ st.markdown("""
     .stApp { background-color: #f8f9fa; }
     [data-testid="stMetric"] {
         background: white; border: 1px solid #D4AF37; padding: 15px; border-radius: 12px;
+    }
+    /* Style untuk angka konfirmasi agar menonjol */
+    .money-highlight {
+        color: #B8860B;
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-top: -15px;
+        margin-bottom: 10px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -87,7 +95,6 @@ def rewrite_cloud(sheet_name, df_full):
     worksheet.update([df_full.columns.values.tolist()] + df_full.values.tolist())
     clear_cache()
 
-# --- 5. LOGIKA BAYAR ---
 def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
     list_bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
     idx_bln = list_bulan.index(bln)
@@ -127,7 +134,6 @@ def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
         if thn > 2030: break
     return pd.DataFrame(data_baru)
 
-# LOAD DATA
 df_masuk = load_data("Pemasukan")
 df_keluar = load_data("Pengeluaran")
 df_warga = load_data("Warga")
@@ -156,7 +162,7 @@ m2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
 m3.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
 st.divider()
 
-# --- MENU LOGIC ---
+# --- 8. MENU LOGIC ---
 if menu == "📊 Laporan":
     st.subheader("📋 Laporan Tahunan")
     thn_lap = st.selectbox("Pilih Tahun", list(range(2022, 2031)), index=4)
@@ -203,8 +209,12 @@ elif menu == "📥 Pemasukan":
             st.info(f"Target: **{nama_sel}** | Role: **{role_sel}**")
             col1, col2 = st.columns(2)
             with col1:
-                nom = st.number_input("Nominal (Rp)", min_value=0, step=5000, format="%d")
-                st.markdown(f"**Format: Rp {nom:,.0f}**")
+                # TRIK INPUT NOMINAL AGAR MUDAH DIBACA
+                raw_nom = st.text_input("Ketik Nominal (Contoh: 50000)", value="0")
+                clean_nom = raw_nom.replace(".", "").replace(",", "").replace(" ", "")
+                nom = int(clean_nom) if clean_nom.isdigit() else 0
+                st.markdown(f'<p class="money-highlight">Konfirmasi: Rp {nom:,.0f}</p>', unsafe_allow_html=True)
+                
                 tp = st.selectbox("Alokasi", ["Paket Lengkap"] if role_sel == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
             with col2:
                 th = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
@@ -214,26 +224,29 @@ elif menu == "📥 Pemasukan":
                 if nom > 0:
                     res = proses_bayar(nama_sel, nom, th, bl, tp, role_sel, df_masuk)
                     append_to_cloud("Pemasukan", res)
-                    bln_awal, bln_akhir = res['Bulan'].iloc[0], res['Bulan'].iloc[-1]
-                    rentang = f"Bulan {bln_awal}" if len(res) == 1 else f"{bln_awal} s/d {bln_akhir}"
-                    st.success(f"✅ Tersimpan!\n* Nama: {nama_sel}\n* Total: Rp {nom:,.0f}\n* Alokasi: {rentang}")
-                    time.sleep(2)
+                    st.success(f"✅ Tersimpan! Rp {nom:,.0f} untuk {nama_sel}")
+                    time.sleep(1.5)
                     st.rerun()
-                else: st.error("Nominal tidak boleh 0!")
+                else: st.error("Masukkan nominal angka yang benar!")
     else: st.warning("Tambah warga dulu!")
 
 elif menu == "📤 Pengeluaran":
     with st.form("f_out", clear_on_submit=True):
         kat = st.radio("Sumber Dana", ["Kas", "Hadiah"])
-        jml = st.number_input("Jumlah (Rp)", min_value=0, step=1000, format="%d")
-        st.info(f"Dicatat: **Rp {jml:,.0f}**")
+        # TRIK INPUT NOMINAL PENGELUARAN
+        raw_jml = st.text_input("Ketik Jumlah Pengeluaran", value="0")
+        clean_jml = raw_jml.replace(".", "").replace(",", "").replace(" ", "")
+        jml = int(clean_jml) if clean_jml.isdigit() else 0
+        st.markdown(f'<p class="money-highlight">Konfirmasi Keluar: Rp {jml:,.0f}</p>', unsafe_allow_html=True)
+        
         ket = st.text_input("Keterangan")
         if st.form_submit_button("Simpan Pengeluaran"):
             if jml > 0 and ket:
                 append_to_cloud("Pengeluaran", pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Kategori': kat, 'Jumlah': jml, 'Keterangan': ket}]))
-                st.success("Tercatat!")
-                time.sleep(1)
+                st.success(f"Tercatat keluar Rp {jml:,.0f}")
+                time.sleep(1.5)
                 st.rerun()
+            else: st.error("Lengkapi jumlah dan keterangan!")
 
 elif menu == "👥 Kelola Warga":
     st.subheader("👥 Database Anggota")
