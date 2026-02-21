@@ -34,30 +34,30 @@ def login():
         <style>
         header {visibility: hidden;}
         
-        /* Background Marmer Premium */
+        /* Background Premium Marble */
         .stApp {
-            background-color: #ffffff;
+            background-color: #f8f9fa;
             background-image: url("https://www.transparenttextures.com/patterns/white-marble.png");
             background-attachment: fixed;
         }
 
-        /* Container Utama */
+        /* Container Tengah */
         .main-login-container {
-            max-width: 450px;
+            max-width: 480px;
             margin: auto;
-            padding-top: 50px;
+            padding-top: 60px;
         }
 
-        /* Kotak Header (Logo & Judul) - Lis Emas Double */
+        /* HEADER BOX: Putih, Lis Emas Double, Mewah */
         .header-box {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 25px;
             text-align: center;
             border: 2px solid #D4AF37;
-            outline: 4px solid white; /* Membuat efek sela putih */
-            box-shadow: 0 0 0 5px #D4AF37, 0 15px 35px rgba(0,0,0,0.1);
-            margin-bottom: 40px;
+            outline: 4px solid white; 
+            box-shadow: 0 0 0 5px #D4AF37, 0 15px 30px rgba(0,0,0,0.1);
+            margin-bottom: 50px; /* Jarak ke form diatur agar lega */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -65,110 +65,123 @@ def login():
         }
 
         .header-logo {
-            width: 70px;
+            width: 75px;
+            filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.1));
         }
 
         .header-text-container {
             text-align: left;
-            border-left: 2px solid #f1f1f1;
+            border-left: 2px solid #eaeaea;
             padding-left: 20px;
         }
 
         .header-title {
             color: #1a1a1a;
             font-family: 'Inter', sans-serif;
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 800;
             margin: 0;
             letter-spacing: -0.5px;
-            text-transform: uppercase;
+            line-height: 1;
         }
 
         .header-subtitle {
-            color: #64748b;
+            color: #B8860B; /* Warna emas gelap untuk sub */
             font-size: 11px;
-            font-weight: 500;
-            margin: 0;
+            font-weight: 600;
+            margin-top: 5px;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 1.2px;
         }
 
-        /* Card Input Form */
+        /* CARD FORM LOGIN */
         .login-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            padding: 35px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.05);
             border: 1px solid #f1f5f9;
         }
 
-        /* Styling Input Field */
+        /* Label Input */
+        .stTextInput label {
+            color: #475569 !important;
+            font-weight: 600 !important;
+        }
+
+        /* Input Field Styling */
         .stTextInput input {
             background-color: #ffffff !important;
             color: #1e293b !important;
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 10px !important;
-            padding: 12px !important;
+            border: 1.5px solid #e2e8f0 !important;
+            border-radius: 12px !important;
+            padding: 12px 15px !important;
+            transition: all 0.3s ease;
         }
 
         .stTextInput input:focus {
             border-color: #D4AF37 !important;
-            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1) !important;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15) !important;
         }
 
-        /* Tombol Masuk - Emas Gradasi */
+        /* TOMBOL MASUK: Emas Gradasi Metalik */
         div.stButton > button {
-            background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
+            background: linear-gradient(135deg, #D4AF37 0%, #B8860B 50%, #8B6508 100%) !important;
             color: white !important;
-            border-radius: 10px !important;
-            padding: 12px 0px !important;
+            border-radius: 12px !important;
+            padding: 14px 0px !important;
+            font-size: 16px !important;
             font-weight: 700 !important;
             border: none !important;
-            box-shadow: 0 4px 15px rgba(184, 134, 11, 0.2) !important;
+            box-shadow: 0 4px 15px rgba(184, 134, 11, 0.3) !important;
             width: 100%;
-            margin-top: 10px;
+            margin-top: 15px;
+            transition: all 0.4s ease !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         div.stButton > button:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
-            box-shadow: 0 6px 20px rgba(184, 134, 11, 0.3) !important;
+            transform: translateY(-3px);
+            filter: brightness(1.15);
+            box-shadow: 0 8px 25px rgba(184, 134, 11, 0.4) !important;
         }
 
         .footer-text {
             text-align: center;
             color: #94a3b8;
-            font-size: 10px;
-            margin-top: 40px;
-            letter-spacing: 0.5px;
+            font-size: 11px;
+            margin-top: 50px;
+            font-weight: 500;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # Memulai Layout
-    _, col_mid, _ = st.columns([0.1, 1, 0.1])
+    # Layouting
+    _, col_mid, _ = st.columns([0.05, 1, 0.05])
     
     with col_mid:
         st.markdown('<div class="main-login-container">', unsafe_allow_html=True)
         
-        # --- KOTAK HEADER PUTIH LIS EMAS ---
+        # --- HEADER BOX ---
         st.markdown(f"""
             <div class="header-box">
                 <img src="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png" class="header-logo">
                 <div class="header-text-container">
                     <p class="header-title">AR-ROYHAAN</p>
-                    <p class="header-subtitle">Sistem Manajemen Keuangan</p>
+                    <p class="header-subtitle">Management System</p>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
-        # --- CARD FORM LOGIN ---
+        # --- LOGIN CARD ---
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
         with st.form("login_form", clear_on_submit=False):
-            user = st.text_input("Username", placeholder="Masukkan username anda")
-            pwd = st.text_input("Password", type="password", placeholder="Masukkan password anda")
-            submit = st.form_submit_button("MASUK KE DASHBOARD")
+            st.markdown("<p style='text-align:center; color:#64748b; font-size:14px; margin-bottom:20px;'>Silakan masuk dengan akun anda</p>", unsafe_allow_html=True)
+            user = st.text_input("Username", placeholder="Username")
+            pwd = st.text_input("Password", type="password", placeholder="Password")
+            st.markdown("<br>", unsafe_allow_html=True)
+            submit = st.form_submit_button("Masuk Ke Aplikasi")
             
             if submit:
                 if "users" in st.secrets:
@@ -180,13 +193,13 @@ def login():
                         st.session_state.update({"logged_in": True, "role": "user"})
                         st.rerun()
                     else:
-                        st.error("Akses ditolak. Periksa kembali user/password.")
+                        st.error("Kredensial tidak valid.")
                 else:
-                    st.warning("Data login belum dikonfigurasi di Secrets.")
+                    st.warning("Konfigurasi Secrets tidak ditemukan.")
         st.markdown('</div>', unsafe_allow_html=True)
         
         # Footer
-        st.markdown('<p class="footer-text">EST 2026 • AR3 COMMUNITY • WE COME TO LEARN, WE BRING SOLUTIONS</p>', unsafe_allow_html=True)
+        st.markdown('<p class="footer-text">© 2026 AR3 COMMUNITY<br>WE COME TO LEARN, WE BRING SOLUTIONS</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 # Jalankan Login
 if not st.session_state['logged_in']:
