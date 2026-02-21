@@ -276,24 +276,75 @@ c3.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
 st.divider()
 
 # --- 7. LOGIKA MENU ---
-if menu == "📊 Laporan":
-    st.subheader("📋 Laporan Tahunan")
-    thn_lap = st.selectbox("Pilih Tahun Laporan", list(range(2022, 2031)), index=4)
-    t1, t2 = st.tabs(["📥 Pemasukan", "📤 Pengeluaran"])
+elif menu == "📊 Laporan":
+    st.subheader("📋 Laporan Tahunan & Monitoring")
     
-    with t1:
-        df_yr = df_masuk[df_masuk['Tahun'] == thn_lap]
-        if not df_yr.empty:
-            bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-            st.write("### 💰 Dana KAS")
-            rkp_k = df_yr.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
+    # Pilih Tahun dengan tampilan lebih rapi
+    thn_lap = st.selectbox("Pilih Tahun Laporan", list(range(2022, 2031)), index=4)
+    
+    # Tab Laporan
+    tab_ringkasan, tab_pemasukan, tab_pengeluaran = st.tabs([
+        "🏆 Ringkasan Saldo", "📥 Detail Pemasukan", "📤 Detail Pengeluaran"
+    ])
+    
+    with tab_ringkasan:
+        st.write(f"### 📈 Performa Kas Tahun {thn_lap}")
+        
+        # Hitung Total per Tahun
+        df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
+        total_kas_thn = df_yr_in['Kas'].sum()
+        total_hadiah_thn = df_yr_in['Hadiah'].sum()
+        
+        m1, m2 = st.columns(2)
+        m1.metric("Total Kas Masuk (Thn Ini)", f"Rp {total_kas_thn:,.0f}")
+        m2.metric("Total Hadiah Masuk (Thn Ini)", f"Rp {total_hadiah_thn:,.0f}")
+        
+        st.divider()
+        
+        # Tabel Status Per Warga (Paling dicari admin)
+        st.write("### 👥 Status Pembayaran Warga")
+        status_warga = df_yr_in.groupby('Nama').agg({
+            'Kas': 'sum',
+            'Hadiah': 'sum',
+            'Total': 'sum'
+        }).reset_index()
+        
+        # Tambahkan indikator lunas (asumsi lunas per tahun adalah 12 x 50rb = 600rb)
+        status_warga['Status'] = status_warga['Total'].apply(
+            lambda x: "✅ LUNAS" if x >= 600000 else f"⚠️ KURANG Rp {600000 - x:,.0f}"
+        )
+        
+        st.dataframe(status_warga.style.applymap(
+            lambda x: 'color: green' if '✅' in str(x) else 'color: red', subset=['Status']
+        ).format({"Kas": "{:,.0f}", "Hadiah": "{:,.0f}", "Total": "{:,.0f}"}), use_container_width=True)
+
+    with tab_pemasukan:
+        # Pindahkan pivot table lama kamu ke sini
+        bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+        
+        st.write("### 💰 Detail Dana KAS (Rp 15.000/bln)")
+        if not df_yr_in.empty:
+            rkp_k = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
             rkp_k = rkp_k.reindex(columns=[b for b in bln_order if b in rkp_k.columns])
             st.dataframe(rkp_k.style.format("{:,.0f}"), use_container_width=True)
             
-            st.write("### 🎁 Dana HADIAH")
-            rkp_h = df_yr.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0)
+            st.write("### 🎁 Detail Dana HADIAH (Rp 35.000/bln)")
+            rkp_h = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0)
             rkp_h = rkp_h.reindex(columns=[b for b in bln_order if b in rkp_h.columns])
             st.dataframe(rkp_h.style.format("{:,.0f}"), use_container_width=True)
+        else:
+            st.warning("Data tahun ini masih kosong.")
+
+    with tab_pengeluaran:
+        st.write(f"### 💸 Catatan Pengeluaran Tahun {thn_lap}")
+        # Filter pengeluaran berdasarkan tahun (asumsi ada kolom Tanggal format DD/MM/YYYY)
+        df_keluar['Tahun_Keluar'] = pd.to_datetime(df_keluar['Tanggal'], dayfirst=True).dt.year
+        df_yr_out = df_keluar[df_keluar['Tahun_Keluar'] == thn_lap]
+        
+        if not df_yr_out.empty:
+            st.table(df_yr_out[['Tanggal', 'Kategori', 'Jumlah', 'Keterangan']].style.format({"Jumlah": "{:,.0f}"}))
+        else:
+            st.info("Belum ada pengeluaran di tahun ini.")
 
 elif menu == "📥 Pemasukan":
     st.subheader("Input Pembayaran Baru")
