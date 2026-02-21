@@ -33,70 +33,103 @@ def login():
     st.markdown("""
         <style>
         header {visibility: hidden;}
+        
+        /* Background Abu-abu Sangat Muda & Bersih */
         .stApp {
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            background-attachment: fixed;
+            background-color: #fcfcfc;
+            background-image: radial-gradient(#e5e7eb 0.7px, #fcfcfc 0.7px);
+            background-size: 30px 30px;
         }
+
+        /* Card Putih dengan Shadow Halus & Border Emas Tipis */
         .login-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            background: white;
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 40px;
-            box-shadow: 0 25px 45px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.03);
             text-align: center;
-            margin-top: 50px;
+            margin-top: 30px;
+            border: 1px solid #f1f5f9;
         }
+
+        /* Judul Emas Elegan */
         .brand-title {
-            color: #D4AF37;
-            font-family: 'Georgia', serif;
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+            color: #B8860B; /* Dark Goldenrod */
+            font-family: 'Inter', sans-serif;
+            font-size: 30px;
+            font-weight: 800;
+            margin-bottom: 0px;
+            letter-spacing: -0.5px;
         }
+
         .brand-sub {
-            color: #ccc;
-            font-size: 14px;
-            letter-spacing: 2px;
-            margin-bottom: 30px;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 35px;
             text-transform: uppercase;
+            letter-spacing: 1px;
         }
+
+        /* Input Field Modern */
+        .stTextInput input {
+            background-color: #ffffff !important;
+            color: #1e293b !important;
+            border: 1.5px solid #e2e8f0 !important;
+            border-radius: 12px !important;
+            padding: 12px !important;
+            transition: all 0.3s;
+        }
+        
+        .stTextInput input:focus {
+            border-color: #B8860B !important;
+            box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.1) !important;
+        }
+
+        /* Tombol Emas ke Kuning Cerah */
         div.stButton > button {
-            background: linear-gradient(90deg, #D4AF37 0%, #FFD700 100%);
+            background: linear-gradient(135deg, #D4AF37 0%, #FFD700 100%) !important;
             color: #1a1a1a !important;
-            font-weight: bold !important;
-            border: none !important;
-            border-radius: 10px !important;
+            border-radius: 12px !important;
             padding: 12px 0px !important;
+            font-weight: 700 !important;
+            border: none !important;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2) !important;
             transition: all 0.3s ease !important;
-            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2) !important;
             width: 100%;
         }
-        .stTextInput input {
-            background-color: rgba(255,255,255,0.1) !important;
-            color: white !important;
-            border: 1px solid rgba(255,255,255,0.2) !important;
-            border-radius: 10px !important;
+
+        div.stButton > button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(212, 175, 55, 0.4) !important;
+            filter: brightness(1.1);
+        }
+
+        /* Footer */
+        .footer-text {
+            color: #94a3b8;
+            font-size: 11px;
+            margin-top: 30px;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    _, col_login, _ = st.columns([0.5, 2, 0.5])
+    _, col_login, _ = st.columns([0.6, 1.8, 0.6])
     with col_login:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=110)
+        
+        # Logo AR
+        st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=100)
+        
         st.markdown('<p class="brand-title">AR-ROYHAAN</p>', unsafe_allow_html=True)
-        st.markdown('<p class="brand-sub">Financial Management System</p>', unsafe_allow_html=True)
+        st.markdown('<p class="brand-sub">Sistem Manajemen Keuangan</p>', unsafe_allow_html=True)
         
         with st.form("login_form", clear_on_submit=False):
-            user = st.text_input("Username", placeholder="Masukkan Username")
-            pwd = st.text_input("Password", type="password", placeholder="Masukkan Password")
-            submit = st.form_submit_button("ENTER SYSTEM")
+            user = st.text_input("Username", placeholder="Masukkan username")
+            pwd = st.text_input("Password", type="password", placeholder="Masukkan password")
+            submit = st.form_submit_button("Masuk Ke Aplikasi")
             
             if submit:
-                # Proteksi agar tidak error jika key users belum ada di secrets
                 if "users" in st.secrets:
                     secrets_users = st.secrets["users"]
                     if user == secrets_users.get("admin_user") and pwd == secrets_users.get("admin_password"):
@@ -108,13 +141,12 @@ def login():
                         st.session_state['role'] = "user"
                         st.rerun()
                     else:
-                        st.error("Kredensial Salah!")
+                        st.error("Username atau password salah")
                 else:
-                    st.error("Konfigurasi Secrets 'users' belum ditemukan.")
+                    st.warning("Konfigurasi login (secrets) belum diatur")
                     
-        st.markdown("<p style='color: #666; font-size: 0.75em; margin-top: 30px;'>© 2026 • AR3 COMMUNITY</p>", unsafe_allow_html=True)
+        st.markdown('<p class="footer-text">© 2026 AR3 Community • We Come To Learn, We Bring Solutions</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-
 # Jalankan Login
 if not st.session_state['logged_in']:
     login()
