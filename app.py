@@ -157,7 +157,8 @@ st.divider()
 
 # --- 8. MENU LOGIC ---
 if menu == "📊 Laporan":
-    thn_lap = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
+    st.subheader("📋 Laporan Tahunan")
+    thn_lap = st.selectbox("Pilih Tahun", list(range(2022, 2031)), index=4)
     tab1, tab2, tab3 = st.tabs(["📥 Pemasukan", "📤 Pengeluaran", "🏆 Ringkasan"])
     
     df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
@@ -165,12 +166,33 @@ if menu == "📊 Laporan":
 
     with tab1:
         if not df_yr_in.empty:
-            st.write("### 💰 Rincian Kas Per Bulan")
+            # --- TABEL KAS ---
+            st.write("### 💰 Dana KAS (Target Rp 15.000)")
             rk = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
-            st.dataframe(rk[[b for b in bln_order if b in rk.columns]].style.format("{:,.0f}"), use_container_width=True)
-        else: st.info("Tidak ada data masuk di tahun ini.")
+            # Pastikan urutan bulan benar
+            cols_k = [b for b in bln_order if b in rk.columns]
+            if cols_k:
+                st.dataframe(
+                    rk[cols_k].style.highlight_between(left=15000, color='#d4edda') # Hijau kalau lunas
+                    .format("{:,.0f}"), 
+                    use_container_width=True
+                )
+            
+            # --- TABEL HADIAH ---
+            st.write("### 🎁 Dana HADIAH (Target Rp 35.000)")
+            rh = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0)
+            cols_h = [b for b in bln_order if b in rh.columns]
+            if cols_h:
+                st.dataframe(
+                    rh[cols_h].style.highlight_between(left=35000, color='#d4edda') # Hijau kalau lunas
+                    .format("{:,.0f}"), 
+                    use_container_width=True
+                )
+        else:
+            st.info("Data Kosong untuk tahun ini.")
 
     with tab2:
+        # (Logika pengeluaran tetap sama agar aman)
         def get_yr(d):
             try: return int(str(d).split('/')[2].split(' ')[0])
             except: return 0
@@ -179,12 +201,14 @@ if menu == "📊 Laporan":
         if not df_out_yr.empty:
             st.metric("Total Pengeluaran Tahun Ini", f"Rp {df_out_yr['Jumlah'].sum():,.0f}")
             st.dataframe(df_out_yr[['Tanggal', 'Kategori', 'Jumlah', 'Keterangan']], use_container_width=True)
-        else: st.info("Tidak ada pengeluaran di tahun ini.")
+        else: st.info("Tidak ada pengeluaran.")
 
     with tab3:
         if not df_yr_in.empty:
+            # Rekapitulasi Lunas/Belum
             rekap = df_yr_in.groupby('Nama').agg({'Kas':'sum','Hadiah':'sum','Total':'sum'}).reset_index()
-            rekap['Status'] = rekap['Total'].apply(lambda x: "✅ LUNAS" if x >= 600000 else f"⚠️ -Rp {600000-x:,.0f}")
+            # Asumsi target setahun adalah 12 bulan x 50.000 = 600.000
+            rekap['Status'] = rekap['Total'].apply(lambda x: "✅ LUNAS" if x >= 600000 else f"⚠️ Kurang Rp {600000-x:,.0f}")
             st.table(rekap.style.format({"Kas": "{:,.0f}", "Hadiah": "{:,.0f}", "Total": "{:,.0f}"}))
 
 elif menu == "📥 Pemasukan":
