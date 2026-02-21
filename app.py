@@ -32,16 +32,11 @@ if 'logged_in' not in st.session_state:
 def login():
     st.markdown("""
         <style>
-        /* Sembunyikan Header Streamlit */
         header {visibility: hidden;}
-        
-        /* Background Gradient Modern */
         .stApp {
             background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
             background-attachment: fixed;
         }
-
-        /* Card Login dengan efek Glassmorphism */
         .login-card {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(15px);
@@ -53,8 +48,6 @@ def login():
             text-align: center;
             margin-top: 50px;
         }
-
-        /* Judul Emas Glow */
         .brand-title {
             color: #D4AF37;
             font-family: 'Georgia', serif;
@@ -63,8 +56,6 @@ def login():
             margin-bottom: 5px;
             text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
         }
-
-        /* Subtitle */
         .brand-sub {
             color: #ccc;
             font-size: 14px;
@@ -72,8 +63,6 @@ def login():
             margin-bottom: 30px;
             text-transform: uppercase;
         }
-
-        /* Tombol Masuk Custom */
         div.stButton > button {
             background: linear-gradient(90deg, #D4AF37 0%, #FFD700 100%);
             color: #1a1a1a !important;
@@ -84,14 +73,10 @@ def login():
             transition: all 0.3s ease !important;
             box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2) !important;
         }
-
         div.stButton > button:hover {
             transform: translateY(-2px) !important;
             box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4) !important;
-            color: #000 !important;
         }
-        
-        /* Input Field Styling */
         .stTextInput input {
             background-color: rgba(255,255,255,0.1) !important;
             color: white !important;
@@ -104,10 +89,7 @@ def login():
     _, col_login, _ = st.columns([0.5, 2, 0.5])
     with col_login:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        
-        # Logo dengan efek shadow
         st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=110)
-        
         st.markdown('<p class="brand-title">AR-ROYHAAN</p>', unsafe_allow_html=True)
         st.markdown('<p class="brand-sub">Financial Management System</p>', unsafe_allow_html=True)
         
@@ -117,19 +99,21 @@ def login():
             submit = st.form_submit_button("ENTER SYSTEM", use_container_width=True)
             
             if submit:
-                if user == "admin" and pwd == "admin123":
+                # Mengambil data dari Streamlit Secrets
+                secrets_users = st.secrets["users"]
+                
+                if user == secrets_users["admin_user"] and pwd == secrets_users["admin_password"]:
                     st.session_state['logged_in'] = True
                     st.session_state['role'] = "admin"
                     st.rerun()
-                elif user == "warga" and pwd == "warga123":
+                elif user == secrets_users["warga_user"] and pwd == secrets_users["warga_password"]:
                     st.session_state['logged_in'] = True
                     st.session_state['role'] = "user"
                     st.rerun()
                 else:
-                    st.error("Invalid Credentials")
-        
-        st.markdown("<p style='color: #666; font-size: 0.75em; margin-top: 30px;'>EST. 2026 • AR3 COMMUNITY</p>", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)True)
+                    st.error("Username atau Password Salah!")
+        st.markdown("<p style='color: #666; font-size: 0.75em; margin-top: 30px;'>© 2026 • AR3 COMMUNITY</p>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # Jalankan Login jika belum masuk
 if not st.session_state['logged_in']:
@@ -223,31 +207,18 @@ df_masuk = load_data("Pemasukan")
 df_keluar = load_data("Pengeluaran")
 df_warga = load_data("Warga")
 
-# --- CSS CUSTOM UNTUK TAMPILAN PREMIUM ---
+# --- DASHBOARD HEADER ---
 st.markdown("""
     <style>
-    .header-container {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        padding: 10px 0;
-    }
+    .header-container { display: flex; align-items: center; gap: 20px; padding: 10px 0; }
     .logo-img { width: 70px; }
     .title-text { margin: 0; font-size: 28px; font-weight: 700; color: #31333F; }
-    @media (max-width: 640px) {
-        .title-text { font-size: 20px; }
-        .logo-img { width: 50px; }
-    }
     [data-testid="stMetric"] {
-        background: linear-gradient(135deg, #ffffff 0%, #f1f1f1 100%);
+        background: white;
         border: 1px solid #D4AF37;
         padding: 15px;
         border-radius: 10px;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
-    }
-    [data-testid="stMetricLabel"] {
-        color: #D4AF37 !important;
-        font-weight: bold !important;
     }
     </style>
     <div class="header-container">
@@ -255,19 +226,16 @@ st.markdown("""
         <h1 class="title-text">Dashboard Keuangan AR3</h1>
     </div>
 """, unsafe_allow_html=True)
-
 st.divider()
 
-# --- DASHBOARD METRIK ---
-_, col_main, _ = st.columns([0.1, 4, 0.1]) 
-with col_main:
-    in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
-    out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
-    out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
-    c1, c2, c3 = st.columns(3)
-    with c1: st.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
-    with c2: st.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
-    with c3: st.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
+# --- METRIK ---
+in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
+out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
+out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
+c1, c2, c3 = st.columns(3)
+with c1: st.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
+with c2: st.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
+with c3: st.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
 
 # --- LOGIKA MENU ---
 if menu == "📊 Laporan & Monitoring":
@@ -278,48 +246,19 @@ if menu == "📊 Laporan & Monitoring":
     with tab1:
         df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
         if not df_yr_in.empty:
-            # 1. Definisi urutan bulan yang benar
-            bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", 
-                         "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-            
-            # --- TABEL 1: KHUSUS KAS (15rb) ---
+            bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
             st.write("### 💰 Laporan Dana KAS (Rp 15.000/bln)")
             rekap_kas = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
-            
-            # 2. Paksa urutan kolom sesuai bln_order yang ada di data
-            existing_cols_kas = [b for b in bln_order if b in rekap_kas.columns]
-            rekap_kas = rekap_kas.reindex(columns=existing_cols_kas)
-            
+            rekap_kas = rekap_kas.reindex(columns=[b for b in bln_order if b in rekap_kas.columns])
             st.dataframe(rekap_kas.style.highlight_between(left=15000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
             
             st.divider()
-
-            # --- TABEL 2: KHUSUS HADIAH (35rb) ---
             st.write("### 🎁 Laporan Dana HADIAH (Rp 35.000/bln)")
             rekap_hadiah = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0)
-            
-            # 3. Paksa urutan kolom sesuai bln_order yang ada di data
-            existing_cols_hadiah = [b for b in bln_order if b in rekap_hadiah.columns]
-            rekap_hadiah = rekap_hadiah.reindex(columns=existing_cols_hadiah)
-            
+            rekap_hadiah = rekap_hadiah.reindex(columns=[b for b in bln_order if b in rekap_hadiah.columns])
             st.dataframe(rekap_hadiah.style.highlight_between(left=35000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
-            
-            st.divider()
-            
-            # --- RINGKASAN TOTAL ---
-            st.write("### 👤 Ringkasan Total Kontribusi")
-            ringkasan = df_yr_in.groupby('Nama').agg({'Kas':'sum','Hadiah':'sum','Total':'sum'})
-            st.table(ringkasan.style.format("{:,.0f}"))
         else:
             st.info("Belum ada data pemasukan tahun ini.")
-
-    with tab2:
-        df_keluar['Tahun_Log'] = df_keluar['Tanggal'].str.split('/').str[2].str.split(' ').str[0]
-        df_yr_out = df_keluar[df_keluar['Tahun_Log'] == str(thn_lap)]
-        if not df_yr_out.empty:
-            st.dataframe(df_yr_out[['Tanggal', 'Kategori', 'Jumlah', 'Keterangan']], use_container_width=True)
-        else:
-            st.info("Tidak ada data pengeluaran tahun ini.")
 
 elif menu == "📥 Input Pemasukan":
     st.subheader("Input Pembayaran")
