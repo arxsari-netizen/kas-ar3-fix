@@ -145,14 +145,16 @@ menu = st.sidebar.radio("Navigasi", list_menu)
 in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
-# Total semua event
-total_ev_masuk = df_event['Jumlah'].sum() if not df_event.empty else 0
+# Hitung Saldo Bersih Event (Masuk - Keluar)
+in_ev_total = df_event['Jumlah'].sum() if not df_event.empty else 0
+out_ev_total = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum() if not df_keluar.empty else 0
+saldo_event_bersih = in_ev_total - out_ev_total
 
 st.markdown(f"## 🏦 KAS & EVENT AR-ROYHAAN 3")
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
 m2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
-m3.metric("🎭 TOTAL DANA EVENT", f"Rp {total_ev_masuk:,.0f}")
+m3.metric("🎭 SALDO EVENT", f"Rp {saldo_event_bersih:,.0f}")
 m4.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h+total_ev_masuk)-(out_k+out_h):,.0f}")
 st.divider()
 
@@ -179,28 +181,32 @@ if menu == "📊 Laporan":
         else:
             st.info("Data kas tahun ini masih kosong.")
 
-    with tab_event:
-        st.write("### 🎭 Saldo Berdasarkan Jenis Event")
+    st.write("### 🎭 Saldo Berdasarkan Jenis Event")
         if not df_event.empty:
-            # Dropdown pilih event buat liat detailnya
             list_ev_laporan = df_event['Nama Event'].unique().tolist()
-            ev_pilihan = st.selectbox("Pilih Event untuk Detail", ["Tampilkan Semua"] + list_ev_laporan)
+            ev_pilihan = st.selectbox("Pilih Event untuk Detail", list_ev_laporan)
             
-            if ev_pilihan == "Tampilkan Semua":
-                # Ringkasan Saldo Tiap Event
-                rekap_ev = df_event.groupby('Nama Event')['Jumlah'].sum().reset_index()
-                st.table(rekap_ev.style.format({"Jumlah": "{:,.0f}"}))
-            else:
-                # Detail per orang untuk event tertentu
-                df_ev_detail = df_event[df_event['Nama Event'] == ev_pilihan]
-                total_ev_ini = df_ev_detail['Jumlah'].sum()
-                
-                col_ev1, col_ev2 = st.columns([2,1])
-                with col_ev2:
-                    st.metric(f"Total Dana {ev_pilihan}", f"Rp {total_ev_ini:,.0f}")
-                with col_ev1:
-                    st.write(f"Daftar Penyumbang {ev_pilihan}:")
-                    st.dataframe(df_ev_detail[['Tanggal', 'Nama', 'Jumlah', 'Keterangan']].sort_values('Tanggal', ascending=False), use_container_width=True)
+            # 1. Hitung Pemasukan Event Ini
+            df_ev_in = df_event[df_event['Nama Event'] == ev_pilihan]
+            total_in = df_ev_in['Jumlah'].sum()
+            
+            # 2. Hitung Pengeluaran Event Ini (Cari di Log Pengeluaran yang ada nama event-nya)
+            df_ev_out = df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(ev_pilihan))]
+            total_out = df_ev_out['Jumlah'].sum()
+            
+            col_ev1, col_ev2, col_ev3 = st.columns(3)
+            col_ev1.metric(f"Pemasukan {ev_pilihan}", f"Rp {total_in:,.0f}")
+            col_ev2.metric(f"Pengeluaran {ev_pilihan}", f"Rp {total_out:,.0f}")
+            col_ev3.metric(f"Saldo Akhir {ev_pilihan}", f"Rp {total_in - total_out:,.0f}", delta_color="normal")
+            
+            st.divider()
+            col_d1, col_d2 = st.columns(2)
+            with col_d1:
+                st.write("📋 Daftar Pembayar:")
+                st.dataframe(df_ev_in[['Tanggal', 'Nama', 'Jumlah']].sort_values('Tanggal', ascending=False), use_container_width=True)
+            with col_d2:
+                st.write("💸 Riwayat Belanja Event:")
+                st.dataframe(df_ev_out[['Tanggal', 'Jumlah', 'Keterangan']], use_container_width=True)
         else:
             st.info("Belum ada data iuran event.")
 
@@ -247,14 +253,34 @@ elif menu == "🎭 Event & Iuran":
 elif menu == "📤 Pengeluaran":
     st.subheader("📤 Catat Pengeluaran")
     with st.form("f_out", clear_on_submit=True):
-        kat = st.radio("Sumber Dana", ["Kas", "Hadiah"])
+        # Tambahkan "Event" di pilihan sumber dana
+        kat = st.radio("Sumber Dana", ["Kas", "Hadiah", "Event"], horizontal=True)
+        
+        # Kalau pilih Event, munculin pilihan Event-nya yang mana
+        nama_ev_out = ""
+        if kat == "Event":
+            list_ev_ada = df_event['Nama Event'].unique().tolist() if not df_event.empty else []
+            nama_ev_out = st.selectbox("Pilih Dana Event Mana?", list_ev_ada)
+        
         jml = st.number_input("Jumlah (Rp)", min_value=0, step=1000)
-        ket = st.text_input("Keterangan")
+        ket = st.text_input("Keterangan / Keperluan")
+        
         if st.form_submit_button("Simpan Pengeluaran"):
             if jml > 0 and ket:
-                append_to_cloud("Pengeluaran", pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Kategori': kat, 'Jumlah': jml, 'Keterangan': ket}]))
-                st.success("✅ Pengeluaran Dicatat!")
+                # Jika kategori Event, simpan keterangan tambahan
+                ket_final = f"[{nama_ev_out}] {ket}" if kat == "Event" else ket
+                
+                new_out = pd.DataFrame([{
+                    'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    'Kategori': kat,
+                    'Jumlah': jml,
+                    'Keterangan': ket_final
+                }])
+                append_to_cloud("Pengeluaran", new_out)
+                st.success(f"✅ Pengeluaran {kat} Rp {jml:,.0f} Berhasil Dicatat!")
                 time.sleep(1.5); st.rerun()
+            else:
+                st.error("Lengkapi jumlah dan keterangan!")
 
 elif menu == "👥 Kelola Warga":
     st.subheader("👥 Database Anggota")
