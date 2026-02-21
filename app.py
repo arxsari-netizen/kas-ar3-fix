@@ -6,7 +6,7 @@ from datetime import datetime
 
 # --- 1. CONFIG HALAMAN ---
 st.set_page_config(
-    page_title="AR3 Keuangan",
+    page_title="AR-ROYHAAN 3 KAS MANAGEMENT",
     page_icon="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png",
     layout="wide"
 )
@@ -115,7 +115,7 @@ def login():
             <div class="header-box">
                 <img src="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png" class="header-logo">
                 <div class="header-text-container">
-                    <p class="header-title">AR-ROYHAAN</p>
+                    <p class="header-title">AR-ROYHAAN 3</p>
                     <p class="header-subtitle">KAS MANAGEMENT</p>
                 </div>
             </div>
