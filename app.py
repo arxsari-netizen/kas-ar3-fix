@@ -153,4 +153,61 @@ if menu == "📊 Laporan":
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 status_warga.to_excel(writer, index=False, sheet_name='Ringkasan')
-            st.download_button(label="📊 Download Excel",
+            st.download_button(label="📊 Download Excel", data=output.getvalue(), file_name=f'Kas_{thn_lap}.xlsx')
+        else:
+            st.warning("Belum ada data.")
+
+    with tab_pemasukan:
+        if not df_yr_in.empty:
+            bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+            st.write("### Detail Kas")
+            rkp_k = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
+            st.dataframe(rkp_k.reindex(columns=[b for b in bln_order if b in rkp_k.columns]).style.format("{:,.0f}"))
+        else:
+            st.info("Data Kosong")
+
+    with tab_pengeluaran:
+        df_keluar['Tahun_Keluar'] = pd.to_datetime(df_keluar['Tanggal'], dayfirst=True).dt.year
+        df_yr_out = df_keluar[df_keluar['Tahun_Keluar'] == thn_lap]
+        st.table(df_yr_out)
+
+elif menu == "📥 Pemasukan":
+    st.subheader("Input Pembayaran")
+    with st.form("in_form", clear_on_submit=True):
+        nama_p = st.selectbox("Nama", sorted(df_warga['Nama'].tolist()))
+        nom = st.number_input("Nominal", min_value=0, step=5000)
+        thn = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
+        bln = st.selectbox("Bulan", ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"])
+        if st.form_submit_button("Simpan"):
+            # Proses sederhana (Kas 15rb, sisanya Hadiah)
+            p_kas = min(nom, 15000)
+            p_hadiah = nom - p_kas
+            new_data = pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Nama': nama_p, 'Tahun': thn, 'Bulan': bln, 'Total': nom, 'Kas': p_kas, 'Hadiah': p_hadiah, 'Status': 'BAYAR'}])
+            save_to_cloud("Pemasukan", pd.concat([df_masuk, new_data], ignore_index=True))
+            st.success("Berhasil!")
+            st.rerun()
+
+elif menu == "📤 Pengeluaran":
+    st.subheader("Catat Pengeluaran")
+    with st.form("out_form"):
+        kat = st.radio("Kategori", ["Kas", "Hadiah"])
+        jml = st.number_input("Jumlah", min_value=0)
+        ket = st.text_input("Keterangan")
+        if st.form_submit_button("Simpan"):
+            new_o = pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Kategori': kat, 'Jumlah': jml, 'Keterangan': ket}])
+            save_to_cloud("Pengeluaran", pd.concat([df_keluar, new_o], ignore_index=True))
+            st.success("Tercatat!")
+            st.rerun()
+
+elif menu == "👥 Kelola Warga":
+    st.subheader("Manajemen Warga")
+    with st.form("add_w"):
+        nw = st.text_input("Nama Baru")
+        if st.form_submit_button("Tambah"):
+            save_to_cloud("Warga", pd.concat([df_warga, pd.DataFrame([{'Nama':nw, 'Role':'Main Warga'}])], ignore_index=True))
+            st.rerun()
+    st.table(df_warga)
+
+elif menu == "📜 Log":
+    st.write("### Log Transaksi")
+    st.dataframe(df_masuk.sort_index(ascending=False))
