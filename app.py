@@ -276,7 +276,7 @@ c3.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
 st.divider()
 
 # --- 7. LOGIKA MENU ---
-elif menu == "📊 Laporan":
+if menu == "📊 Laporan":
     st.subheader("📋 Laporan Tahunan & Monitoring")
     
     # Pilih Tahun dengan tampilan lebih rapi
