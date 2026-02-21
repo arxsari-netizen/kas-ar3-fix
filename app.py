@@ -250,14 +250,43 @@ elif menu == "📤 Pengeluaran":
                 st.rerun()
 
 elif menu == "👥 Kelola Warga":
-    st.subheader("Manajemen Anggota")
-    with st.form("add_w"):
-        nw = st.text_input("Nama Lengkap")
-        rl = st.selectbox("Role", ["Main Warga", "Warga Support"])
-        if st.form_submit_button("Tambah"):
-            if nw:
-                save_to_cloud("Warga", pd.concat([df_warga, pd.DataFrame([{'Nama':nw, 'Role':rl}])], ignore_index=True))
+    st.subheader("👥 Manajemen Anggota")
+    
+    # Membuat Tab untuk Tambah dan Hapus agar rapi
+    tab_tambah, tab_hapus = st.tabs(["➕ Tambah Anggota", "🗑️ Hapus Anggota"])
+    
+    with tab_tambah:
+        with st.form("add_w", clear_on_submit=True):
+            nw = st.text_input("Nama Lengkap")
+            rl = st.selectbox("Role", ["Main Warga", "Warga Support"])
+            if st.form_submit_button("Simpan Anggota Baru"):
+                if nw:
+                    # Cek apakah nama sudah ada
+                    if nw in df_warga['Nama'].values:
+                        st.error("Nama tersebut sudah terdaftar!")
+                    else:
+                        new_row = pd.DataFrame([{'Nama': nw, 'Role': rl}])
+                        df_updated = pd.concat([df_warga, new_row], ignore_index=True)
+                        save_to_cloud("Warga", df_updated)
+                        st.success(f"Berhasil menambah {nw}")
+                        st.rerun()
+                else:
+                    st.warning("Nama tidak boleh kosong!")
+
+    with tab_hapus:
+        if not df_warga.empty:
+            target_hapus = st.selectbox("Pilih Nama yang Akan Dihapus", sorted(df_warga['Nama'].tolist()))
+            st.warning(f"Tindakan ini akan menghapus **{target_hapus}** dari daftar warga.")
+            if st.button("🔥 Hapus Permanen"):
+                df_updated = df_warga[df_warga['Nama'] != target_hapus]
+                save_to_cloud("Warga", df_updated)
+                st.success(f"{target_hapus} telah dihapus.")
                 st.rerun()
+        else:
+            st.info("Daftar warga kosong.")
+
+    st.divider()
+    st.write("### 📜 Daftar Anggota Saat Ini")
     st.table(df_warga)
 
 elif menu == "📜 Log":
