@@ -141,10 +141,11 @@ if st.sidebar.button("🚪 Logout"): st.session_state.clear(); st.rerun()
 list_menu = ["📊 Laporan", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📜 Log"] if st.session_state['role'] == "admin" else ["📊 Laporan", "📜 Log"]
 menu = st.sidebar.radio("Navigasi", list_menu)
 
-# --- 6. DASHBOARD METRIK (Update biar lebih detail) ---
+# --- 6. DASHBOARD METRIK (KOREKSI ERROR VARIABEL) ---
 in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
+
 # Hitung Saldo Bersih Event (Masuk - Keluar)
 in_ev_total = df_event['Jumlah'].sum() if not df_event.empty else 0
 out_ev_total = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum() if not df_keluar.empty else 0
@@ -155,7 +156,8 @@ m1, m2, m3, m4 = st.columns(4)
 m1.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
 m2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
 m3.metric("🎭 SALDO EVENT", f"Rp {saldo_event_bersih:,.0f}")
-m4.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h+total_ev_masuk)-(out_k+out_h):,.0f}")
+# Koreksi variabel total_ev_masuk jadi in_ev_total
+m4.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h+in_ev_total)-(out_k+out_h+out_ev_total):,.0f}")
 st.divider()
 
 # --- 7. MENU LOGIC ---
@@ -163,7 +165,6 @@ st.divider()
 if menu == "📊 Laporan":
     st.subheader("📋 Laporan Keuangan Terpisah")
     
-    # Bikin Tab Besar biar gak ribet bacanya
     tab_kas, tab_event, tab_keluar = st.tabs(["💰 Kas Bulanan", "🎭 Saldo Per Event", "📤 Pengeluaran"])
     
     with tab_kas:
@@ -172,16 +173,16 @@ if menu == "📊 Laporan":
         df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
         
         if not df_yr_in.empty:
-            # Tampilan Pivot yang bersih
             rk = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Total', aggfunc='sum').fillna(0)
-            # Urutkan bulan agar tidak berantakan
             bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
             cols = [b for b in bln_order if b in rk.columns]
             st.dataframe(rk[cols].style.highlight_between(left=50000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
         else:
             st.info("Data kas tahun ini masih kosong.")
 
-    st.write("### 🎭 Saldo Berdasarkan Jenis Event")
+    # KOREKSI INDENTASI TAB EVENT (Tadi lu ngetik di luar tab)
+    with tab_event:
+        st.write("### 🎭 Saldo Berdasarkan Jenis Event")
         if not df_event.empty:
             list_ev_laporan = df_event['Nama Event'].unique().tolist()
             ev_pilihan = st.selectbox("Pilih Event untuk Detail", list_ev_laporan)
@@ -190,14 +191,14 @@ if menu == "📊 Laporan":
             df_ev_in = df_event[df_event['Nama Event'] == ev_pilihan]
             total_in = df_ev_in['Jumlah'].sum()
             
-            # 2. Hitung Pengeluaran Event Ini (Cari di Log Pengeluaran yang ada nama event-nya)
+            # 2. Hitung Pengeluaran Event Ini
             df_ev_out = df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(ev_pilihan))]
             total_out = df_ev_out['Jumlah'].sum()
             
             col_ev1, col_ev2, col_ev3 = st.columns(3)
             col_ev1.metric(f"Pemasukan {ev_pilihan}", f"Rp {total_in:,.0f}")
             col_ev2.metric(f"Pengeluaran {ev_pilihan}", f"Rp {total_out:,.0f}")
-            col_ev3.metric(f"Saldo Akhir {ev_pilihan}", f"Rp {total_in - total_out:,.0f}", delta_color="normal")
+            col_ev3.metric(f"Saldo Akhir {ev_pilihan}", f"Rp {total_in - total_out:,.0f}")
             
             st.divider()
             col_d1, col_d2 = st.columns(2)
@@ -209,25 +210,6 @@ if menu == "📊 Laporan":
                 st.dataframe(df_ev_out[['Tanggal', 'Jumlah', 'Keterangan']], use_container_width=True)
         else:
             st.info("Belum ada data iuran event.")
-
-    with tab_keluar:
-        st.write("### 📤 Laporan Pengeluaran")
-        col_out1, col_out2 = st.columns(2)
-        with col_out1:
-            st.metric("Keluar dari KAS", f"Rp {out_k:,.0f}")
-        with col_out2:
-            st.metric("Keluar dari HADIAH", f"Rp {out_h:,.0f}")
-        
-        st.divider()
-        # Filter kategori pengeluaran biar gak ribet
-        kat_pilih = st.radio("Filter Kategori:", ["Semua", "Kas", "Hadiah"], horizontal=True)
-        if kat_pilih == "Semua":
-            df_out_show = df_keluar
-        else:
-            df_out_show = df_keluar[df_keluar['Kategori'] == kat_pilih]
-            
-        st.dataframe(df_out_show[['Tanggal', 'Kategori', 'Jumlah', 'Keterangan']].sort_values('Tanggal', ascending=False), use_container_width=True)
-
 elif menu == "🎭 Event & Iuran":
     st.subheader("🎭 Input Iuran Event / Kegiatan")
     if not df_warga.empty:
