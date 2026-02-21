@@ -188,24 +188,38 @@ if menu == "📊 Laporan":
             st.table(rekap.style.format({"Kas": "{:,.0f}", "Hadiah": "{:,.0f}", "Total": "{:,.0f}"}))
 
 elif menu == "📥 Pemasukan":
+    st.subheader("📥 Input Pembayaran")
+    
     if not df_warga.empty:
+        # Pilihan nama ditaruh di luar form agar role_sel bisa terupdate otomatis saat nama diganti
         nama_sel = st.selectbox("Pilih Anggota", sorted(df_warga['Nama'].tolist()))
         role_sel = df_warga.loc[df_warga['Nama'] == nama_sel, 'Role'].values[0]
+        
         with st.form("f_in", clear_on_submit=True):
-            st.info(f"Target: {nama_sel} ({role_sel})")
-            nom = st.number_input("Nominal (Rp)", min_value=0, step=5000)
-            tp = st.selectbox("Alokasi", ["Paket Lengkap"] if role_sel == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
-            th = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
-            bl = st.selectbox("Bulan", bln_order)
-            if st.form_submit_button("Simpan Pembayaran"):
+            st.info(f"Target: **{nama_sel}** | Role: **{role_sel}**")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                nom = st.number_input("Nominal (Rp)", min_value=0, step=5000)
+                tp = st.selectbox("Alokasi", ["Paket Lengkap"] if role_sel == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
+            
+            with col2:
+                th = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
+                bl = st.selectbox("Bulan", ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"])
+            
+            # Tombol Submit (Pastikan sejajar di dalam 'with st.form')
+            submit_bayar = st.form_submit_button("Simpan Pembayaran")
+            
+            if submit_bayar:
                 if nom > 0:
                     res = proses_bayar(nama_sel, nom, th, bl, tp, role_sel, df_masuk)
                     append_to_cloud("Pemasukan", res)
-                    st.success("Data Berhasil Disimpan!")
+                    st.success(f"Pembayaran {nama_sel} Berhasil Disimpan!")
                     st.rerun()
-                else: st.error("Nominal harus lebih dari 0!")
-    else: st.warning("Tambahkan warga dulu di menu Kelola Warga.")
-
+                else:
+                    st.error("Nominal tidak boleh 0!")
+    else:
+        st.warning("Data warga masih kosong. Silakan tambah warga dulu di menu 'Kelola Warga'.")
 elif menu == "📤 Pengeluaran":
     with st.form("f_out", clear_on_submit=True):
         kat = st.radio("Sumber Dana", ["Kas", "Hadiah"])
