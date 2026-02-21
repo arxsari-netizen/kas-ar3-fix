@@ -69,7 +69,7 @@ def login():
             justify-content: center;
             gap: 12px;
         }
-        .header-logo { width: 45px; }
+        .header-logo { width: 80px; }
         .header-text-container {
             text-align: left;
             border-left: 1.5px solid #eaeaea;
