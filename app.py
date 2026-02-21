@@ -116,7 +116,7 @@ def login():
                 <img src="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png" class="header-logo">
                 <div class="header-text-container">
                     <p class="header-title">AR-ROYHAAN</p>
-                    <p class="header-subtitle">Management System</p>
+                    <p class="header-subtitle">KAS MANAGEMENT</p>
                 </div>
             </div>
         """, unsafe_allow_html=True)
