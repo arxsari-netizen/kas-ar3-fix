@@ -24,24 +24,16 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- SISTEM LOGIN WELCOME PAGE ---
+# --- 2. SISTEM LOGIN & WELCOME PAGE ---
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
 
 def login():
-    # --- CSS KHUSUS HALAMAN LOGIN ---
     st.markdown("""
         <style>
-        /* Menghilangkan header default streamlit saat login */
         header {visibility: hidden;}
-        
-        /* Background halaman login */
-        .stApp {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        }
-        
-        /* Gaya kotak login */
+        .stApp { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
         .login-card {
             background-color: white;
             padding: 30px;
@@ -53,15 +45,10 @@ def login():
         </style>
     """, unsafe_allow_html=True)
 
-    # Membuat tampilan di tengah
     _, col_login, _ = st.columns([0.5, 2, 0.5])
-    
     with col_login:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        
-        # Logo di tengah kotak
         st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=120)
-        
         st.markdown("<h2 style='color: #D4AF37; margin-bottom: 0;'>AR-ROYHAAN</h2>", unsafe_allow_html=True)
         st.markdown("<p style='color: #777; margin-bottom: 25px;'>Sistem Manajemen Keuangan AR3</p>", unsafe_allow_html=True)
         
@@ -71,7 +58,7 @@ def login():
             submit = st.form_submit_button("Masuk Ke Aplikasi", use_container_width=True)
             
             if submit:
-                # Ganti dengan password pilihanmu agar tidak kena notif "Data Breach"
+                # Tips: Ganti password ini di Streamlit Secrets nanti untuk keamanan maksimal
                 if user == "admin" and pwd == "admin123":
                     st.session_state['logged_in'] = True
                     st.session_state['role'] = "admin"
@@ -82,29 +69,25 @@ def login():
                     st.rerun()
                 else:
                     st.error("Username atau Password salah!")
-        
         st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888; margin-top: 20px; font-size: 0.8em;'>© 2026 AR3 Community - We Come To Learn, We Bring Solutions</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888; margin-top: 20px; font-size: 0.8em;'>© 2026 AR3 Community</p>", unsafe_allow_html=True)
 
-# Logika Tampilan Utama
+# Jalankan Login jika belum masuk
 if not st.session_state['logged_in']:
     login()
     st.stop()
+
+# --- 3. FUNGSI LOGOUT & SIDEBAR ---
 def logout():
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
     st.rerun()
 
-if not st.session_state['logged_in']:
-    login()
-    st.warning("Silakan login untuk mengakses data.")
-    st.stop()
-
-# --- JIKA SUDAH LOGIN ---
 st.sidebar.success(f"Login sebagai: {st.session_state['role'].upper()}")
 if st.sidebar.button("Logout"):
     logout()
 
+# Filter Menu berdasarkan Role
 if st.session_state['role'] == "admin":
     list_menu = ["📊 Laporan & Monitoring", "📥 Input Pemasukan", "📤 Input Pengeluaran", "👥 Kelola Warga", "📜 Log Transaksi"]
 else:
