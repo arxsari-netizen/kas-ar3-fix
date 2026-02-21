@@ -124,13 +124,15 @@ def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
 df_masuk = load_data("Pemasukan")
 df_keluar = load_data("Pengeluaran")
 df_warga = load_data("Warga")
+df_event = load_data("Event") # Pastikan sudah buat sheet "Event" di Google Sheets
 
 # --- SIDEBAR ---
 st.sidebar.markdown(f"### 👤 {st.session_state['role'].upper()}")
 if st.sidebar.button("🔄 Refresh Data"): clear_cache(); st.rerun()
 if st.sidebar.button("🚪 Logout"): st.session_state.clear(); st.rerun()
 
-list_menu = ["📊 Laporan", "📥 Pemasukan", "📤 Pengeluaran", "👥 Kelola Warga", "📜 Log"] if st.session_state['role'] == "admin" else ["📊 Laporan", "📜 Log"]
+# Tambahkan "🎭 Event" ke daftar menu
+list_menu = ["📊 Laporan", "📥 Pemasukan", "🎭 Event", "📤 Pengeluaran", "👥 Kelola Warga", "📜 Log"] if st.session_state['role'] == "admin" else ["📊 Laporan", "📜 Log"]
 menu = st.sidebar.radio("Navigasi", list_menu)
 
 # --- DASHBOARD METRIK ---
@@ -218,7 +220,57 @@ elif menu == "📥 Pemasukan":
                     st.error("Isi nominalnya dulu, Bro!")
     else:
         st.warning("Data warga kosong, isi dulu di menu Kelola Warga.")
+elif menu == "🎭 Event":
+    st.subheader("🎭 Catat Iuran Event / Kegiatan")
+    
+    if not df_warga.empty:
+        # 1. Pilihan Event (Bisa ketik event baru atau pilih yang sudah ada)
+        list_event_ada = df_event['Nama Event'].unique().tolist() if not df_event.empty else []
+        
+        col_e1, col_e2 = st.columns(2)
+        with col_e1:
+            # Gunakan selectbox yang bisa ditambah sendiri (pilih 'Lainnya' untuk ketik baru)
+            event_sel = st.selectbox("Pilih Jenis Event", ["-- Pilih Event --"] + list_event_ada + ["➕ Tambah Event Baru"])
+            
+            if event_sel == "➕ Tambah Event Baru":
+                nama_event = st.text_input("Ketik Nama Event Baru (Contoh: Maulid 2024)")
+            else:
+                nama_event = event_sel
 
+        with col_e2:
+            nama_warga = st.selectbox("Nama Warga", sorted(df_warga['Nama'].tolist()), key="ev_nama")
+
+        with st.form("f_event", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            with c1:
+                nom_ev = st.number_input("Nominal Bayar (Rp)", min_value=0, step=5000)
+            with c2:
+                ket_ev = st.text_input("Keterangan (Opsional)", placeholder="Misal: Lunas")
+            
+            submit_ev = st.form_submit_button("Simpan Iuran Event")
+
+            if submit_ev:
+                if nama_event and nama_event != "-- Pilih Event --" and nom_ev > 0:
+                    data_ev = pd.DataFrame([{
+                        'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        'Nama': nama_warga,
+                        'Nama Event': nama_event,
+                        'Jumlah': nom_ev,
+                        'Keterangan': ket_ev
+                    }])
+                    append_to_cloud("Event", data_ev)
+                    st.success(f"✅ Berhasil! Rp {nom_ev:,.0f} untuk {nama_event} ({nama_warga})")
+                    time.sleep(1.5)
+                    st.rerun()
+                else:
+                    st.error("Lengkapi Nama Event dan Nominal!")
+
+        # 4. Ringkasan Saldo Per Event
+        if not df_event.empty:
+            st.divider()
+            st.write("### 📊 Ringkasan Saldo Event")
+            rekap_ev = df_event.groupby('Nama Event')['Jumlah'].sum().reset_index()
+            st.table(rekap_ev.style.format({"Jumlah": "{:,.0f}"}))
 elif menu == "📤 Pengeluaran":
     st.subheader("📤 Catat Pengeluaran")
     with st.form("f_out", clear_on_submit=True):
