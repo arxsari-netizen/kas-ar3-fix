@@ -245,11 +245,67 @@ elif menu == "📤 Pengeluaran":
                 st.error("Jumlah dan Keterangan harus diisi!")
 elif menu == "👥 Kelola Warga":
     st.subheader("👥 Database Anggota")
-    nw = st.text_input("Nama Baru")
-    rl = st.selectbox("Role", ["Main Warga", "Warga Support"])
-    if st.button("Tambah Warga"):
-        rewrite_cloud("Warga", pd.concat([df_warga, pd.DataFrame([{'Nama': nw, 'Role': rl}])], ignore_index=True))
-        st.rerun()
+    
+    # Kita pakai Tabs biar rapi kayak awal
+    t1, t2, t3 = st.tabs(["➕ Tambah Baru", "✏️ Edit Nama/Role", "🗑️ Hapus"])
+    
+    with t1:
+        with st.form("f_add", clear_on_submit=True):
+            nw = st.text_input("Nama Lengkap")
+            rl = st.selectbox("Role", ["Main Warga", "Warga Support"])
+            if st.form_submit_button("Daftarkan Warga"):
+                if nw.strip():
+                    new_data = pd.DataFrame([{'Nama': nw, 'Role': rl}])
+                    rewrite_cloud("Warga", pd.concat([df_warga, new_data], ignore_index=True))
+                    st.success(f"✅ {nw} berhasil didaftarkan!")
+                    st.rerun()
+                else: st.error("Nama tidak boleh kosong!")
+
+    with t2:
+        if not df_warga.empty:
+            # Pilih nama yang mau diubah
+            n_lama = st.selectbox("Pilih Nama yang Akan Diubah", sorted(df_warga['Nama'].tolist()))
+            data_w = df_warga[df_warga['Nama'] == n_lama].iloc[0]
+            
+            with st.form("f_edit"):
+                n_baru = st.text_input("Nama Baru", value=data_w['Nama'])
+                r_baru = st.selectbox("Role Baru", ["Main Warga", "Warga Support"], 
+                                      index=0 if data_w['Role'] == "Main Warga" else 1)
+                
+                st.warning("⚠️ Mengubah nama akan otomatis mengupdate semua riwayat di sheet Pemasukan!")
+                
+                if st.form_submit_button("Update Data"):
+                    # 1. Update di Sheet Warga
+                    df_warga.loc[df_warga['Nama'] == n_lama, ['Nama', 'Role']] = [n_baru, r_baru]
+                    rewrite_cloud("Warga", df_warga)
+                    
+                    # 2. UPDATE OTOMATIS DI SHEET PEMASUKAN (Ini fungsinya!)
+                    if not df_masuk.empty:
+                        df_masuk.loc[df_masuk['Nama'] == n_lama, 'Nama'] = n_baru
+                        rewrite_cloud("Pemasukan", df_masuk)
+                    
+                    st.success(f"✅ Data {n_lama} berhasil diperbarui!")
+                    st.rerun()
+        else:
+            st.info("Belum ada data warga untuk diedit.")
+
+    with t3:
+        if not df_warga.empty:
+            n_del = st.selectbox("Pilih Nama yang Akan Dihapus", sorted(df_warga['Nama'].tolist()), key="del_box")
+            confirm = st.checkbox(f"Saya yakin ingin menghapus {n_del} secara permanen")
+            
+            if st.button("Hapus Permanen Sekarang"):
+                if confirm:
+                    # Hapus hanya dari list warga
+                    df_baru = df_warga[df_warga['Nama'] != n_del]
+                    rewrite_cloud("Warga", df_baru)
+                    st.success(f"🗑️ {n_del} telah dihapus dari database.")
+                    st.rerun()
+                else:
+                    st.error("Centang kotak konfirmasi dulu, Bro!")
+
+    st.divider()
+    st.write("### 📋 Daftar Warga Saat Ini")
     st.table(df_warga)
 
 elif menu == "📜 Log":
