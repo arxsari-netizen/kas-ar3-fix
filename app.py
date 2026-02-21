@@ -223,8 +223,11 @@ elif menu == "📥 Pemasukan":
             
             col1, col2 = st.columns(2)
             with col1:
-                nom = st.number_input("Nominal (Rp)", min_value=0, step=5000)
-                tp = st.selectbox("Alokasi", ["Paket Lengkap"] if role_sel == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
+    # Input nominal dengan bantuan visual
+    nom = st.number_input("Nominal (Rp)", min_value=0, step=5000, format="%d")
+    st.markdown(f"**Format: Rp {nom:,.0f}**") # Visual bantuan yang jelas
+    
+    tp = st.selectbox("Alokasi", ["Paket Lengkap"] if role_sel == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
             
             with col2:
                 th = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
@@ -265,7 +268,8 @@ elif menu == "📥 Pemasukan":
 elif menu == "📤 Pengeluaran":
     with st.form("f_out", clear_on_submit=True):
         kat = st.radio("Sumber Dana", ["Kas", "Hadiah"])
-        jml = st.number_input("Jumlah (Rp)", min_value=0)
+        jml = st.number_input("Jumlah (Rp)", min_value=0, step=1000, format="%d")
+        st.info(f"Nominal yang akan dicatat: **Rp {jml:,.0f}**")
         ket = st.text_input("Keterangan / Keperluan")
         if st.form_submit_button("Simpan Pengeluaran"):
             if jml > 0 and ket:
