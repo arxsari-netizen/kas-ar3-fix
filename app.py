@@ -34,118 +34,159 @@ def login():
         <style>
         header {visibility: hidden;}
         
-        /* Background Abu-abu Sangat Muda & Bersih */
+        /* Background Marmer Premium */
         .stApp {
-            background-color: #fcfcfc;
-            background-image: radial-gradient(#e5e7eb 0.7px, #fcfcfc 0.7px);
-            background-size: 30px 30px;
+            background-color: #ffffff;
+            background-image: url("https://www.transparenttextures.com/patterns/white-marble.png");
+            background-attachment: fixed;
         }
 
-        /* Card Putih dengan Shadow Halus & Border Emas Tipis */
-        .login-card {
+        /* Container Utama */
+        .main-login-container {
+            max-width: 450px;
+            margin: auto;
+            padding-top: 50px;
+        }
+
+        /* Kotak Header (Logo & Judul) - Lis Emas Double */
+        .header-box {
             background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+            border-radius: 15px;
+            padding: 20px;
             text-align: center;
-            margin-top: 30px;
+            border: 2px solid #D4AF37;
+            outline: 4px solid white; /* Membuat efek sela putih */
+            box-shadow: 0 0 0 5px #D4AF37, 0 15px 35px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .header-logo {
+            width: 70px;
+        }
+
+        .header-text-container {
+            text-align: left;
+            border-left: 2px solid #f1f1f1;
+            padding-left: 20px;
+        }
+
+        .header-title {
+            color: #1a1a1a;
+            font-family: 'Inter', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        .header-subtitle {
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 500;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* Card Input Form */
+        .login-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
             border: 1px solid #f1f5f9;
         }
 
-        /* Judul Emas Elegan */
-        .brand-title {
-            color: #B8860B; /* Dark Goldenrod */
-            font-family: 'Inter', sans-serif;
-            font-size: 30px;
-            font-weight: 800;
-            margin-bottom: 0px;
-            letter-spacing: -0.5px;
-        }
-
-        .brand-sub {
-            color: #64748b;
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 35px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Input Field Modern */
+        /* Styling Input Field */
         .stTextInput input {
             background-color: #ffffff !important;
             color: #1e293b !important;
-            border: 1.5px solid #e2e8f0 !important;
-            border-radius: 12px !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 10px !important;
             padding: 12px !important;
-            transition: all 0.3s;
-        }
-        
-        .stTextInput input:focus {
-            border-color: #B8860B !important;
-            box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.1) !important;
         }
 
-        /* Tombol Emas ke Kuning Cerah */
+        .stTextInput input:focus {
+            border-color: #D4AF37 !important;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1) !important;
+        }
+
+        /* Tombol Masuk - Emas Gradasi */
         div.stButton > button {
-            background: linear-gradient(135deg, #D4AF37 0%, #FFD700 100%) !important;
-            color: #1a1a1a !important;
-            border-radius: 12px !important;
+            background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
+            color: white !important;
+            border-radius: 10px !important;
             padding: 12px 0px !important;
             font-weight: 700 !important;
             border: none !important;
-            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2) !important;
-            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 15px rgba(184, 134, 11, 0.2) !important;
             width: 100%;
+            margin-top: 10px;
         }
 
         div.stButton > button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(212, 175, 55, 0.4) !important;
             filter: brightness(1.1);
+            box-shadow: 0 6px 20px rgba(184, 134, 11, 0.3) !important;
         }
 
-        /* Footer */
         .footer-text {
+            text-align: center;
             color: #94a3b8;
-            font-size: 11px;
-            margin-top: 30px;
+            font-size: 10px;
+            margin-top: 40px;
+            letter-spacing: 0.5px;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    _, col_login, _ = st.columns([0.6, 1.8, 0.6])
-    with col_login:
+    # Memulai Layout
+    _, col_mid, _ = st.columns([0.1, 1, 0.1])
+    
+    with col_mid:
+        st.markdown('<div class="main-login-container">', unsafe_allow_html=True)
+        
+        # --- KOTAK HEADER PUTIH LIS EMAS ---
+        st.markdown(f"""
+            <div class="header-box">
+                <img src="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png" class="header-logo">
+                <div class="header-text-container">
+                    <p class="header-title">AR-ROYHAAN</p>
+                    <p class="header-subtitle">Sistem Manajemen Keuangan</p>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # --- CARD FORM LOGIN ---
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        
-        # Logo AR
-        st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=100)
-        
-        st.markdown('<p class="brand-title">AR-ROYHAAN</p>', unsafe_allow_html=True)
-        st.markdown('<p class="brand-sub">Sistem Manajemen Keuangan</p>', unsafe_allow_html=True)
-        
         with st.form("login_form", clear_on_submit=False):
-            user = st.text_input("Username", placeholder="Masukkan username")
-            pwd = st.text_input("Password", type="password", placeholder="Masukkan password")
-            submit = st.form_submit_button("Masuk Ke Aplikasi")
+            user = st.text_input("Username", placeholder="Masukkan username anda")
+            pwd = st.text_input("Password", type="password", placeholder="Masukkan password anda")
+            submit = st.form_submit_button("MASUK KE DASHBOARD")
             
             if submit:
                 if "users" in st.secrets:
-                    secrets_users = st.secrets["users"]
-                    if user == secrets_users.get("admin_user") and pwd == secrets_users.get("admin_password"):
-                        st.session_state['logged_in'] = True
-                        st.session_state['role'] = "admin"
+                    u_data = st.secrets["users"]
+                    if user == u_data.get("admin_user") and pwd == u_data.get("admin_password"):
+                        st.session_state.update({"logged_in": True, "role": "admin"})
                         st.rerun()
-                    elif user == secrets_users.get("warga_user") and pwd == secrets_users.get("warga_password"):
-                        st.session_state['logged_in'] = True
-                        st.session_state['role'] = "user"
+                    elif user == u_data.get("warga_user") and pwd == u_data.get("warga_password"):
+                        st.session_state.update({"logged_in": True, "role": "user"})
                         st.rerun()
                     else:
-                        st.error("Username atau password salah")
+                        st.error("Akses ditolak. Periksa kembali user/password.")
                 else:
-                    st.warning("Konfigurasi login (secrets) belum diatur")
-                    
-        st.markdown('<p class="footer-text">© 2026 AR3 Community • We Come To Learn, We Bring Solutions</p>', unsafe_allow_html=True)
+                    st.warning("Data login belum dikonfigurasi di Secrets.")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Footer
+        st.markdown('<p class="footer-text">EST 2026 • AR3 COMMUNITY • WE COME TO LEARN, WE BRING SOLUTIONS</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 # Jalankan Login
 if not st.session_state['logged_in']:
