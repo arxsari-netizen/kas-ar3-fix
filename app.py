@@ -91,10 +91,10 @@ def login():
         }
         .slogan-text {
             color: #B8860B;
-            font-size: 11px;
+            font-size: 20px;
             font-style: italic;
             font-weight: 600;
-            margin-top: 8px;
+            margin-top: 5px;
             border-top: 1px solid #f8f8f8;
             padding-top: 5px;
         }
