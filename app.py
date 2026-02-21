@@ -24,30 +24,72 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- SISTEM LOGIN SEDERHANA ---
+# --- SISTEM LOGIN WELCOME PAGE ---
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
 
 def login():
-    st.sidebar.title("🔐 Login Sistem")
-    with st.sidebar.form("login_form"):
-        user = st.text_input("Username")
-        pwd = st.text_input("Password", type="password")
-        if st.form_submit_button("Login"):
-            # Mengambil data dari Streamlit Secrets
-            creds = st.secrets["credentials"]
+    # --- CSS KHUSUS HALAMAN LOGIN ---
+    st.markdown("""
+        <style>
+        /* Menghilangkan header default streamlit saat login */
+        header {visibility: hidden;}
+        
+        /* Background halaman login */
+        .stApp {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
+        /* Gaya kotak login */
+        .login-card {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #D4AF37;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Membuat tampilan di tengah
+    _, col_login, _ = st.columns([0.5, 2, 0.5])
+    
+    with col_login:
+        st.markdown('<div class="login-card">', unsafe_allow_html=True)
+        
+        # Logo di tengah kotak
+        st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=120)
+        
+        st.markdown("<h2 style='color: #D4AF37; margin-bottom: 0;'>AR-ROYHAAN</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #777; margin-bottom: 25px;'>Sistem Manajemen Keuangan AR3</p>", unsafe_allow_html=True)
+        
+        with st.form("login_form"):
+            user = st.text_input("Username", placeholder="Masukkan Username")
+            pwd = st.text_input("Password", type="password", placeholder="Masukkan Password")
+            submit = st.form_submit_button("Masuk Ke Aplikasi", use_container_width=True)
             
-            if user == creds["admin_user"] and pwd == creds["admin_password"]:
-                st.session_state['logged_in'] = True
-                st.session_state['role'] = "admin"
-                st.rerun()
-            elif user == creds["warga_user"] and pwd == creds["warga_password"]:
-                st.session_state['logged_in'] = True
-                st.session_state['role'] = "user"
-                st.rerun()
-            else:
-                st.error("Username/Password Salah")
+            if submit:
+                # Ganti dengan password pilihanmu agar tidak kena notif "Data Breach"
+                if user == "admin" and pwd == "admin123":
+                    st.session_state['logged_in'] = True
+                    st.session_state['role'] = "admin"
+                    st.rerun()
+                elif user == "warga" and pwd == "warga123":
+                    st.session_state['logged_in'] = True
+                    st.session_state['role'] = "user"
+                    st.rerun()
+                else:
+                    st.error("Username atau Password salah!")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888; margin-top: 20px; font-size: 0.8em;'>© 2026 AR3 Community - We Come To Learn, We Bring Solutions</p>", unsafe_allow_html=True)
+
+# Logika Tampilan Utama
+if not st.session_state['logged_in']:
+    login()
+    st.stop()
 def logout():
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
