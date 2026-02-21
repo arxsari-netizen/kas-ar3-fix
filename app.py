@@ -26,6 +26,7 @@ st.markdown("""
         border: 1px solid #D4AF37;
         padding: 15px;
         border-radius: 12px;
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.02);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -51,7 +52,7 @@ def login():
         .login-card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 8px 30px rgba(0,0,0,0.04); }
         div.stButton > button {
             background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
-            color: white !important; width: 100%; font-weight: 700;
+            color: white !important; width: 100%; font-weight: 700; border: none; padding: 10px; border-radius: 8px;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -71,22 +72,23 @@ def login():
             user = st.text_input("Username")
             pwd = st.text_input("Password", type="password")
             if st.form_submit_button("Masuk Ke Aplikasi"):
-                u_data = st.secrets["users"]
-                if user == u_data.get("admin_user") and pwd == u_data.get("admin_password"):
-                    st.session_state.update({"logged_in": True, "role": "admin"})
-                    st.rerun()
-                elif user == u_data.get("warga_user") and pwd == u_data.get("warga_password"):
-                    st.session_state.update({"logged_in": True, "role": "user"})
-                    st.rerun()
-                else:
-                    st.error("Gagal Login.")
+                if "users" in st.secrets:
+                    u_data = st.secrets["users"]
+                    if user == u_data.get("admin_user") and pwd == u_data.get("admin_password"):
+                        st.session_state.update({"logged_in": True, "role": "admin"})
+                        st.rerun()
+                    elif user == u_data.get("warga_user") and pwd == u_data.get("warga_password"):
+                        st.session_state.update({"logged_in": True, "role": "user"})
+                        st.rerun()
+                    else:
+                        st.error("Username atau Password salah.")
         st.markdown('</div>', unsafe_allow_html=True)
 
 if not st.session_state['logged_in']:
     login()
     st.stop()
 
-# --- 4. DATA SPREADSHEET ---
+# --- 4. LOGIKA DATA & PROSES ---
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 creds = Credentials.from_service_account_info(st.secrets["gspread_credentials"], scopes=scope)
 client = gspread.authorize(creds)
@@ -105,7 +107,47 @@ def save_to_cloud(sheet_name, df):
     worksheet.clear()
     worksheet.update([df.columns.values.tolist()] + df.values.tolist())
 
-# Load Data Utama
+def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
+    list_bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+    idx_bln = list_bulan.index(bln)
+    sisa = nominal
+    data_baru = []
+    while sisa > 0:
+        curr_bln = list_bulan[idx_bln]
+        if role == "Main Warga":
+            kondisi = (df_existing['Nama'] == nama) & (df_existing['Bulan'] == curr_bln) & (df_existing['Tahun'] == thn)
+            sdh_bayar = df_existing[kondisi]['Total'].sum()
+            sdh_kas = df_existing[kondisi]['Kas'].sum()
+            if sdh_bayar < 50000:
+                butuh = 50000 - sdh_bayar
+                bayar_ini = min(sisa, butuh)
+                p_kas = min(bayar_ini, max(0, 15000 - sdh_kas))
+                p_hadiah = bayar_ini - p_kas
+                data_baru.append({
+                    'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    'Nama': nama, 'Tahun': thn, 'Bulan': curr_bln,
+                    'Total': bayar_ini, 'Kas': p_kas, 'Hadiah': p_hadiah,
+                    'Status': "LUNAS" if (sdh_bayar + bayar_ini) >= 50000 else "CICIL",
+                    'Tipe': "Paket Lengkap"
+                })
+                sisa -= bayar_ini
+        else:
+            data_baru.append({
+                'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
+                'Nama': nama, 'Tahun': thn, 'Bulan': curr_bln,
+                'Total': sisa, 'Kas': sisa if tipe == "Hanya Kas" else 0,
+                'Hadiah': sisa if tipe == "Hanya Hadiah" else 0,
+                'Status': "SUPPORT", 'Tipe': tipe
+            })
+            sisa = 0
+        idx_bln += 1
+        if idx_bln > 11: 
+            idx_bln = 0
+            thn += 1
+        if thn > 2030: break
+    return pd.DataFrame(data_baru)
+
+# Load Data Awal
 df_masuk = load_data("Pemasukan")
 df_keluar = load_data("Pengeluaran")
 df_warga = load_data("Warga")
@@ -135,180 +177,90 @@ c3.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h)-(out_k+out_h):,.0f}")
 st.divider()
 
 # --- 7. LOGIKA MENU ---
-if menu == "📊 Laporan & Monitoring":
-
+if menu == "📊 Laporan":
     st.subheader("📋 Laporan Keuangan Tahunan")
-
     thn_lap = st.selectbox("Pilih Tahun Laporan", list(range(2022, 2031)), index=4)
+    tab1, tab2, tab3 = st.tabs(["📥 Pemasukan", "📤 Pengeluaran", "🏆 Ringkasan"])
 
-    tab1, tab2 = st.tabs(["📥 Pemasukan", "📤 Pengeluaran"])
-
-    
+    df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
+    bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 
     with tab1:
-
-        df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
-
         if not df_yr_in.empty:
-
-            # 1. Definisi urutan bulan yang benar
-
-            bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", 
-
-                         "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-
-            
-
-            # --- TABEL 1: KHUSUS KAS (15rb) ---
-
-            st.write("### 💰 Laporan Dana KAS (Rp 15.000/bln)")
-
+            st.write("### 💰 Dana KAS (Rp 15.000/bln)")
             rekap_kas = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0)
-
-            
-
-            # 2. Paksa urutan kolom sesuai bln_order yang ada di data
-
-            existing_cols_kas = [b for b in bln_order if b in rekap_kas.columns]
-
-            rekap_kas = rekap_kas.reindex(columns=existing_cols_kas)
-
-            
-
+            rekap_kas = rekap_kas.reindex(columns=[b for b in bln_order if b in rekap_kas.columns])
             st.dataframe(rekap_kas.style.highlight_between(left=15000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
-
             
-
-            st.divider()
-
-
-
-            # --- TABEL 2: KHUSUS HADIAH (35rb) ---
-
-            st.write("### 🎁 Laporan Dana HADIAH (Rp 35.000/bln)")
-
+            st.write("### 🎁 Dana HADIAH (Rp 35.000/bln)")
             rekap_hadiah = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0)
-
-            
-
-            # 3. Paksa urutan kolom sesuai bln_order yang ada di data
-
-            existing_cols_hadiah = [b for b in bln_order if b in rekap_hadiah.columns]
-
-            rekap_hadiah = rekap_hadiah.reindex(columns=existing_cols_hadiah)
-
-            
-
+            rekap_hadiah = rekap_hadiah.reindex(columns=[b for b in bln_order if b in rekap_hadiah.columns])
             st.dataframe(rekap_hadiah.style.highlight_between(left=35000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
-
-            
-
-            st.divider()
-
-            
-
-            # --- RINGKASAN TOTAL ---
-
-            st.write("### 👤 Ringkasan Total Kontribusi")
-
-            ringkasan = df_yr_in.groupby('Nama').agg({'Kas':'sum','Hadiah':'sum','Total':'sum'})
-
-            st.table(ringkasan.style.format("{:,.0f}"))
-
         else:
-
-            st.info("Belum ada data pemasukan tahun ini.")
-
-
+            st.info("Data kosong.")
 
     with tab2:
-
-        df_keluar['Tahun_Log'] = df_keluar['Tanggal'].str.split('/').str[2].str.split(' ').str[0]
-
-        df_yr_out = df_keluar[df_keluar['Tahun_Log'] == str(thn_lap)]
-
+        df_keluar['Tahun_Log'] = pd.to_datetime(df_keluar['Tanggal'], dayfirst=True, errors='coerce').dt.year
+        df_yr_out = df_keluar[df_keluar['Tahun_Log'] == thn_lap]
         if not df_yr_out.empty:
-
             st.dataframe(df_yr_out[['Tanggal', 'Kategori', 'Jumlah', 'Keterangan']], use_container_width=True)
-
         else:
+            st.info("Tidak ada pengeluaran.")
 
-            st.info("Tidak ada data pengeluaran tahun ini.")
-
-
-
-elif menu == "📥 Input Pemasukan":
-
-    st.subheader("Input Pembayaran")
-
-    nama_p = st.selectbox("Pilih Nama", sorted(df_warga['Nama'].tolist()))
-
-    role_p = df_warga.loc[df_warga['Nama'] == nama_p, 'Role'].values[0]
-
-    with st.form("in_form", clear_on_submit=True):
-
-        st.write(f"Status: **{role_p}**")
-
-        nom = st.number_input("Nominal (Rp)", min_value=0, step=5000)
-
-        tipe = st.selectbox("Alokasi", ["Paket Lengkap"] if role_p == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
-
-        thn = st.selectbox("Tahun Mulai", list(range(2022, 2031)), index=4)
-
-        bln = st.selectbox("Bulan Mulai", ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"])
-
-        if st.form_submit_button("Simpan Pembayaran"):
-
-            res = proses_bayar(nama_p, nom, thn, bln, tipe, role_p, df_masuk)
-
-            if not res.empty:
-
-                df_updated = pd.concat([df_masuk, res], ignore_index=True)
-
-                save_to_cloud("Pemasukan", df_updated)
-
-                st.success("Pembayaran Berhasil Disimpan!")
-
-                st.rerun()
-
+    with tab3:
+        if not df_yr_in.empty:
+            ringkasan = df_yr_in.groupby('Nama').agg({'Kas':'sum','Hadiah':'sum','Total':'sum'}).reset_index()
+            ringkasan['Status'] = ringkasan['Total'].apply(lambda x: "✅ LUNAS" if x >= 600000 else f"⚠️ -Rp {600000-x:,.0f}")
+            st.dataframe(ringkasan.style.format({"Kas": "{:,.0f}", "Hadiah": "{:,.0f}", "Total": "{:,.0f}"}), use_container_width=True)
+            
+            # Excel Download
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                ringkasan.to_excel(writer, index=False, sheet_name='Ringkasan')
+            st.download_button(label="📥 Download Excel", data=output.getvalue(), file_name=f'Laporan_{thn_lap}.xlsx')
 
 elif menu == "📥 Pemasukan":
-    st.subheader("Input Pembayaran")
+    st.subheader("Input Pembayaran Baru")
+    nama_p = st.selectbox("Pilih Anggota", sorted(df_warga['Nama'].tolist()))
+    role_p = df_warga.loc[df_warga['Nama'] == nama_p, 'Role'].values[0]
     with st.form("in_form", clear_on_submit=True):
-        nama_p = st.selectbox("Nama", sorted(df_warga['Nama'].tolist()))
-        nom = st.number_input("Nominal", min_value=0, step=5000)
+        st.info(f"Anggota: {nama_p} ({role_p})")
+        nom = st.number_input("Nominal Pembayaran (Rp)", min_value=0, step=5000)
+        tp = st.selectbox("Alokasi", ["Paket Lengkap"] if role_p == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
         thn = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
-        bln = st.selectbox("Bulan", ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"])
-        if st.form_submit_button("Simpan"):
-            # Proses sederhana (Kas 15rb, sisanya Hadiah)
-            p_kas = min(nom, 15000)
-            p_hadiah = nom - p_kas
-            new_data = pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Nama': nama_p, 'Tahun': thn, 'Bulan': bln, 'Total': nom, 'Kas': p_kas, 'Hadiah': p_hadiah, 'Status': 'BAYAR'}])
-            save_to_cloud("Pemasukan", pd.concat([df_masuk, new_data], ignore_index=True))
-            st.success("Berhasil!")
-            st.rerun()
+        bln = st.selectbox("Bulan", bln_order)
+        if st.form_submit_button("✅ Simpan Data"):
+            if nom > 0:
+                res = proses_bayar(nama_p, nom, thn, bln, tp, role_p, df_masuk)
+                save_to_cloud("Pemasukan", pd.concat([df_masuk, res], ignore_index=True))
+                st.success("Pembayaran Berhasil!")
+                st.rerun()
 
 elif menu == "📤 Pengeluaran":
-    st.subheader("Catat Pengeluaran")
+    st.subheader("Catat Pengeluaran Dana")
     with st.form("out_form"):
-        kat = st.radio("Kategori", ["Kas", "Hadiah"])
-        jml = st.number_input("Jumlah", min_value=0)
-        ket = st.text_input("Keterangan")
-        if st.form_submit_button("Simpan"):
-            new_o = pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Kategori': kat, 'Jumlah': jml, 'Keterangan': ket}])
-            save_to_cloud("Pengeluaran", pd.concat([df_keluar, new_o], ignore_index=True))
-            st.success("Tercatat!")
-            st.rerun()
+        kat = st.radio("Sumber Dana", ["Kas", "Hadiah"])
+        jml = st.number_input("Nominal (Rp)", min_value=0)
+        ket = st.text_input("Keterangan Penggunaan")
+        if st.form_submit_button("Simpan Pengeluaran"):
+            if jml > 0 and ket:
+                new_o = pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Kategori': kat, 'Jumlah': jml, 'Keterangan': ket}])
+                save_to_cloud("Pengeluaran", pd.concat([df_keluar, new_o], ignore_index=True))
+                st.success("Tercatat!")
+                st.rerun()
 
 elif menu == "👥 Kelola Warga":
-    st.subheader("Manajemen Warga")
+    st.subheader("Manajemen Anggota")
     with st.form("add_w"):
-        nw = st.text_input("Nama Baru")
+        nw = st.text_input("Nama Lengkap")
+        rl = st.selectbox("Role", ["Main Warga", "Warga Support"])
         if st.form_submit_button("Tambah"):
-            save_to_cloud("Warga", pd.concat([df_warga, pd.DataFrame([{'Nama':nw, 'Role':'Main Warga'}])], ignore_index=True))
-            st.rerun()
+            if nw:
+                save_to_cloud("Warga", pd.concat([df_warga, pd.DataFrame([{'Nama':nw, 'Role':rl}])], ignore_index=True))
+                st.rerun()
     st.table(df_warga)
 
 elif menu == "📜 Log":
-    st.write("### Log Transaksi")
-    st.dataframe(df_masuk.sort_index(ascending=False))
+    st.subheader("Histori Transaksi")
+    st.write("### Pemasukan")
+    st.dataframe(df_masuk.sort_index(ascending=False), use_container_width=True)
