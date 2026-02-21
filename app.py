@@ -46,7 +46,7 @@ st.markdown("""
         gap: 15px;
     }
 
-    .header-logo { width: 55px; }
+    .header-logo { width: 80px; }
 
     .header-text-container {
         text-align: left;
