@@ -72,10 +72,7 @@ def login():
             padding: 12px 0px !important;
             transition: all 0.3s ease !important;
             box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2) !important;
-        }
-        div.stButton > button:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4) !important;
+            width: 100%;
         }
         .stTextInput input {
             background-color: rgba(255,255,255,0.1) !important;
@@ -94,43 +91,45 @@ def login():
         st.markdown('<p class="brand-sub">Financial Management System</p>', unsafe_allow_html=True)
         
         with st.form("login_form", clear_on_submit=False):
-            user = st.text_input("Username", placeholder="Username")
-            pwd = st.text_input("Password", type="password", placeholder="Password")
-            submit = st.form_submit_button("ENTER SYSTEM", use_container_width=True)
+            user = st.text_input("Username", placeholder="Masukkan Username")
+            pwd = st.text_input("Password", type="password", placeholder="Masukkan Password")
+            submit = st.form_submit_button("ENTER SYSTEM")
             
             if submit:
-                # Mengambil data dari Streamlit Secrets
-                secrets_users = st.secrets["users"]
-                
-                if user == secrets_users["admin_user"] and pwd == secrets_users["admin_password"]:
-                    st.session_state['logged_in'] = True
-                    st.session_state['role'] = "admin"
-                    st.rerun()
-                elif user == secrets_users["warga_user"] and pwd == secrets_users["warga_password"]:
-                    st.session_state['logged_in'] = True
-                    st.session_state['role'] = "user"
-                    st.rerun()
+                # Proteksi agar tidak error jika key users belum ada di secrets
+                if "users" in st.secrets:
+                    secrets_users = st.secrets["users"]
+                    if user == secrets_users.get("admin_user") and pwd == secrets_users.get("admin_password"):
+                        st.session_state['logged_in'] = True
+                        st.session_state['role'] = "admin"
+                        st.rerun()
+                    elif user == secrets_users.get("warga_user") and pwd == secrets_users.get("warga_password"):
+                        st.session_state['logged_in'] = True
+                        st.session_state['role'] = "user"
+                        st.rerun()
+                    else:
+                        st.error("Kredensial Salah!")
                 else:
-                    st.error("Username atau Password Salah!")
+                    st.error("Konfigurasi Secrets 'users' belum ditemukan.")
+                    
         st.markdown("<p style='color: #666; font-size: 0.75em; margin-top: 30px;'>© 2026 • AR3 COMMUNITY</p>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-# Jalankan Login jika belum masuk
+# Jalankan Login
 if not st.session_state['logged_in']:
     login()
     st.stop()
 
 # --- 3. FUNGSI LOGOUT & SIDEBAR ---
 def logout():
-    st.session_state['logged_in'] = False
-    st.session_state['role'] = None
+    st.session_state.clear()
     st.rerun()
 
-st.sidebar.success(f"Login sebagai: {st.session_state['role'].upper()}")
+st.sidebar.success(f"Login: {st.session_state['role'].upper()}")
 if st.sidebar.button("Logout"):
     logout()
 
-# Filter Menu berdasarkan Role
+# Filter Menu
 if st.session_state['role'] == "admin":
     list_menu = ["📊 Laporan & Monitoring", "📥 Input Pemasukan", "📤 Input Pengeluaran", "👥 Kelola Warga", "📜 Log Transaksi"]
 else:
@@ -147,6 +146,7 @@ client = gspread.authorize(creds)
 SHEET_ID = "1i3OqFAeFYJ7aXy0QSS0IUF9r_yp3pwqNb7tJ8-CEXQE"
 sh = client.open_by_key(SHEET_ID)
 
+# --- FUNGSI DATA ---
 def load_data(sheet_name):
     worksheet = sh.worksheet(sheet_name)
     data = worksheet.get_all_records()
@@ -202,12 +202,12 @@ def proses_bayar(nama, nominal, thn, bln, tipe, role, df_existing):
         if thn > 2030: break
     return pd.DataFrame(data_baru)
 
-# --- LOAD DATA ---
+# Load Initial Data
 df_masuk = load_data("Pemasukan")
 df_keluar = load_data("Pengeluaran")
 df_warga = load_data("Warga")
 
-# --- DASHBOARD HEADER ---
+# --- HEADER DASHBOARD ---
 st.markdown("""
     <style>
     .header-container { display: flex; align-items: center; gap: 20px; padding: 10px 0; }
@@ -228,10 +228,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.divider()
 
-# --- METRIK ---
+# --- METRIK UTAMA ---
 in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
+
 c1, c2, c3 = st.columns(3)
 with c1: st.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
 with c2: st.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
