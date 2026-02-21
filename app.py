@@ -180,36 +180,69 @@ if menu == "📊 Laporan":
 
 elif menu == "📥 Pemasukan":
     st.subheader("📥 Input Pembayaran")
+    
     if not df_warga.empty:
+        # Pilihan nama di luar form biar role-nya update otomatis
         nama_sel = st.selectbox("Pilih Anggota", sorted(df_warga['Nama'].tolist()))
         role_sel = df_warga.loc[df_warga['Nama'] == nama_sel, 'Role'].values[0]
+        
         with st.form("f_in", clear_on_submit=True):
+            st.info(f"Target: **{nama_sel}** | Role: **{role_sel}**")
+            
             col1, col2 = st.columns(2)
             with col1:
                 nom = st.number_input("Nominal (Rp)", min_value=0, step=5000)
                 tp = st.selectbox("Alokasi", ["Paket Lengkap"] if role_sel == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
+            
             with col2:
                 th = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
-                bl = st.selectbox("Bulan", bln_order)
-            if st.form_submit_button("Simpan Pembayaran"):
+                bl = st.selectbox("Bulan", ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"])
+            
+            # --- TOMBOL SUBMIT ---
+            submit_bayar = st.form_submit_button("Simpan Pembayaran")
+            
+            if submit_bayar:
                 if nom > 0:
+                    # Jalankan fungsi simpan
                     res = proses_bayar(nama_sel, nom, th, bl, tp, role_sel, df_masuk)
                     append_to_cloud("Pemasukan", res)
-                    st.success(f"Berhasil simpan {nama_sel}")
+                    
+                    # --- NOTIF IJO DETAIL ---
+                    st.success(f"✅ BERHASIL! Duit Rp {nom:,.0f} dari {nama_sel} sudah masuk ke Google Sheets.")
+                    
+                    # Kasih jeda 2 detik biar notif kebaca sebelum pindah halaman
+                    import time
+                    time.sleep(2)
                     st.rerun()
-    else: st.warning("Data warga kosong.")
+                else:
+                    st.error("Isi nominalnya dulu, Bro!")
+    else:
+        st.warning("Data warga kosong, isi dulu di menu Kelola Warga.")
 
 elif menu == "📤 Pengeluaran":
+    st.subheader("📤 Catat Pengeluaran")
     with st.form("f_out", clear_on_submit=True):
         kat = st.radio("Sumber Dana", ["Kas", "Hadiah"])
         jml = st.number_input("Jumlah (Rp)", min_value=0, step=1000)
-        ket = st.text_input("Keterangan")
-        if st.form_submit_button("Simpan Pengeluaran"):
+        ket = st.text_input("Keterangan / Keperluan")
+        
+        submit_keluar = st.form_submit_button("Simpan Pengeluaran")
+        
+        if submit_keluar:
             if jml > 0 and ket:
-                append_to_cloud("Pengeluaran", pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Kategori': kat, 'Jumlah': jml, 'Keterangan': ket}]))
-                st.success("Tercatat!")
+                data_out = pd.DataFrame([{
+                    'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    'Kategori': kat,
+                    'Jumlah': jml,
+                    'Keterangan': ket
+                }])
+                append_to_cloud("Pengeluaran", data_out)
+                st.success(f"✅ Pengeluaran Rp {jml:,.0f} Berhasil Dicatat!")
+                import time
+                time.sleep(2)
                 st.rerun()
-
+            else:
+                st.error("Jumlah dan Keterangan harus diisi!")
 elif menu == "👥 Kelola Warga":
     st.subheader("👥 Database Anggota")
     nw = st.text_input("Nama Baru")
