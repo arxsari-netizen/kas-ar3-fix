@@ -32,15 +32,71 @@ if 'logged_in' not in st.session_state:
 def login():
     st.markdown("""
         <style>
+        /* Sembunyikan Header Streamlit */
         header {visibility: hidden;}
-        .stApp { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        
+        /* Background Gradient Modern */
+        .stApp {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            background-attachment: fixed;
+        }
+
+        /* Card Login dengan efek Glassmorphism */
         .login-card {
-            background-color: white;
-            padding: 30px;
-            border-radius: 15px;
-            border: 2px solid #D4AF37;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.2);
             text-align: center;
+            margin-top: 50px;
+        }
+
+        /* Judul Emas Glow */
+        .brand-title {
+            color: #D4AF37;
+            font-family: 'Georgia', serif;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        /* Subtitle */
+        .brand-sub {
+            color: #ccc;
+            font-size: 14px;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        /* Tombol Masuk Custom */
+        div.stButton > button {
+            background: linear-gradient(90deg, #D4AF37 0%, #FFD700 100%);
+            color: #1a1a1a !important;
+            font-weight: bold !important;
+            border: none !important;
+            border-radius: 10px !important;
+            padding: 12px 0px !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2) !important;
+        }
+
+        div.stButton > button:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4) !important;
+            color: #000 !important;
+        }
+        
+        /* Input Field Styling */
+        .stTextInput input {
+            background-color: rgba(255,255,255,0.1) !important;
+            color: white !important;
+            border: 1px solid rgba(255,255,255,0.2) !important;
+            border-radius: 10px !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -48,17 +104,19 @@ def login():
     _, col_login, _ = st.columns([0.5, 2, 0.5])
     with col_login:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=120)
-        st.markdown("<h2 style='color: #D4AF37; margin-bottom: 0;'>AR-ROYHAAN</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='color: #777; margin-bottom: 25px;'>Sistem Manajemen Keuangan AR3</p>", unsafe_allow_html=True)
         
-        with st.form("login_form"):
-            user = st.text_input("Username", placeholder="Masukkan Username")
-            pwd = st.text_input("Password", type="password", placeholder="Masukkan Password")
-            submit = st.form_submit_button("Masuk Ke Aplikasi", use_container_width=True)
+        # Logo dengan efek shadow
+        st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=110)
+        
+        st.markdown('<p class="brand-title">AR-ROYHAAN</p>', unsafe_allow_html=True)
+        st.markdown('<p class="brand-sub">Financial Management System</p>', unsafe_allow_html=True)
+        
+        with st.form("login_form", clear_on_submit=False):
+            user = st.text_input("Username", placeholder="Username")
+            pwd = st.text_input("Password", type="password", placeholder="Password")
+            submit = st.form_submit_button("ENTER SYSTEM", use_container_width=True)
             
             if submit:
-                # Tips: Ganti password ini di Streamlit Secrets nanti untuk keamanan maksimal
                 if user == "admin" and pwd == "admin123":
                     st.session_state['logged_in'] = True
                     st.session_state['role'] = "admin"
@@ -68,9 +126,10 @@ def login():
                     st.session_state['role'] = "user"
                     st.rerun()
                 else:
-                    st.error("Username atau Password salah!")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888; margin-top: 20px; font-size: 0.8em;'>© 2026 AR3 Community</p>", unsafe_allow_html=True)
+                    st.error("Invalid Credentials")
+        
+        st.markdown("<p style='color: #666; font-size: 0.75em; margin-top: 30px;'>EST. 2026 • AR3 COMMUNITY</p>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)True)
 
 # Jalankan Login jika belum masuk
 if not st.session_state['logged_in']:
