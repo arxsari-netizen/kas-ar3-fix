@@ -3,6 +3,7 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
+import time
 
 # --- 1. CONFIG ---
 st.set_page_config(page_title="AR-ROYHAAN 3", layout="wide")
@@ -40,8 +41,15 @@ def load_data(sheet_name):
 
 df_masuk, df_keluar, df_warga, df_event = load_data("Pemasukan"), load_data("Pengeluaran"), load_data("Warga"), load_data("Event")
 
-# --- 4. DASHBOARD ---
-st.title(f"🏦 {menu if 'menu' in locals() else 'Dashboard'}")
+# --- 4. SIDEBAR & DASHBOARD ---
+with st.sidebar:
+    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
+    st.write(f"**USER: {st.session_state['role'].upper()}**")
+    list_menu = ["📊 Laporan", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📜 Log"] if st.session_state['role']=="admin" else ["📊 Laporan", "📜 Log"]
+    menu = st.radio("NAVIGASI", list_menu)
+    if st.button("Logout"): st.session_state.clear(); st.rerun()
+
+st.title(f"🏦 {menu}")
 in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Jumlah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
@@ -54,19 +62,11 @@ m3.metric("🎭 SALDO EVENT", f"Rp {int(in_e - out_e):,}")
 m4.metric("🏧 TOTAL TUNAI", f"Rp {int((in_k+in_h+in_e)-(out_k+out_h+out_e)):,}")
 st.divider()
 
-# --- 5. SIDEBAR & MENU ---
-with st.sidebar:
-    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
-    st.write(f"**USER: {st.session_state['role'].upper()}**")
-    list_menu = ["📊 Laporan", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📜 Log"] if st.session_state['role']=="admin" else ["📊 Laporan", "📜 Log"]
-    menu = st.radio("NAVIGASI", list_menu)
-    if st.button("Logout"): st.session_state.clear(); st.rerun()
-
 bln_list = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 
+# --- 5. LOGIKA MENU ---
 if menu == "📊 Laporan":
     t1, t2, t3 = st.tabs(["💰 Rekap Bulanan", "🎭 Detail Event", "📤 Riwayat Pengeluaran"])
-    
     with t1:
         thn = st.selectbox("Pilih Tahun Laporan", range(2022, 2031), index=4)
         df_y = df_masuk[df_masuk['Tahun'] == thn]
@@ -74,67 +74,87 @@ if menu == "📊 Laporan":
         if not df_y.empty: st.dataframe(df_y.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0).astype(int).reindex(columns=[b for b in bln_list if b in df_y['Bulan'].unique()]), use_container_width=True)
         st.write("#### 🟡 Hadiah (35rb)")
         if not df_y.empty: st.dataframe(df_y.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0).astype(int).reindex(columns=[b for b in bln_list if b in df_y['Bulan'].unique()]), use_container_width=True)
-    
     with t2:
         if not df_event.empty:
             ev_sel = st.selectbox("Pilih Nama Event", df_event['Nama Event'].unique())
             e_in = df_event[df_event['Nama Event'] == ev_sel]['Jumlah'].sum()
             e_out = df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(f"[{ev_sel}]"))]['Jumlah'].sum()
-            
             c1, c2, c3 = st.columns(3)
             c1.metric("Iuran Masuk", f"Rp {int(e_in):,}")
             c2.metric("Pengeluaran", f"Rp {int(e_out):,}")
             c3.metric("SISA SALDO", f"Rp {int(e_in - e_out):,}")
-            
             col_in, col_out = st.columns(2)
-            with col_in:
-                st.write("**📥 Rincian Iuran Warga:**")
-                st.dataframe(df_event[df_event['Nama Event'] == ev_sel][['Tanggal', 'Nama', 'Jumlah']], hide_index=True)
-            with col_out:
-                st.write("**📤 Rincian Belanja Event:**")
-                st.dataframe(df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(f"[{ev_sel}]"))][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
-
-    with t3: # PERBAIKAN: LAPORAN PENGELUARAN DIPISAH
-        col_k, col_h = st.columns(2)
-        with col_k:
-            st.write("#### 📤 Pengeluaran DANA KAS")
-            df_k = df_keluar[df_keluar['Kategori'] == 'Kas']
-            st.dataframe(df_k[['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True, use_container_width=True)
-            st.info(f"Total Keluar Kas: Rp {int(df_k['Jumlah'].sum()):,}")
-        with col_h:
-            st.write("#### 📤 Pengeluaran DANA HADIAH")
-            df_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']
-            st.dataframe(df_h[['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True, use_container_width=True)
-            st.info(f"Total Keluar Hadiah: Rp {int(df_h['Jumlah'].sum()):,}")
+            with col_in: st.write("**📥 Iuran Warga:**"); st.dataframe(df_event[df_event['Nama Event'] == ev_sel][['Tanggal', 'Nama', 'Jumlah']], hide_index=True)
+            with col_out: st.write("**📤 Belanja Event:**"); st.dataframe(df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(f"[{ev_sel}]"))][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
+    with t3:
+        ck, ch = st.columns(2)
+        with ck:
+            st.write("#### 📤 Pengeluaran KAS")
+            st.dataframe(df_keluar[df_keluar['Kategori'] == 'Kas'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True, use_container_width=True)
+        with ch:
+            st.write("#### 📤 Pengeluaran HADIAH")
+            st.dataframe(df_keluar[df_keluar['Kategori'] == 'Hadiah'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True, use_container_width=True)
 
 elif menu == "📤 Pengeluaran":
-    with st.form("f_out"):
-        kat = st.selectbox("Kategori Dana", ["Kas", "Hadiah", "Event"])
-        ev_list = df_event['Nama Event'].unique().tolist() if not df_event.empty else []
-        ev_ref = st.selectbox("Pilih Event (WAJIB jika Kategori = Event)", ["-- Pilih Event --"] + ev_list)
-        nom, ket = st.number_input("Nominal", min_value=0, step=1000), st.text_input("Keterangan Barang/Jasa")
+    # Gunakan radio di luar form agar dropdown event bisa muncul/hilang secara reaktif
+    kat_pilih = st.radio("Pilih Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
+    
+    with st.form("f_out", clear_on_submit=True): # clear_on_submit biar nominal balik jadi 0
+        ev_ref = "N/A"
+        if kat_pilih == "Event":
+            ev_list = df_event['Nama Event'].unique().tolist() if not df_event.empty else []
+            ev_ref = st.selectbox("Wajib Pilih Event:", ["-- Pilih Event --"] + ev_list)
         
-        if st.form_submit_button("Catat Pengeluaran"):
-            # PERBAIKAN: Validasi agar tidak N/A saat pilih Event
-            if kat == "Event" and ev_ref == "-- Pilih Event --":
-                st.error("❌ Gagal! Lu harus pilih nama Event-nya dulu kalau mau pake Dana Event.")
+        nom = st.number_input("Nominal Pengeluaran", min_value=0, step=1000, key="nom_out")
+        ket = st.text_input("Keterangan (Contoh: Beli Lampu)")
+        
+        if st.form_submit_button("Simpan Pengeluaran"):
+            if kat_pilih == "Event" and ev_ref == "-- Pilih Event --":
+                st.error("❌ Pilih dulu Nama Event-nya!")
             elif nom <= 0:
-                st.error("❌ Nominal gak boleh nol!")
+                st.error("❌ Nominal harus diisi!")
             else:
-                final_ket = f"[{ev_ref}] {ket}" if kat == "Event" else ket
-                sh.worksheet("Pengeluaran").append_row([datetime.now().strftime("%d/%m/%Y"), kat, int(nom), final_ket])
-                st.success("Tercatat!"); st.cache_data.clear(); st.rerun()
+                final_ket = f"[{ev_ref}] {ket}" if kat_pilih == "Event" else ket
+                sh.worksheet("Pengeluaran").append_row([datetime.now().strftime("%d/%m/%Y"), kat_pilih, int(nom), final_ket])
+                st.success("✅ Berhasil disimpan!")
+                st.cache_data.clear()
+                time.sleep(1); st.rerun()
+
+elif menu == "📥 Kas Bulanan":
+    w_pilih = st.selectbox("Pilih Nama Warga", sorted(df_warga['Nama'].tolist()), key="sw")
+    role_w = df_warga[df_warga['Nama'] == w_pilih]['Role'].values[0] if w_pilih in df_warga['Nama'].values else "Main Warga"
+    with st.form("f_kas", clear_on_submit=True):
+        n = st.number_input("Nominal", step=5000, key="n_kas")
+        t = st.selectbox("Tahun", range(2022, 2031), index=4)
+        b = st.selectbox("Bulan", bln_list)
+        if role_w == "Warga Support":
+            opsi = st.radio("Bayar:", ["Semua", "Hanya Kas", "Hanya Hadiah"], horizontal=True)
+        else:
+            st.info("Role: Main Warga (Otomatis Pecah 15/35)")
+            opsi = "Semua"
+        if st.form_submit_button("Simpan"):
+            pk, ph = (n, 0) if opsi=="Hanya Kas" else (0, n) if opsi=="Hanya Hadiah" else (min(n, 15000), max(0, n-15000))
+            sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"])
+            st.success("Selesai!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+
+elif menu == "🎭 Event & Iuran":
+    with st.form("f_ev", clear_on_submit=True):
+        ev_ada = df_event['Nama Event'].unique().tolist() if not df_event.empty else []
+        ev_p = st.selectbox("Event", ["-- Baru --"] + ev_ada)
+        ev_n = st.text_input("Nama Event Baru") if ev_p == "-- Baru --" else ev_p
+        w_e, j_e = st.selectbox("Warga", sorted(df_warga['Nama'].tolist())), st.number_input("Jumlah", step=5000, key="j_ev")
+        if st.form_submit_button("Simpan"):
+            sh.worksheet("Event").append_row([datetime.now().strftime("%d/%m/%Y"), w_e, ev_n, int(j_e)])
+            st.success("OK!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
 elif menu == "👥 Kelola Warga":
-    st.subheader("Data Warga & Role")
+    st.subheader("Data Warga")
     st.dataframe(df_warga[['Nama', 'Role']], hide_index=True, use_container_width=True)
     ct, ce, ch = st.tabs(["➕ Tambah", "✏️ Edit", "🗑️ Hapus"])
     with ct:
         with st.form("t_w"):
-            nw = st.text_input("Nama Baru")
-            nr = st.selectbox("Role", ["Main Warga", "Warga Support"])
-            if st.form_submit_button("Tambah"):
-                sh.worksheet("Warga").append_row([nw, nr]); st.rerun()
+            nw, nr = st.text_input("Nama"), st.selectbox("Role", ["Main Warga", "Warga Support"])
+            if st.form_submit_button("Tambah"): sh.worksheet("Warga").append_row([nw, nr]); st.rerun()
     with ce:
         with st.form("e_w"):
             w_o = st.selectbox("Warga", df_warga['Nama'].tolist())
@@ -146,10 +166,9 @@ elif menu == "👥 Kelola Warga":
     with ch:
         with st.form("h_w"):
             w_d = st.selectbox("Hapus", df_warga['Nama'].tolist())
-            if st.form_submit_button("Hapus Permanen"):
+            if st.form_submit_button("Hapus"):
                 cell = sh.worksheet("Warga").find(w_d)
                 sh.worksheet("Warga").delete_rows(cell.row); st.rerun()
 
 elif menu == "📜 Log":
-    st.write("Riwayat Pemasukan Terakhir")
     st.dataframe(df_masuk.tail(20), hide_index=True, use_container_width=True)
