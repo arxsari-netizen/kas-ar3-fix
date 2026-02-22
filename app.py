@@ -141,7 +141,7 @@ if st.sidebar.button("🚪 Logout"): st.session_state.clear(); st.rerun()
 list_menu = ["📊 Laporan", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📜 Log"] if st.session_state['role'] == "admin" else ["📊 Laporan", "📜 Log"]
 menu = st.sidebar.radio("Navigasi", list_menu)
 
-# --- 6. DASHBOARD METRIK (KOREKSI ERROR VARIABEL) ---
+# --- 6. DASHBOARD METRIK ---
 in_k, in_h = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
@@ -156,7 +156,7 @@ m1, m2, m3, m4 = st.columns(4)
 m1.metric("💰 SALDO KAS", f"Rp {in_k - out_k:,.0f}")
 m2.metric("🎁 SALDO HADIAH", f"Rp {in_h - out_h:,.0f}")
 m3.metric("🎭 SALDO EVENT", f"Rp {saldo_event_bersih:,.0f}")
-# Koreksi variabel total_ev_masuk jadi in_ev_total
+# Rumus: (Semua Masuk) - (Semua Keluar)
 m4.metric("🏦 TOTAL TUNAI", f"Rp {(in_k+in_h+in_ev_total)-(out_k+out_h+out_ev_total):,.0f}")
 st.divider()
 
@@ -171,20 +171,11 @@ if menu == "📊 Laporan":
         st.write("### 📅 Rekap Kas Warga (Bulanan)")
         thn_lap = st.selectbox("Pilih Tahun", list(range(2022, 2031)), index=4)
         df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
-        
         if not df_yr_in.empty:
-            # Tampilan Pivot: Baris = Nama, Kolom = Bulan, Isi = Total Bayar
             rk = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Total', aggfunc='sum').fillna(0)
-            
-            # Urutan bulan biar gak acak
             bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
             cols = [b for b in bln_order if b in rk.columns]
-            
-            # Tampilkan Tabel dengan Highlight Hijau jika sudah bayar Rp 50.000 (Paket Lengkap)
-            st.dataframe(
-                rk[cols].style.highlight_between(left=50000, color='#d4edda').format("{:,.0f}"), 
-                use_container_width=True
-            )
+            st.dataframe(rk[cols].style.highlight_between(left=50000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
         else:
             st.info(f"Data kas tahun {thn_lap} masih kosong.")
 
@@ -193,16 +184,11 @@ if menu == "📊 Laporan":
         if not df_event.empty:
             list_ev_laporan = df_event['Nama Event'].unique().tolist()
             ev_pilihan = st.selectbox("Pilih Event untuk Detail", list_ev_laporan)
-            
-            # 1. Hitung Pemasukan Event
             df_ev_in = df_event[df_event['Nama Event'] == ev_pilihan]
             total_in = df_ev_in['Jumlah'].sum()
-            
-            # 2. Hitung Pengeluaran Event (Mencari teks Event di keterangan pengeluaran)
             df_ev_out = df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(ev_pilihan, na=False))]
             total_out = df_ev_out['Jumlah'].sum()
             
-            # Tampilan Metrik Event
             ce1, ce2, ce3 = st.columns(3)
             ce1.metric(f"Total Masuk {ev_pilihan}", f"Rp {total_in:,.0f}")
             ce2.metric(f"Total Keluar {ev_pilihan}", f"Rp {total_out:,.0f}")
@@ -221,24 +207,36 @@ if menu == "📊 Laporan":
 
     with tab_keluar:
         st.write("### 📤 Laporan Pengeluaran")
-        
-        # Ringkasan Pengeluaran
         ok, oh, oe = st.columns(3)
         ok.metric("Duit Kas Keluar", f"Rp {out_k:,.0f}")
         oh.metric("Duit Hadiah Keluar", f"Rp {out_h:,.0f}")
         oe.metric("Duit Event Keluar", f"Rp {out_ev_total:,.0f}")
-        
         st.divider()
-        kat_filter = st.multiselect("Filter Kategori Pengeluaran:", ["Kas", "Hadiah", "Event"], default=["Kas", "Hadiah", "Event"])
-        
+        kat_filter = st.multiselect("Filter Kategori:", ["Kas", "Hadiah", "Event"], default=["Kas", "Hadiah", "Event"])
         df_out_filtered = df_keluar[df_keluar['Kategori'].isin(kat_filter)]
         if not df_out_filtered.empty:
-            st.dataframe(
-                df_out_filtered[['Tanggal', 'Kategori', 'Jumlah', 'Keterangan']].sort_values('Tanggal', ascending=False), 
-                use_container_width=True
-            )
-        else:
-            st.info("Pilih kategori atau data pengeluaran kosong.")
+            st.dataframe(df_out_filtered[['Tanggal', 'Kategori', 'Jumlah', 'Keterangan']].sort_values('Tanggal', ascending=False), use_container_width=True)
+
+elif menu == "📥 Kas Bulanan":
+    st.subheader("📥 Input Kas Bulanan")
+    if not df_warga.empty:
+        nama_sel = st.selectbox("Pilih Warga", sorted(df_warga['Nama'].tolist()))
+        role_sel = df_warga.loc[df_warga['Nama'] == nama_sel, 'Role'].values[0]
+        with st.form("f_kas", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                nom = st.number_input("Nominal (Rp)", min_value=0, step=5000)
+                tp = st.selectbox("Alokasi", ["Paket Lengkap"] if role_sel == "Main Warga" else ["Hanya Kas", "Hanya Hadiah"])
+            with col2:
+                th = st.selectbox("Tahun", list(range(2022, 2031)), index=4)
+                bl = st.selectbox("Mulai Bulan", ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"])
+            if st.form_submit_button("Simpan Kas"):
+                if nom > 0:
+                    res = proses_bayar(nama_sel, nom, th, bl, tp, role_sel, df_masuk)
+                    append_to_cloud("Pemasukan", res)
+                    st.success(f"✅ Berhasil!")
+                    time.sleep(1.5); st.rerun()
+
 elif menu == "🎭 Event & Iuran":
     st.subheader("🎭 Input Iuran Event / Kegiatan")
     if not df_warga.empty:
@@ -249,8 +247,7 @@ elif menu == "🎭 Event & Iuran":
             ev_final = st.text_input("Nama Event Baru") if ev_pilih == "➕ Tambah Event Baru" else ev_pilih
         with col_b:
             warga_ev = st.selectbox("Pilih Warga", sorted(df_warga['Nama'].tolist()), key="ev_w")
-        
-        with st.form("f_ev"):
+        with st.form("f_ev", clear_on_submit=True):
             c1, c2 = st.columns(2)
             with c1: nom_ev = st.number_input("Nominal Iuran", min_value=0, step=5000)
             with c2: ket_ev = st.text_input("Keterangan")
@@ -264,34 +261,20 @@ elif menu == "🎭 Event & Iuran":
 elif menu == "📤 Pengeluaran":
     st.subheader("📤 Catat Pengeluaran")
     with st.form("f_out", clear_on_submit=True):
-        # Tambahkan "Event" di pilihan sumber dana
         kat = st.radio("Sumber Dana", ["Kas", "Hadiah", "Event"], horizontal=True)
-        
-        # Kalau pilih Event, munculin pilihan Event-nya yang mana
         nama_ev_out = ""
         if kat == "Event":
             list_ev_ada = df_event['Nama Event'].unique().tolist() if not df_event.empty else []
             nama_ev_out = st.selectbox("Pilih Dana Event Mana?", list_ev_ada)
-        
         jml = st.number_input("Jumlah (Rp)", min_value=0, step=1000)
         ket = st.text_input("Keterangan / Keperluan")
-        
         if st.form_submit_button("Simpan Pengeluaran"):
             if jml > 0 and ket:
-                # Jika kategori Event, simpan keterangan tambahan
                 ket_final = f"[{nama_ev_out}] {ket}" if kat == "Event" else ket
-                
-                new_out = pd.DataFrame([{
-                    'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    'Kategori': kat,
-                    'Jumlah': jml,
-                    'Keterangan': ket_final
-                }])
+                new_out = pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Kategori': kat, 'Jumlah': jml, 'Keterangan': ket_final}])
                 append_to_cloud("Pengeluaran", new_out)
-                st.success(f"✅ Pengeluaran {kat} Rp {jml:,.0f} Berhasil Dicatat!")
+                st.success("✅ Berhasil!")
                 time.sleep(1.5); st.rerun()
-            else:
-                st.error("Lengkapi jumlah dan keterangan!")
 
 elif menu == "👥 Kelola Warga":
     st.subheader("👥 Database Anggota")
@@ -311,37 +294,25 @@ elif menu == "👥 Kelola Warga":
                 if st.form_submit_button("Update"):
                     df_warga.loc[df_warga['Nama'] == n_lama, ['Nama', 'Role']] = [n_baru, r_baru]
                     rewrite_cloud("Warga", df_warga)
-                    if not df_masuk.empty:
-                        df_masuk.loc[df_masuk['Nama'] == n_lama, 'Nama'] = n_baru
-                        rewrite_cloud("Pemasukan", df_masuk)
                     st.rerun()
     with t3:
-        n_del = st.selectbox("Hapus Nama", sorted(df_warga['Nama'].tolist()))
-        if st.button("Hapus Permanen") and st.checkbox("Yakin?"):
-            rewrite_cloud("Warga", df_warga[df_warga['Nama'] != n_del])
-            st.rerun()
+        if not df_warga.empty:
+            n_del = st.selectbox("Hapus Nama", sorted(df_warga['Nama'].tolist()))
+            if st.button("Hapus Permanen") and st.checkbox("Yakin?"):
+                rewrite_cloud("Warga", df_warga[df_warga['Nama'] != n_del])
+                st.rerun()
     st.table(df_warga)
 
 elif menu == "📜 Log":
     st.subheader("📜 Log Transaksi Terakhir")
     tipe_log = st.selectbox("Pilih Jenis Log", ["Kas Bulanan", "Iuran Event", "Pengeluaran"])
-    
-    if tipe_log == "Kas Bulanan":
-        df_target, s_name = df_masuk, "Pemasukan"
-    elif tipe_log == "Iuran Event":
-        df_target, s_name = df_event, "Event"
-    else:
-        df_target, s_name = df_keluar, "Pengeluaran"
-        
+    if tipe_log == "Kas Bulanan": df_target, s_name = df_masuk, "Pemasukan"
+    elif tipe_log == "Iuran Event": df_target, s_name = df_event, "Event"
+    else: df_target, s_name = df_keluar, "Pengeluaran"
     if not df_target.empty:
-        df_show = df_target.sort_index(ascending=False).head(20)
-        st.dataframe(df_show, use_container_width=True)
-        
-        # FITUR PRO: Hapus baris terakhir jika salah input
-        if st.button(f"🗑️ Hapus Transaksi Teratas di {tipe_log}"):
-            if st.checkbox("Saya sadar ini akan menghapus data di Google Sheets"):
-                df_final = df_target.drop(df_target.index[-1])
-                rewrite_cloud(s_name, df_final)
-                st.success("Data berhasil dihapus!")
-                time.sleep(1.5); st.rerun()
-    else: st.info("Belum ada data.")
+        st.dataframe(df_target.sort_index(ascending=False).head(20), use_container_width=True)
+        if st.button(f"🗑️ Hapus Transaksi Terakhir"):
+            if st.checkbox("Yakin hapus?"):
+                rewrite_cloud(s_name, df_target.drop(df_target.index[-1]))
+                st.success("Dihapus!")
+                time.sleep(1); st.rerun()
