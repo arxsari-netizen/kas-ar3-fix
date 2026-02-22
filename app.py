@@ -59,25 +59,25 @@ with st.sidebar:
     menu = st.radio("NAVIGASI", list_menu)
     if st.button("Logout"): st.session_state.clear(); st.rerun()
 
-# --- 5. DASHBOARD ---
+# --- 5. DASHBOARD (DIPERBAIKI) ---
 st.title(f"🏦 {menu}")
 
-# Hitung saldo dulu buat dipake di menu mana aja
+# Hitung saldo dulu
 in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Jumlah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
 out_e = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
 
-# TAMPILAN SALDO (Hanya untuk Admin Utama)
-if st.session_state['role'] == "admin":
+# PAKEM: Saldo HANYA muncul jika ADMIN dan BUKAN menu Inventaris
+if st.session_state['role'] == "admin" and menu != "📦 Inventaris":
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("💰 SALDO KAS", f"Rp {int(in_k - out_k):,}")
     m2.metric("🎁 SALDO HADIAH", f"Rp {int(in_h - out_h):,}")
     m3.metric("🎭 SALDO EVENT", f"Rp {int(in_e - out_e):,}")
     m4.metric("🏧 TOTAL TUNAI", f"Rp {int((in_k+in_h+in_e)-(out_k+out_h+out_e)):,}")
     st.divider()
-else:
-    st.info("Sistem Manajemen Majelis Ar-Royhaan 3")
+elif st.session_state['role'] == "admin_inventaris" or menu == "📦 Inventaris":
+    st.info("Sistem Manajemen Aset Majelis Ar-Royhaan 3")
 
 bln_list = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 
@@ -124,15 +124,23 @@ elif menu == "📤 Pengeluaran":
 
 elif menu == "📥 Kas Bulanan":
     w_pilih = st.selectbox("Nama Warga", sorted(df_warga['Nama'].tolist()), key="sw")
+    # CEK ROLE WARGA
     role_w = df_warga[df_warga['Nama'] == w_pilih]['Role'].values[0] if w_pilih in df_warga['Nama'].values else "Main Warga"
+    
+    # PAKEM: Tampilkan status role biar jelas
+    st.write(f"**Status Warga:** `{role_w}`")
+    
     with st.form("f_kas", clear_on_submit=True):
         n = st.number_input("Nominal", step=5000, key="n_kas")
         t, b = st.selectbox("Tahun", range(2022, 2031), index=4), st.selectbox("Bulan", bln_list)
+        
+        # Logika pecah otomatis vs manual
         opsi = st.radio("Bayar:", ["Semua", "Hanya Kas", "Hanya Hadiah"], horizontal=True) if role_w == "Warga Support" else "Semua"
+        
         if st.form_submit_button("Simpan"):
             pk, ph = (n, 0) if opsi=="Hanya Kas" else (0, n) if opsi=="Hanya Hadiah" else (min(n, 15000), max(0, n-15000))
             sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"])
-            st.success("OK!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+            st.success(f"Data {w_pilih} Berhasil Disimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
 elif menu == "📦 Inventaris":
     st.subheader("📦 Manajemen Aset Majelis")
