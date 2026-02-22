@@ -20,8 +20,6 @@ if not st.session_state['logged_in']:
             if st.form_submit_button("Masuk"):
                 if user == st.secrets["users"]["admin_user"] and pwd == st.secrets["users"]["admin_password"]:
                     st.session_state.update({"logged_in": True, "role": "admin"}); st.rerun()
-                elif user == st.secrets["users"].get("inventaris_user") and pwd == st.secrets["users"].get("inventaris_password"):
-                    st.session_state.update({"logged_in": True, "role": "admin_inventaris"}); st.rerun()
                 elif user == st.secrets["users"]["warga_user"] and pwd == st.secrets["users"]["warga_password"]:
                     st.session_state.update({"logged_in": True, "role": "user"}); st.rerun()
                 else: st.error("Akses Ditolak!")
@@ -50,25 +48,26 @@ except: df_inv = pd.DataFrame(columns=['Nama Barang', 'Spesifikasi', 'Jumlah', '
 with st.sidebar:
     st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
     st.write(f"**USER: {st.session_state['role'].upper()}**")
+    
+    # ORDER: Gabungin akses User/Jamaah biar bisa kelola Inventaris
     if st.session_state['role'] == "admin":
         list_menu = ["📊 Laporan", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "📜 Log"]
-    elif st.session_state['role'] == "admin_inventaris":
-        list_menu = ["📊 Laporan", "📦 Inventaris"]
     else:
-        list_menu = ["📊 Laporan", "📜 Log"]
+        list_menu = ["📊 Laporan", "📦 Inventaris", "📜 Log"]
+        
     menu = st.radio("NAVIGASI", list_menu)
     if st.button("Logout"): st.session_state.clear(); st.rerun()
 
-# --- 5. DASHBOARD (DIPERBAIKI) ---
+# --- 5. DASHBOARD ---
 st.title(f"🏦 {menu}")
 
-# Hitung saldo dulu
+# Hitung saldo global
 in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Jumlah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
 out_e = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
 
-# PAKEM: Saldo HANYA muncul jika ADMIN dan BUKAN menu Inventaris
+# TAMPILAN SALDO (Hanya untuk Admin Utama & Bukan saat di menu Inventaris)
 if st.session_state['role'] == "admin" and menu != "📦 Inventaris":
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("💰 SALDO KAS", f"Rp {int(in_k - out_k):,}")
@@ -76,8 +75,8 @@ if st.session_state['role'] == "admin" and menu != "📦 Inventaris":
     m3.metric("🎭 SALDO EVENT", f"Rp {int(in_e - out_e):,}")
     m4.metric("🏧 TOTAL TUNAI", f"Rp {int((in_k+in_h+in_e)-(out_k+out_h+out_e)):,}")
     st.divider()
-elif st.session_state['role'] == "admin_inventaris" or menu == "📦 Inventaris":
-    st.info("Sistem Manajemen Aset Majelis Ar-Royhaan 3")
+else:
+    st.info("Sistem Manajemen & Aset Majelis Ar-Royhaan 3")
 
 bln_list = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 
@@ -106,7 +105,7 @@ if menu == "📊 Laporan":
         with ck: st.write("#### 📤 Pengeluaran KAS"); st.dataframe(df_keluar[df_keluar['Kategori'] == 'Kas'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True, use_container_width=True)
         with ch: st.write("#### 📤 Pengeluaran HADIAH"); st.dataframe(df_keluar[df_keluar['Kategori'] == 'Hadiah'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True, use_container_width=True)
 
-elif menu == "📤 Pengeluaran":
+elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
         ev_ref = "N/A"
@@ -122,25 +121,18 @@ elif menu == "📤 Pengeluaran":
                 sh.worksheet("Pengeluaran").append_row([datetime.now().strftime("%d/%m/%Y"), kat_pilih, int(nom), f"[{ev_ref}] {ket}" if kat_pilih == "Event" else ket])
                 st.success("Tercatat!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
-elif menu == "📥 Kas Bulanan":
+elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     w_pilih = st.selectbox("Nama Warga", sorted(df_warga['Nama'].tolist()), key="sw")
-    # CEK ROLE WARGA
     role_w = df_warga[df_warga['Nama'] == w_pilih]['Role'].values[0] if w_pilih in df_warga['Nama'].values else "Main Warga"
-    
-    # PAKEM: Tampilkan status role biar jelas
     st.write(f"**Status Warga:** `{role_w}`")
-    
     with st.form("f_kas", clear_on_submit=True):
         n = st.number_input("Nominal", step=5000, key="n_kas")
         t, b = st.selectbox("Tahun", range(2022, 2031), index=4), st.selectbox("Bulan", bln_list)
-        
-        # Logika pecah otomatis vs manual
         opsi = st.radio("Bayar:", ["Semua", "Hanya Kas", "Hanya Hadiah"], horizontal=True) if role_w == "Warga Support" else "Semua"
-        
         if st.form_submit_button("Simpan"):
             pk, ph = (n, 0) if opsi=="Hanya Kas" else (0, n) if opsi=="Hanya Hadiah" else (min(n, 15000), max(0, n-15000))
             sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"])
-            st.success(f"Data {w_pilih} Berhasil Disimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+            st.success("OK!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
 elif menu == "📦 Inventaris":
     st.subheader("📦 Manajemen Aset Majelis")
@@ -153,7 +145,7 @@ elif menu == "📦 Inventaris":
         with st.form("f_inv_add", clear_on_submit=True):
             nb, sp = st.text_input("Nama Barang"), st.text_input("Spesifikasi")
             jml, lok = st.number_input("Jumlah", min_value=1), st.text_input("Lokasi")
-            kon, sts = st.selectbox("Kondisi", ["Baik", "Rusak"]), st.selectbox("Status", ["Tersedia", "Dipinjam"])
+            kon, sts = st.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"]), st.selectbox("Status", ["Tersedia", "Dipinjam", "Hilang"])
             if st.form_submit_button("Simpan"):
                 sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok, kon, sts])
                 st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
@@ -161,16 +153,17 @@ elif menu == "📦 Inventaris":
         if not df_inv.empty:
             with st.form("f_inv_edit"):
                 b_edit = st.selectbox("Pilih Barang", df_inv['Nama Barang'].tolist())
-                n_lok = st.text_input("Update Lokasi Baru (Kosongkan jika tetap)")
-                n_k, n_s = st.selectbox("Kondisi Baru", ["Baik", "Rusak"]), st.selectbox("Status Baru", ["Tersedia", "Dipinjam", "Hilang"])
+                n_lok = st.text_input("Update Lokasi (Kosongkan jika tetap)")
+                n_k = st.selectbox("Kondisi Baru", ["Baik", "Rusak Ringan", "Rusak Parah"])
+                n_s = st.selectbox("Status Baru", ["Tersedia", "Dipinjam", "Hilang"])
                 if st.form_submit_button("Update"):
                     row = sh.worksheet("Inventaris").find(b_edit).row
                     if n_lok: sh.worksheet("Inventaris").update_cell(row, 4, n_lok)
                     sh.worksheet("Inventaris").update_cell(row, 5, n_k)
                     sh.worksheet("Inventaris").update_cell(row, 6, n_s)
-                    st.success("Updated!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                    st.success("Data Berhasil Diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
-elif menu == "🎭 Event & Iuran":
+elif menu == "🎭 Event & Iuran" and st.session_state['role'] == "admin":
     with st.form("f_ev", clear_on_submit=True):
         ev_ada = df_event['Nama Event'].unique().tolist() if not df_event.empty else []
         ev_p = st.selectbox("Event", ["-- Baru --"] + ev_ada)
@@ -180,7 +173,7 @@ elif menu == "🎭 Event & Iuran":
             sh.worksheet("Event").append_row([datetime.now().strftime("%d/%m/%Y"), w_e, ev_n, int(j_e)])
             st.success("OK!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
-elif menu == "👥 Kelola Warga":
+elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
     st.dataframe(df_warga[['Nama', 'Role']], hide_index=True, use_container_width=True)
     ct, ce, ch = st.tabs(["➕ Tambah", "✏️ Edit", "🗑️ Hapus"])
     with ct:
@@ -200,4 +193,5 @@ elif menu == "👥 Kelola Warga":
             if st.form_submit_button("Hapus"): sh.worksheet("Warga").delete_rows(sh.worksheet("Warga").find(w_d).row); st.rerun()
 
 elif menu == "📜 Log":
+    st.write("#### 🕒 20 Transaksi Terakhir")
     st.dataframe(df_masuk.tail(20), hide_index=True, use_container_width=True)
