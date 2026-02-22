@@ -162,7 +162,7 @@ st.divider()
 
 # --- 7. MENU LOGIC ---
 
-f menu == "📊 Laporan":
+if menu == "📊 Laporan":
     st.subheader("📋 Laporan Keuangan Terpisah")
     
     tab_kas, tab_event, tab_keluar = st.tabs(["💰 Kas Bulanan", "🎭 Saldo Per Event", "📤 Pengeluaran"])
