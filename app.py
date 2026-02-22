@@ -151,11 +151,30 @@ if menu == "📚 Pustaka":
                             st.image(clean_url, use_container_width=True)
                             st.link_button("Buka Gambar Penuh", row['Link'])
                         elif row['Tipe'] == "Audio":
-                            clean_url = gdrive_fix(row['Link'])
-                            # Kita tambahin caption biar user tau itu file audio
-                            st.write("🎵 *Klik play untuk memutar rekaman:*")
-                            st.audio(clean_url, format="audio/mpeg") 
-                            st.caption("Catatan: Jika tidak berbunyi, pastikan file di Google Drive sudah 'Anyone with the link can view'")
+                            # Ubah link sharing biasa menjadi link preview agar player Google Drive muncul
+                            # Contoh: /view menjadi /preview
+                            audio_url = row['Link']
+                            if '/view' in audio_url:
+                                preview_url = audio_url.replace('/view', '/preview')
+                            else:
+                                # Jika link format lain, kita coba pakai ID file
+                                try:
+                                    if '/d/' in audio_url:
+                                        f_id = audio_url.split('/d/')[1].split('/')[0]
+                                        preview_url = f"https://drive.google.com/file/d/{f_id}/preview"
+                                    else:
+                                        preview_url = audio_url
+                                except:
+                                    preview_url = audio_url
+
+                            st.write("🎵 **Rekaman Kajian (Durasi Panjang)**")
+                            
+                            # Player resmi Google Drive (Lebih stabil buat 1 jam+)
+                            st.markdown(f'<iframe src="{preview_url}" width="100%" height="150" style="border:none; border-radius:10px;"></iframe>', unsafe_allow_html=True)
+                            
+                            # Tombol cadangan
+                            st.caption("Jika player di atas tidak muncul, klik tombol di bawah:")
+                            st.link_button("🚀 Putar via Google Drive", audio_url)
                         else: st.link_button("Buka Materi Luar", row['Link'])
                 st.divider()
 
