@@ -51,11 +51,17 @@ df_pus = load_data("Pustaka")
 def gdrive_fix(url):
     file_id = ""
     try:
+        # Ekstrak ID File
         if '/d/' in url: file_id = url.split('/d/')[1].split('/')[0]
         elif 'id=' in url: file_id = url.split('id=')[1].split('&')[0]
-        if file_id: return f"https://lh3.googleusercontent.com/u/0/d/{file_id}"
+        
+        if file_id:
+            # Link khusus untuk PDF/Gambar (Preview)
+            # Link khusus untuk Audio (Direct Stream)
+            return f"https://drive.google.com/uc?export=open&id={file_id}"
         return url
-    except: return url
+    except:
+        return url
 
 # --- 4. SIDEBAR ---
 with st.sidebar:
@@ -150,7 +156,12 @@ if menu == "📚 Pustaka":
                         elif row['Tipe'] == "Gambar": 
                             st.image(clean_url, use_container_width=True)
                             st.link_button("Buka Gambar Penuh", row['Link'])
-                        elif row['Tipe'] == "Audio": st.audio(clean_url)
+                        elif row['Tipe'] == "Audio":
+                            clean_url = gdrive_fix(row['Link'])
+                            # Kita tambahin caption biar user tau itu file audio
+                            st.write("🎵 *Klik play untuk memutar rekaman:*")
+                            st.audio(clean_url, format="audio/mpeg") 
+                            st.caption("Catatan: Jika tidak berbunyi, pastikan file di Google Drive sudah 'Anyone with the link can view'")
                         else: st.link_button("Buka Materi Luar", row['Link'])
                 st.divider()
 
