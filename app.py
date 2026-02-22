@@ -252,4 +252,61 @@ elif menu == "🎭 Event & Iuran":
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.error("Pilih Event dan masukkan nominal!"):
+                    st.error("Pilih Event dan masukkan nominal!")
+                elif menu == "📤 Pengeluaran":
+    st.subheader("📤 Catat Pengeluaran")
+    with st.form("f_out"):
+        kat_o = st.radio("Sumber Dana", ["Kas", "Hadiah", "Event"], horizontal=True)
+        ev_label = ""
+        if kat_o == "Event":
+            list_ev_out = df_event['Nama Event'].unique().tolist() if not df_event.empty else []
+            ev_label = st.selectbox("Untuk Event Apa?", list_ev_out)
+        jml_o = st.number_input("Nominal (Rp)", min_value=0, step=1000)
+        ket_o = st.text_input("Keperluan / Nama Barang")
+        if st.form_submit_button("Simpan Pengeluaran"):
+            if jml_o > 0 and ket_o:
+                ket_final = f"[{ev_label}] {ket_o}" if kat_o == "Event" else ket_o
+                df_o = pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Kategori': kat_o, 'Jumlah': jml_o, 'Keterangan': ket_final}])
+                append_to_cloud("Pengeluaran", df_o)
+                st.success("✅ Pengeluaran Dicatat!")
+                time.sleep(1); st.rerun()
+
+elif menu == "👥 Kelola Warga":
+    st.subheader("👥 Database Warga")
+    t_add, t_edit, t_del = st.tabs(["➕ Tambah", "✏️ Edit", "🗑️ Hapus"])
+    with t_add:
+        with st.form("f_w"):
+            nw, rl = st.text_input("Nama Lengkap"), st.selectbox("Role", ["Main Warga", "Warga Support"])
+            if st.form_submit_button("Simpan"):
+                rewrite_cloud("Warga", pd.concat([df_warga, pd.DataFrame([{'Nama': nw, 'Role': rl}])], ignore_index=True))
+                st.rerun()
+    with t_edit:
+        if not df_warga.empty:
+            n_l = st.selectbox("Pilih Nama", sorted(df_warga['Nama'].tolist()))
+            n_b = st.text_input("Nama Baru", value=n_l)
+            r_b = st.selectbox("Role Baru", ["Main Warga", "Warga Support"])
+            if st.button("Update Data"):
+                df_warga.loc[df_warga['Nama'] == n_l, ['Nama', 'Role']] = [n_b, r_b]
+                rewrite_cloud("Warga", df_warga)
+                st.rerun()
+    with t_del:
+        n_d = st.selectbox("Pilih Nama Hapus", sorted(df_warga['Nama'].tolist()))
+        if st.button("HAPUS PERMANEN") and st.checkbox("Saya yakin"):
+            rewrite_cloud("Warga", df_warga[df_warga['Nama'] != n_d])
+            st.rerun()
+    st.table(df_warga)
+
+elif menu == "📜 Log":
+    st.subheader("📜 Riwayat Transaksi")
+    tipe_l = st.selectbox("Kategori Log", ["Kas Bulanan", "Iuran Event", "Pengeluaran"])
+    if tipe_l == "Kas Bulanan": dt, sn = df_masuk, "Pemasukan"
+    elif tipe_l == "Iuran Event": dt, sn = df_event, "Event"
+    else: dt, sn = df_keluar, "Pengeluaran"
+    
+    if not dt.empty:
+        st.dataframe(dt.sort_index(ascending=False).head(30), use_container_width=True)
+        if st.button("🗑️ Hapus Baris Terakhir"):
+            if st.checkbox("Konfirmasi hapus"):
+                rewrite_cloud(sn, dt.drop(dt.index[-1]))
+                st.success("Data terakhir dihapus!")
+                time.sleep(1); st.rerun()
