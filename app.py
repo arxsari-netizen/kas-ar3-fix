@@ -97,10 +97,22 @@ if show_dashboard:
     
     # Tombol WA Laporan (Hanya di menu Laporan)
     if menu == "📊 Laporan":
-        with st.expander("📢 Bagikan Laporan ke Grup"):
+       with st.expander("📢 Bagikan Laporan ke Grup"):
             sk, shd = int(in_k - out_k), int(in_h - out_h)
-            pesan_wa = f"📢 *LAPORAN KAS AR-ROYHAAN 3* 🌸\n📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n💰 *Saldo Kas:* Rp {sk:,}\n🎁 *Saldo Hadiah:* Rp {shd:,}\n━━━━━━━━━━━━━━━━━━\n🏧 *TOTAL DANA: Rp {sk+shd:,}*\n\nSyukron jazakumullah khair. 🙏"
-            url_wa = f"https://wa.me/?text={pesan_wa.replace(' ', '%20').replace('\n', '%0A')}"
+            pesan_wa = (
+                f"📢 *LAPORAN KAS AR-ROYHAAN 3* 🌸\n"
+                f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
+                f"💰 *Saldo Kas:* Rp {sk:,}\n"
+                f"🎁 *Saldo Hadiah:* Rp {shd:,}\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"🏧 *TOTAL DANA: Rp {sk+shd:,}*\n\n"
+                f"Syukron jazakumullah khair. 🙏"
+            )
+            
+            # --- PERBAIKAN DISINI: Kita replace di luar f-string ---
+            pesan_encoded = pesan_wa.replace(' ', '%20').replace('\n', '%0A')
+            url_wa = f"https://wa.me/?text={pesan_encoded}"
+            
             st.link_button("📲 Kirim Laporan Kas ke WA", url_wa)
 else:
     if menu not in ["📦 Inventaris", "📚 Pustaka"]:
@@ -202,8 +214,21 @@ elif menu == "📦 Inventaris":
             # TOMBOL SHARE INVENTARIS (Disini posisinya biar bener)
             itb = len(df_inv[df_inv['Kondisi'] == 'Baik'])
             itr = len(df_inv[df_inv['Kondisi'] != 'Baik'])
-            p_inv = f"📦 *LAPORAN ASET AR-ROYHAAN 3* 🌵\n📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n📊 *Ringkasan Kondisi:*\n✅ Layak Pakai: {itb} Barang\n⚠️ Perlu Perbaikan: {itr} Barang\n━━━━━━━━━━━━━━━━━━\n📋 _Data otomatis dari sistem majelis._\n\nMohon dijaga bersama. ✨"
-            u_inv = f"https://wa.me/?text={p_inv.replace(' ', '%20').replace('\n', '%0A')}"
+            p_inv = (
+                f"📦 *LAPORAN ASET AR-ROYHAAN 3* 🌵\n"
+                f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
+                f"📊 *Ringkasan Kondisi:*\n"
+                f"✅ Layak Pakai: {itb} Barang\n"
+                f"⚠️ Perlu Perbaikan: {itr} Barang\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"📋 _Data otomatis dari sistem majelis._\n\n"
+                f"Mohon dijaga bersama. ✨"
+            )
+            
+            # --- PERBAIKAN DISINI ---
+            p_inv_encoded = p_inv.replace(' ', '%20').replace('\n', '%0A')
+            u_inv = f"https://wa.me/?text={p_inv_encoded}"
+            
             st.divider()
             st.link_button("📲 Share Status Aset ke WA", u_inv)
     with tab_add and st.session_state['role'] == "admin":
