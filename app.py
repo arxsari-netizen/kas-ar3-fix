@@ -231,4 +231,25 @@ elif menu == "🎭 Event & Iuran":
             ev_f = st.text_input("Ketik Nama Event Baru") if ev_p == "➕ Tambah Baru" else ev_p
         with col_e2:
             warga_e = st.selectbox("Nama Warga", sorted(df_warga['Nama'].tolist()), key="w_ev")
+        
+        # --- BAGIAN YANG TADI ERROR DIBAWAH INI ---
         with st.form("f_ev"):
+            nom_e = st.number_input("Jumlah Iuran", min_value=0, step=5000)
+            ket_e = st.text_input("Keterangan")
+            submit_ev = st.form_submit_button("Simpan Iuran Event")
+            
+            if submit_ev:
+                if nom_e > 0 and ev_f != "-- Pilih --":
+                    new_ev = pd.DataFrame([{
+                        'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 
+                        'Nama': warga_e, 
+                        'Nama Event': ev_f, 
+                        'Jumlah': nom_e, 
+                        'Keterangan': ket_e
+                    }])
+                    append_to_cloud("Event", new_ev)
+                    st.success("✅ Iuran Event Disimpan!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("Pilih Event dan masukkan nominal!"):
