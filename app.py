@@ -100,8 +100,8 @@ if show_dashboard:
        with st.expander("📢 Bagikan Laporan ke Grup"):
             sk, shd = int(in_k - out_k), int(in_h - out_h)
             pesan_wa = (
-                f"📢 *LAPORAN KAS AR-ROYHAAN 3* 🌸\n"
-                f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
+                f"📢 *LAPORAN KAS AR-ROYHAAN 3* ✨\n"
+                f"🗓️ _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
                 f"💰 *Saldo Kas:* Rp {sk:,}\n"
                 f"🎁 *Saldo Hadiah:* Rp {shd:,}\n"
                 f"━━━━━━━━━━━━━━━━━━\n"
