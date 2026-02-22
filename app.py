@@ -96,21 +96,26 @@ if menu == "📊 Laporan":
 
 elif menu == "📥 Kas Bulanan":
     st.subheader("📥 Input Pembayaran Bulanan")
+    # PERBAIKAN: Gunakan key agar perubahan langsung terbaca
+    w_pilih = st.selectbox("Pilih Nama Warga", sorted(df_warga['Nama'].tolist()), key="select_warga")
+    
+    # Ambil data warga terpilih secara realtime
+    data_w_terpilih = df_warga[df_warga['Nama'] == w_pilih]
+    role_warga = data_w_terpilih['Role'].values[0] if not data_w_terpilih.empty else "Main Warga"
+    
     with st.form("f_kas"):
-        w_pilih = st.selectbox("Pilih Nama Warga", sorted(df_warga['Nama'].tolist()))
-        # Cek Role Warga tersebut
-        role_warga = df_warga[df_warga['Nama'] == w_pilih]['Role'].values[0] if w_pilih in df_warga['Nama'].values else "Main Warga"
-        
         n = st.number_input("Nominal Bayar", step=5000)
         t = st.selectbox("Tahun", range(2022, 2031), index=4)
         b = st.selectbox("Bulan", bln_list)
         
+        # Info yang bener sesuai pilihan warga
         st.info(f"Warga terpilih: **{w_pilih}** ({role_warga})")
         
+        # Logika Pilihan Bayar
         if role_warga == "Warga Support":
             opsi_bayar = st.radio("Bayar Khusus Untuk:", ["Semua (Pecah 15/35)", "Hanya Kas (15rb)", "Hanya Hadiah (35rb)"], horizontal=True)
         else:
-            st.warning("⚠️ Main Warga: Otomatis pecah Kas 15rb & Hadiah 35rb")
+            st.warning("⚠️ **Main Warga**: Wajib Bayar Kas & Hadiah (Otomatis Pecah)")
             opsi_bayar = "Semua (Pecah 15/35)"
             
         if st.form_submit_button("Simpan Pembayaran"):
@@ -122,13 +127,13 @@ elif menu == "📥 Kas Bulanan":
                 pk, ph = min(n, 15000), max(0, n-15000)
                 
             sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"])
-            st.success("Data Berhasil Disimpan!"); st.cache_data.clear(); st.rerun()
+            st.success(f"Berhasil! {w_pilih} telah membayar."); st.cache_data.clear(); st.rerun()
 
 elif menu == "🎭 Event & Iuran":
     with st.form("f_ev"):
         ev_ada = df_event['Nama Event'].unique().tolist() if not df_event.empty else []
         ev_p = st.selectbox("Event", ["-- Baru --"] + ev_ada)
-        ev_n = st.text_input("Nama Event Baru (Jika pilih -- Baru --)") if ev_p == "-- Baru --" else ev_p
+        ev_n = st.text_input("Nama Event Baru") if ev_p == "-- Baru --" else ev_p
         w_e, j_e = st.selectbox("Warga", sorted(df_warga['Nama'].tolist())), st.number_input("Jumlah Iuran", step=5000)
         if st.form_submit_button("Simpan Iuran"):
             sh.worksheet("Event").append_row([datetime.now().strftime("%d/%m/%Y"), w_e, ev_n, int(j_e)])
@@ -138,7 +143,7 @@ elif menu == "📤 Pengeluaran":
     with st.form("f_out"):
         kat = st.selectbox("Kategori Dana", ["Kas", "Hadiah", "Event"])
         ev_list = df_event['Nama Event'].unique().tolist() if not df_event.empty else []
-        ev_ref = st.selectbox("Pilih Event (Jika Kategori Dana = Event)", ["N/A"] + ev_list)
+        ev_ref = st.selectbox("Pilih Event (Wajib jika Kategori Dana = Event)", ["N/A"] + ev_list)
         nom, ket = st.number_input("Nominal"), st.text_input("Keterangan")
         if st.form_submit_button("Catat Pengeluaran"):
             final_ket = f"[{ev_ref}] {ket}" if kat == "Event" else ket
