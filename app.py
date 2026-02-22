@@ -232,7 +232,6 @@ elif menu == "🎭 Event & Iuran":
         with col_e2:
             warga_e = st.selectbox("Nama Warga", sorted(df_warga['Nama'].tolist()), key="w_ev")
         
-        # --- BAGIAN YANG TADI ERROR DIBAWAH INI ---
         with st.form("f_ev"):
             nom_e = st.number_input("Jumlah Iuran", min_value=0, step=5000)
             ket_e = st.text_input("Keterangan")
@@ -252,8 +251,9 @@ elif menu == "🎭 Event & Iuran":
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.error("Pilih Event dan masukkan nominal!")
-                elif menu == "📤 Pengeluaran":
+                    st.error("Lengkapi nama event dan nominal!")
+
+elif menu == "📤 Pengeluaran":
     st.subheader("📤 Catat Pengeluaran")
     with st.form("f_out"):
         kat_o = st.radio("Sumber Dana", ["Kas", "Hadiah", "Event"], horizontal=True)
@@ -263,13 +263,23 @@ elif menu == "🎭 Event & Iuran":
             ev_label = st.selectbox("Untuk Event Apa?", list_ev_out)
         jml_o = st.number_input("Nominal (Rp)", min_value=0, step=1000)
         ket_o = st.text_input("Keperluan / Nama Barang")
+        
         if st.form_submit_button("Simpan Pengeluaran"):
             if jml_o > 0 and ket_o:
+                # Jika pilih Event, masukkan nama event ke keterangan secara otomatis
                 ket_final = f"[{ev_label}] {ket_o}" if kat_o == "Event" else ket_o
-                df_o = pd.DataFrame([{'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 'Kategori': kat_o, 'Jumlah': jml_o, 'Keterangan': ket_final}])
+                df_o = pd.DataFrame([{
+                    'Tanggal': datetime.now().strftime("%d/%m/%Y %H:%M"), 
+                    'Kategori': kat_o, 
+                    'Jumlah': jml_o, 
+                    'Keterangan': ket_final
+                }])
                 append_to_cloud("Pengeluaran", df_o)
                 st.success("✅ Pengeluaran Dicatat!")
-                time.sleep(1); st.rerun()
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("Isi nominal dan keterangan!")
 
 elif menu == "👥 Kelola Warga":
     st.subheader("👥 Database Warga")
@@ -290,10 +300,11 @@ elif menu == "👥 Kelola Warga":
                 rewrite_cloud("Warga", df_warga)
                 st.rerun()
     with t_del:
-        n_d = st.selectbox("Pilih Nama Hapus", sorted(df_warga['Nama'].tolist()))
-        if st.button("HAPUS PERMANEN") and st.checkbox("Saya yakin"):
-            rewrite_cloud("Warga", df_warga[df_warga['Nama'] != n_d])
-            st.rerun()
+        if not df_warga.empty:
+            n_d = st.selectbox("Pilih Nama Hapus", sorted(df_warga['Nama'].tolist()))
+            if st.button("HAPUS PERMANEN") and st.checkbox("Saya yakin ingin menghapus"):
+                rewrite_cloud("Warga", df_warga[df_warga['Nama'] != n_d])
+                st.rerun()
     st.table(df_warga)
 
 elif menu == "📜 Log":
@@ -306,7 +317,10 @@ elif menu == "📜 Log":
     if not dt.empty:
         st.dataframe(dt.sort_index(ascending=False).head(30), use_container_width=True)
         if st.button("🗑️ Hapus Baris Terakhir"):
-            if st.checkbox("Konfirmasi hapus"):
+            if st.checkbox("Konfirmasi: Hapus data terakhir di cloud?"):
                 rewrite_cloud(sn, dt.drop(dt.index[-1]))
                 st.success("Data terakhir dihapus!")
-                time.sleep(1); st.rerun()
+                time.sleep(1)
+                st.rerun()
+    else:
+        st.info("Belum ada data untuk kategori ini.")
