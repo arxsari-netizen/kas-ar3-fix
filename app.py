@@ -59,14 +59,17 @@ with st.sidebar:
     menu = st.radio("NAVIGASI", list_menu)
     if st.button("Logout"): st.session_state.clear(); st.rerun()
 
-# --- 5. DASHBOARD (LOGIKA SEMBUNYI SALDO) ---
+# --- 5. DASHBOARD ---
 st.title(f"🏦 {menu}")
 
-# Saldo cuma muncul buat Admin Utama
-if st.session_state['role'] == "admin":
-    in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Jumlah'].sum()
-    out_k, out_h, out_e = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum(), df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum(), df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
+# Hitung saldo dulu buat dipake di menu mana aja
+in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Jumlah'].sum()
+out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
+out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
+out_e = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
 
+# TAMPILAN SALDO (Hanya untuk Admin Utama)
+if st.session_state['role'] == "admin":
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("💰 SALDO KAS", f"Rp {int(in_k - out_k):,}")
     m2.metric("🎁 SALDO HADIAH", f"Rp {int(in_h - out_h):,}")
@@ -74,8 +77,10 @@ if st.session_state['role'] == "admin":
     m4.metric("🏧 TOTAL TUNAI", f"Rp {int((in_k+in_h+in_e)-(out_k+out_h+out_e)):,}")
     st.divider()
 else:
-    # Buat Admin Inventaris, dashboard saldo diganti info aset
-    st.info(f"Selamat Datang di Sistem Manajemen Aset Majelis Ar-Royhaan 3")
+    st.info("Sistem Manajemen Majelis Ar-Royhaan 3")
+
+bln_list = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+
 # --- 6. LOGIKA MENU ---
 
 if menu == "📊 Laporan":
@@ -132,12 +137,10 @@ elif menu == "📥 Kas Bulanan":
 elif menu == "📦 Inventaris":
     st.subheader("📦 Manajemen Aset Majelis")
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar", "➕ Tambah", "✏️ Update"])
-    
     with tab_view:
         if not df_inv.empty:
             pilih_lok = st.selectbox("Filter Lokasi", ["Semua"] + df_inv['Lokasi'].unique().tolist())
             st.dataframe(df_inv if pilih_lok == "Semua" else df_inv[df_inv['Lokasi'] == pilih_lok], hide_index=True, use_container_width=True)
-            
     with tab_add:
         with st.form("f_inv_add", clear_on_submit=True):
             nb, sp = st.text_input("Nama Barang"), st.text_input("Spesifikasi")
@@ -146,25 +149,18 @@ elif menu == "📦 Inventaris":
             if st.form_submit_button("Simpan"):
                 sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok, kon, sts])
                 st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-                
     with tab_edit:
         if not df_inv.empty:
             with st.form("f_inv_edit"):
-                b_edit = st.selectbox("Pilih Barang yang Pindah/Berubah", df_inv['Nama Barang'].tolist())
-                # Ambil data lama buat default (opsional, tapi biar user tau posisi terakhir)
+                b_edit = st.selectbox("Pilih Barang", df_inv['Nama Barang'].tolist())
                 n_lok = st.text_input("Update Lokasi Baru (Kosongkan jika tetap)")
-                n_k = st.selectbox("Update Kondisi", ["Baik", "Rusak"])
-                n_s = st.selectbox("Update Status", ["Tersedia", "Dipinjam", "Hilang"])
-                
-                if st.form_submit_button("Update Data Barang"):
+                n_k, n_s = st.selectbox("Kondisi Baru", ["Baik", "Rusak"]), st.selectbox("Status Baru", ["Tersedia", "Dipinjam", "Hilang"])
+                if st.form_submit_button("Update"):
                     row = sh.worksheet("Inventaris").find(b_edit).row
-                    # Update Lokasi jika diisi
-                    if n_lok:
-                        sh.worksheet("Inventaris").update_cell(row, 4, n_lok)
-                    # Update Kondisi & Status
+                    if n_lok: sh.worksheet("Inventaris").update_cell(row, 4, n_lok)
                     sh.worksheet("Inventaris").update_cell(row, 5, n_k)
                     sh.worksheet("Inventaris").update_cell(row, 6, n_s)
-                    st.success(f"Data {b_edit} Berhasil Diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                    st.success("Updated!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
 elif menu == "🎭 Event & Iuran":
     with st.form("f_ev", clear_on_submit=True):
