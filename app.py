@@ -49,7 +49,6 @@ with st.sidebar:
     st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
     st.write(f"**USER: {st.session_state['role'].upper()}**")
     
-    # ORDER: Gabungin akses User/Jamaah biar bisa kelola Inventaris
     if st.session_state['role'] == "admin":
         list_menu = ["📊 Laporan", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "📜 Log"]
     else:
@@ -67,8 +66,13 @@ out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
 out_e = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
 
-# TAMPILAN SALDO (Hanya untuk Admin Utama & Bukan saat di menu Inventaris)
-if st.session_state['role'] == "admin" and menu != "📦 Inventaris":
+# LOGIKA BARU: Tampilkan Dashboard Saldo jika:
+# 1. User adalah Admin (kecuali di menu Inventaris)
+# 2. ATAU User adalah Warga TAPI sedang buka menu Laporan
+show_dashboard = (st.session_state['role'] == "admin" and menu != "📦 Inventaris") or \
+                 (st.session_state['role'] == "user" and menu == "📊 Laporan")
+
+if show_dashboard:
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("💰 SALDO KAS", f"Rp {int(in_k - out_k):,}")
     m2.metric("🎁 SALDO HADIAH", f"Rp {int(in_h - out_h):,}")
