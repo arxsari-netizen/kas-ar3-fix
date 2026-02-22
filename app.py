@@ -162,7 +162,7 @@ st.divider()
 
 # --- 7. MENU LOGIC ---
 
-if menu == "📊 Laporan":
+f menu == "📊 Laporan":
     st.subheader("📋 Laporan Keuangan Terpisah")
     
     tab_kas, tab_event, tab_keluar = st.tabs(["💰 Kas Bulanan", "🎭 Saldo Per Event", "📤 Pengeluaran"])
@@ -173,43 +173,72 @@ if menu == "📊 Laporan":
         df_yr_in = df_masuk[df_masuk['Tahun'] == thn_lap]
         
         if not df_yr_in.empty:
+            # Tampilan Pivot: Baris = Nama, Kolom = Bulan, Isi = Total Bayar
             rk = df_yr_in.pivot_table(index='Nama', columns='Bulan', values='Total', aggfunc='sum').fillna(0)
+            
+            # Urutan bulan biar gak acak
             bln_order = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
             cols = [b for b in bln_order if b in rk.columns]
-            st.dataframe(rk[cols].style.highlight_between(left=50000, color='#d4edda').format("{:,.0f}"), use_container_width=True)
+            
+            # Tampilkan Tabel dengan Highlight Hijau jika sudah bayar Rp 50.000 (Paket Lengkap)
+            st.dataframe(
+                rk[cols].style.highlight_between(left=50000, color='#d4edda').format("{:,.0f}"), 
+                use_container_width=True
+            )
         else:
-            st.info("Data kas tahun ini masih kosong.")
+            st.info(f"Data kas tahun {thn_lap} masih kosong.")
 
-    # KOREKSI INDENTASI TAB EVENT (Tadi lu ngetik di luar tab)
     with tab_event:
         st.write("### 🎭 Saldo Berdasarkan Jenis Event")
         if not df_event.empty:
             list_ev_laporan = df_event['Nama Event'].unique().tolist()
             ev_pilihan = st.selectbox("Pilih Event untuk Detail", list_ev_laporan)
             
-            # 1. Hitung Pemasukan Event Ini
+            # 1. Hitung Pemasukan Event
             df_ev_in = df_event[df_event['Nama Event'] == ev_pilihan]
             total_in = df_ev_in['Jumlah'].sum()
             
-            # 2. Hitung Pengeluaran Event Ini
-            df_ev_out = df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(ev_pilihan))]
+            # 2. Hitung Pengeluaran Event (Mencari teks Event di keterangan pengeluaran)
+            df_ev_out = df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(ev_pilihan, na=False))]
             total_out = df_ev_out['Jumlah'].sum()
             
-            col_ev1, col_ev2, col_ev3 = st.columns(3)
-            col_ev1.metric(f"Pemasukan {ev_pilihan}", f"Rp {total_in:,.0f}")
-            col_ev2.metric(f"Pengeluaran {ev_pilihan}", f"Rp {total_out:,.0f}")
-            col_ev3.metric(f"Saldo Akhir {ev_pilihan}", f"Rp {total_in - total_out:,.0f}")
+            # Tampilan Metrik Event
+            ce1, ce2, ce3 = st.columns(3)
+            ce1.metric(f"Total Masuk {ev_pilihan}", f"Rp {total_in:,.0f}")
+            ce2.metric(f"Total Keluar {ev_pilihan}", f"Rp {total_out:,.0f}")
+            ce3.metric(f"Saldo Bersih", f"Rp {total_in - total_out:,.0f}")
             
             st.divider()
-            col_d1, col_d2 = st.columns(2)
-            with col_d1:
+            d1, d2 = st.columns(2)
+            with d1:
                 st.write("📋 Daftar Pembayar:")
                 st.dataframe(df_ev_in[['Tanggal', 'Nama', 'Jumlah']].sort_values('Tanggal', ascending=False), use_container_width=True)
-            with col_d2:
-                st.write("💸 Riwayat Belanja Event:")
+            with d2:
+                st.write("💸 Riwayat Belanja:")
                 st.dataframe(df_ev_out[['Tanggal', 'Jumlah', 'Keterangan']], use_container_width=True)
         else:
             st.info("Belum ada data iuran event.")
+
+    with tab_keluar:
+        st.write("### 📤 Laporan Pengeluaran")
+        
+        # Ringkasan Pengeluaran
+        ok, oh, oe = st.columns(3)
+        ok.metric("Duit Kas Keluar", f"Rp {out_k:,.0f}")
+        oh.metric("Duit Hadiah Keluar", f"Rp {out_h:,.0f}")
+        oe.metric("Duit Event Keluar", f"Rp {out_ev_total:,.0f}")
+        
+        st.divider()
+        kat_filter = st.multiselect("Filter Kategori Pengeluaran:", ["Kas", "Hadiah", "Event"], default=["Kas", "Hadiah", "Event"])
+        
+        df_out_filtered = df_keluar[df_keluar['Kategori'].isin(kat_filter)]
+        if not df_out_filtered.empty:
+            st.dataframe(
+                df_out_filtered[['Tanggal', 'Kategori', 'Jumlah', 'Keterangan']].sort_values('Tanggal', ascending=False), 
+                use_container_width=True
+            )
+        else:
+            st.info("Pilih kategori atau data pengeluaran kosong.")
 elif menu == "🎭 Event & Iuran":
     st.subheader("🎭 Input Iuran Event / Kegiatan")
     if not df_warga.empty:
