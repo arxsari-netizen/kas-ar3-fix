@@ -99,6 +99,23 @@ if show_dashboard:
     m3.metric("🎭 SALDO EVENT", f"Rp {int(in_e - out_e):,}")
     m4.metric("🏧 TOTAL TUNAI", f"Rp {int((in_k+in_h+in_e)-(out_k+out_h+out_e)):,}")
     st.divider()
+if menu == "📊 Laporan":
+        with st.expander("📢 Bagikan Laporan ke Grup"):
+            saldo_kas = int(in_k - out_k)
+            saldo_hadiah = int(in_h - out_h)
+            total_gabungan = saldo_kas + saldo_hadiah
+            
+            pesan_wa = (
+                f"📢 *LAPORAN KAS AR-ROYHAAN 3* 🌸\n"
+                f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
+                f"💰 *Saldo Kas:* Rp {saldo_kas:,}\n"
+                f"🎁 *Saldo Hadiah:* Rp {saldo_hadiah:,}\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"🏧 *TOTAL DANA: Rp {total_gabungan:,}*\n\n"
+                f"Syukron jazakumullah khair kepada seluruh jamaah. 🙏"
+            )
+            url_share_kas = f"https://wa.me/?text={pesan_wa.replace(' ', '%20').replace('\n', '%0A')}"
+            st.link_button("📲 Kirim Laporan Kas ke WA", url_share_kas)
 else:
     st.info("Pusat Informasi & Aset Majelis Ar-Royhaan 3")
 
@@ -237,7 +254,27 @@ elif menu == "📦 Inventaris":
                     if n_lok: sh.worksheet("Inventaris").update_cell(row, 4, n_lok)
                     sh.worksheet("Inventaris").update_cell(row, 5, n_k); sh.worksheet("Inventaris").update_cell(row, 6, n_s)
                     st.success("Updated!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-
+if not df_inv.empty:
+        # Menghitung ringkasan kondisi
+        total_item = len(df_inv)
+        item_baik = len(df_inv[df_inv['Kondisi'] == 'Baik'])
+        item_rusak = len(df_inv[df_inv['Kondisi'] != 'Baik'])
+        
+        pesan_inv = (
+            f"📦 *LAPORAN ASET AR-ROYHAAN 3* 🌵\n"
+            f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
+            f"📊 *Ringkasan Kondisi:*\n"
+            f"✅ Layak Pakai: {item_baik} Barang\n"
+            f"⚠️ Perlu Perbaikan: {item_rusak} Barang\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"📋 _Data ini diambil otomatis dari sistem inventaris majelis._\n\n"
+            f"Mohon dijaga bersama untuk kemaslahatan umat. ✨"
+        )
+        
+        url_share_inv = f"https://wa.me/?text={pesan_inv.replace(' ', '%20').replace('\n', '%0A')}"
+        
+        st.divider()
+        st.link_button("📲 Share Status Aset ke WA", url_share_inv)
 elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
     st.dataframe(df_warga[['Nama', 'Role']], hide_index=True, use_container_width=True)
     # Form tambah warga (seperti kode sebelumnya...)
