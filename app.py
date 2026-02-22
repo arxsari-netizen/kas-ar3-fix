@@ -95,7 +95,6 @@ if show_dashboard:
     m4.metric("🏧 TOTAL TUNAI", f"Rp {int((in_k+in_h+in_e)-(out_k+out_h+out_e)):,}")
     st.divider()
     
-    # Tombol WA Laporan (Hanya di menu Laporan)
     if menu == "📊 Laporan":
        with st.expander("📢 Bagikan Laporan ke Grup"):
             sk, shd = int(in_k - out_k), int(in_h - out_h)
@@ -108,11 +107,8 @@ if show_dashboard:
                 f" *TOTAL DANA: Rp {sk+shd:,}*\n\n"
                 f"Syukron jazakumullah khair. 🙏"
             )
-            
-            # --- PERBAIKAN DISINI: Kita replace di luar f-string ---
             pesan_encoded = pesan_wa.replace(' ', '%20').replace('\n', '%0A')
             url_wa = f"https://wa.me/?text={pesan_encoded}"
-            
             st.link_button("📲 Kirim Laporan Kas ke WA", url_wa)
 else:
     if menu not in ["📦 Inventaris", "📚 Pustaka"]:
@@ -162,7 +158,6 @@ if menu == "📚 Pustaka":
                         elif row['Tipe'] == "Audio": st.audio(clean_url)
                         else: st.link_button("Buka Materi Luar", row['Link'])
                 st.divider()
-        else: st.warning("Materi tidak ditemukan.")
 
 elif menu == "📊 Laporan":
     t1, t2, t3 = st.tabs(["💰 Rekap Bulanan", "🎭 Detail Event", "📤 Riwayat Pengeluaran"])
@@ -209,56 +204,53 @@ elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
 elif menu == "📦 Inventaris":
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar", "➕ Tambah", "✏️ Update"])
     with tab_view:
-        # --- FITUR SHARE INVENTARIS (VERSI DETAIL) ---
-    if not df_inv.empty:
-        # 1. Ambil daftar barang berdasarkan kondisi
-        list_baik = df_inv[df_inv['Kondisi'] == 'Baik']['Nama Barang'].tolist()
-        list_rusak = df_inv[df_inv['Kondisi'] != 'Baik']['Nama Barang'].tolist()
-        # 2. Ambil daftar barang yang lagi dipinjam
-        list_pinjam = df_inv[df_inv['Status'] == 'Dipinjam']['Nama Barang'].tolist()
-
-        # Format teks daftar barang
-        txt_baik = ", ".join(list_baik) if list_baik else "-"
-        txt_rusak = ", ".join(list_rusak) if list_rusak else "-"
-        txt_pinjam = ", ".join(list_pinjam) if list_pinjam else "Semua Tersedia"
-
-        p_inv = (
-            f"📦 *LAPORAN ASET AR-ROYHAAN 3* 🌵\n"
-            f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
-            f"✅ *BARANG LAYAK PAKAI:*\n"
-            f"_{txt_baik}_\n\n"
-            f"⚠️ *PERLU PERBAIKAN:*\n"
-            f"_{txt_rusak}_\n\n"
-            f"📢 *STATUS PEMINJAMAN:*\n"
-            f"_{txt_pinjam}_\n\n"
-            f"━━━━━━━━━━━━━━━━━━\n"
-            f"📋 _Mohon lapor jika ingin meminjam atau ada kerusakan aset._\n\n"
-            f"Syukron. ✨"
-        )
-        
-        # Encoding biar gak error backslash
-        p_inv_encoded = p_inv.replace(' ', '%20').replace('\n', '%0A')
-        u_inv = f"https://wa.me/?text={p_inv_encoded}"
-        
-        st.divider()
-        st.link_button("📲 Share Daftar Detail Aset ke WA", u_inv)
-    with tab_add and st.session_state['role'] == "admin":
-        with st.form("f_inv_add", clear_on_submit=True):
-            nb, sp, jml, lok = st.text_input("Nama Barang"), st.text_input("Spesifikasi"), st.number_input("Jumlah", min_value=1), st.text_input("Lokasi")
-            kon, sts = st.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"]), st.selectbox("Status", ["Tersedia", "Dipinjam", "Hilang"])
-            if st.form_submit_button("Simpan"):
-                sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok, kon, sts])
-                st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-    with tab_edit and st.session_state['role'] == "admin":
         if not df_inv.empty:
-            with st.form("f_inv_edit"):
-                b_edit = st.selectbox("Pilih Barang", df_inv['Nama Barang'].tolist())
-                n_lok, n_k, n_s = st.text_input("Update Lokasi"), st.selectbox("Kondisi Baru", ["Baik", "Rusak"]), st.selectbox("Status Baru", ["Tersedia", "Dipinjam"])
-                if st.form_submit_button("Update"):
-                    row = sh.worksheet("Inventaris").find(b_edit).row
-                    if n_lok: sh.worksheet("Inventaris").update_cell(row, 4, n_lok)
-                    sh.worksheet("Inventaris").update_cell(row, 5, n_k); sh.worksheet("Inventaris").update_cell(row, 6, n_s)
-                    st.success("Updated!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+            st.dataframe(df_inv, hide_index=True, use_container_width=True)
+            # --- FITUR SHARE INVENTARIS DI DALAM TAB VIEW ---
+            list_baik = df_inv[df_inv['Kondisi'] == 'Baik']['Nama Barang'].tolist()
+            list_rusak = df_inv[df_inv['Kondisi'] != 'Baik']['Nama Barang'].tolist()
+            list_pinjam = df_inv[df_inv['Status'] == 'Dipinjam']['Nama Barang'].tolist()
+
+            txt_baik = ", ".join(list_baik) if list_baik else "-"
+            txt_rusak = ", ".join(list_rusak) if list_rusak else "-"
+            txt_pinjam = ", ".join(list_pinjam) if list_pinjam else "Semua Tersedia"
+
+            p_inv = (
+                f"📦 *LAPORAN ASET AR-ROYHAAN 3* 🌵\n"
+                f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
+                f"✅ *BARANG LAYAK PAKAI:*\n"
+                f"_{txt_baik}_\n\n"
+                f"⚠️ *PERLU PERBAIKAN:*\n"
+                f"_{txt_rusak}_\n\n"
+                f"📢 *STATUS PEMINJAMAN:*\n"
+                f"_{txt_pinjam}_\n\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"📋 _Mohon lapor jika ingin meminjam atau ada kerusakan aset._\n\n"
+                f"Syukron. ✨"
+            )
+            p_inv_encoded = p_inv.replace(' ', '%20').replace('\n', '%0A')
+            u_inv = f"https://wa.me/?text={p_inv_encoded}"
+            st.divider()
+            st.link_button("📲 Share Daftar Detail Aset ke WA", u_inv)
+
+    if st.session_state['role'] == "admin":
+        with tab_add:
+            with st.form("f_inv_add", clear_on_submit=True):
+                nb, sp, jml, lok = st.text_input("Nama Barang"), st.text_input("Spesifikasi"), st.number_input("Jumlah", min_value=1), st.text_input("Lokasi")
+                kon, sts = st.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"]), st.selectbox("Status", ["Tersedia", "Dipinjam", "Hilang"])
+                if st.form_submit_button("Simpan"):
+                    sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok, kon, sts])
+                    st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+        with tab_edit:
+            if not df_inv.empty:
+                with st.form("f_inv_edit"):
+                    b_edit = st.selectbox("Pilih Barang", df_inv['Nama Barang'].tolist())
+                    n_lok, n_k, n_s = st.text_input("Update Lokasi"), st.selectbox("Kondisi Baru", ["Baik", "Rusak"]), st.selectbox("Status Baru", ["Tersedia", "Dipinjam"])
+                    if st.form_submit_button("Update"):
+                        row = sh.worksheet("Inventaris").find(b_edit).row
+                        if n_lok: sh.worksheet("Inventaris").update_cell(row, 4, n_lok)
+                        sh.worksheet("Inventaris").update_cell(row, 5, n_k); sh.worksheet("Inventaris").update_cell(row, 6, n_s)
+                        st.success("Updated!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
 elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
     st.dataframe(df_warga[['Nama', 'Role']], hide_index=True, use_container_width=True)
