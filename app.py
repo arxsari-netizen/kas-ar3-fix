@@ -80,7 +80,7 @@ with st.sidebar:
     if st.button("Logout"): st.session_state.clear(); st.rerun()
 
 # --- 5. DASHBOARD ---
-st.title(f"🏦 {menu}")
+st.title(f"🌻 {menu}")
 
 # Hitung saldo global
 in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Jumlah'].sum()
