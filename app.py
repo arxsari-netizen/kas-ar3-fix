@@ -106,7 +106,7 @@ bln_list = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agu
 
 # --- 6. LOGIKA MENU ---
 
-# --- MENU PUSTAKA (VERSI FIX INDENTASI) ---
+# --- MENU PUSTAKA (VERSI SEARCH + PREVIEW FIX) ---
 if menu == "📚 Pustaka":
     st.subheader("📚 Pustaka Digital & Materi Kajian")
     
@@ -122,39 +122,53 @@ if menu == "📚 Pustaka":
                     st.success("Materi Terunggah!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
     if not df_pus.empty:
-        # Tampilan Koleksi
-        sel_k = st.selectbox("Filter Kategori", ["Semua"] + df_pus['Kategori'].unique().tolist())
-        df_view = df_pus if sel_k == "Semua" else df_pus[df_pus['Kategori'] == sel_k]
+        # --- FITUR SEARCH & FILTER ---
+        c_search, c_filter = st.columns([2, 1])
+        with c_search:
+            cari = st.text_input("🔍 Cari Materi (Judul atau Deskripsi)", placeholder="Contoh: doa mandi")
+        with c_filter:
+            sel_k = st.selectbox("📂 Filter Kategori", ["Semua"] + df_pus['Kategori'].unique().tolist())
+        
+        # Logika Filter & Search
+        df_view = df_pus.copy()
+        if sel_k != "Semua":
+            df_view = df_view[df_view['Kategori'] == sel_k]
+        
+        if cari:
+            # Cari kata kunci di Judul ATAU Deskripsi (Abaikan huruf besar/kecil)
+            mask = df_view.apply(lambda row: cari.lower() in row['Judul'].lower() or cari.lower() in row['Deskripsi'].lower(), axis=1)
+            df_view = df_view[mask]
         
         st.divider()
-        for idx, row in df_view.iterrows():
-            with st.container():
-                c1, c2 = st.columns([1, 4])
-                with c1:
-                    icon = "📄" if row['Tipe'] == "PDF" else "🖼️" if row['Tipe'] == "Gambar" else "🔊" if row['Tipe'] == "Audio" else "🔗"
-                    st.markdown(f"<h1 style='text-align: center;'>{icon}</h1>", unsafe_allow_html=True)
-                with c2:
-                    st.write(f"### {row['Judul']}")
-                    st.caption(f"Kategori: {row['Kategori']} | Tipe: {row['Tipe']}")
-                    st.write(row['Deskripsi'])
-                    
-                    with st.expander("Lihat / Putar Materi"):
-                        clean_url = gdrive_fix(row['Link'])
+
+        # Tampilkan Hasil
+        if not df_view.empty:
+            st.info(f"Menampilkan {len(df_view)} materi")
+            for idx, row in df_view.iterrows():
+                with st.container():
+                    col1, col2 = st.columns([1, 4])
+                    with col1:
+                        icon = "📄" if row['Tipe'] == "PDF" else "🖼️" if row['Tipe'] == "Gambar" else "🔊" if row['Tipe'] == "Audio" else "🔗"
+                        st.markdown(f"<h1 style='text-align: center;'>{icon}</h1>", unsafe_allow_html=True)
+                    with col2:
+                        st.write(f"### {row['Judul']}")
+                        st.caption(f"Kategori: {row['Kategori']} | Tipe: {row['Tipe']}")
+                        st.write(row['Deskripsi'])
                         
-                        if row['Tipe'] == "PDF":
-                            st.markdown(f'<iframe src="{clean_url}" width="100%" height="500px"></iframe>', unsafe_allow_html=True)
-                        
-                        elif row['Tipe'] == "Gambar":
-                            # SEKARANG SUDAH SEJAJAR & RAPI
-                            st.image(clean_url, use_container_width=True)
-                            st.caption("Pratinjau Gambar")
-                        
-                        elif row['Tipe'] == "Audio":
-                            st.audio(clean_url)
-                        
-                        else:
-                            st.link_button("Buka Materi Luar", row['Link'])
-                st.divider()
+                        with st.expander("Lihat / Putar Materi"):
+                            clean_url = gdrive_fix(row['Link'])
+                            if row['Tipe'] == "PDF":
+                                st.markdown(f'<iframe src="{clean_url}" width="100%" height="500px"></iframe>', unsafe_allow_html=True)
+                            elif row['Tipe'] == "Gambar":
+                                st.image(clean_url, use_container_width=True)
+                                st.link_button("Buka Gambar Penuh", row['Link'])
+                            elif row['Tipe'] == "Audio":
+                                st.audio(clean_url)
+                            else:
+                                st.link_button("Buka Materi Luar", row['Link'])
+                    st.divider()
+        else:
+            st.warning("Materi tidak ditemukan. Coba kata kunci lain.")
     else:
         st.warning("Belum ada materi di pustaka.")
 
