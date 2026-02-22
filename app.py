@@ -106,7 +106,7 @@ bln_list = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agu
 
 # --- 6. LOGIKA MENU ---
 
-# --- MENU PUSTAKA (MODUL BARU) ---
+# --- MENU PUSTAKA (VERSI FIX INDENTASI) ---
 if menu == "📚 Pustaka":
     st.subheader("📚 Pustaka Digital & Materi Kajian")
     
@@ -131,7 +131,6 @@ if menu == "📚 Pustaka":
             with st.container():
                 c1, c2 = st.columns([1, 4])
                 with c1:
-                    # Icon sederhana berdasarkan tipe
                     icon = "📄" if row['Tipe'] == "PDF" else "🖼️" if row['Tipe'] == "Gambar" else "🔊" if row['Tipe'] == "Audio" else "🔗"
                     st.markdown(f"<h1 style='text-align: center;'>{icon}</h1>", unsafe_allow_html=True)
                 with c2:
@@ -139,17 +138,20 @@ if menu == "📚 Pustaka":
                     st.caption(f"Kategori: {row['Kategori']} | Tipe: {row['Tipe']}")
                     st.write(row['Deskripsi'])
                     
-                    # Preview Area
                     with st.expander("Lihat / Putar Materi"):
                         clean_url = gdrive_fix(row['Link'])
+                        
                         if row['Tipe'] == "PDF":
                             st.markdown(f'<iframe src="{clean_url}" width="100%" height="500px"></iframe>', unsafe_allow_html=True)
-                       elif row['Tipe'] == "Gambar":
-            clean_url = gdrive_fix(row['Link'])
-            st.write(f"Debug Link: {clean_url}") # Hapus tanda # di awal baris ini buat liat linknya
-            st.image(clean_url, use_container_width=True)
+                        
+                        elif row['Tipe'] == "Gambar":
+                            # SEKARANG SUDAH SEJAJAR & RAPI
+                            st.image(clean_url, use_container_width=True)
+                            st.caption("Pratinjau Gambar")
+                        
                         elif row['Tipe'] == "Audio":
                             st.audio(clean_url)
+                        
                         else:
                             st.link_button("Buka Materi Luar", row['Link'])
                 st.divider()
