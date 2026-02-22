@@ -50,12 +50,21 @@ df_masuk, df_keluar, df_warga, df_event = load_data("Pemasukan"), load_data("Pen
 df_inv = load_data("Inventaris")
 df_pus = load_data("Pustaka") # Tab baru
 
-# Fungsi Helper Link Google Drive
+# Fungsi Helper Link Google Drive (VERSI LEBIH KUAT)
 def gdrive_fix(url):
     file_id = ""
-    if '/d/' in url: file_id = url.split('/d/')[1].split('/')[0]
-    elif 'id=' in url: file_id = url.split('id=')[1].split('&')[0]
-    return f"https://drive.google.com/uc?export=view&id={file_id}" if file_id else url
+    try:
+        if '/d/' in url:
+            file_id = url.split('/d/')[1].split('/')[0]
+        elif 'id=' in url:
+            file_id = url.split('id=')[1].split('&')[0]
+        
+        if file_id:
+            # Format ini paling stabil buat nampilin gambar & PDF di Streamlit
+            return f"https://drive.google.com/uc?id={file_id}"
+        return url
+    except:
+        return url
 
 # --- 4. SIDEBAR ---
 with st.sidebar:
