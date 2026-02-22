@@ -70,7 +70,7 @@ with st.sidebar:
 
 # --- 5. LOGIKA IKON DINAMIS ---
 ikon_bunga = {
-    "📊 Laporan": "🌸", "📚 Pustaka": "🪷", "📥 Kas Bulanan": "🌻", 
+    "📊 Laporan": "🌸", "📚 Pustaka": "🎁", "📥 Kas Bulanan": "🌻", 
     "🎭 Event & Iuran": "🌺", "📤 Pengeluaran": "🍂", 
     "👥 Kelola Warga": "🌷", "📦 Inventaris": "🌵", "📜 Log": "🍃"
 }
@@ -100,12 +100,12 @@ if show_dashboard:
        with st.expander("📢 Bagikan Laporan ke Grup"):
             sk, shd = int(in_k - out_k), int(in_h - out_h)
             pesan_wa = (
-                f"📢 *LAPORAN KAS AR-ROYHAAN 3* ✨\n"
-                f"🗓️ _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
-                f"💰 *Saldo Kas:* Rp {sk:,}\n"
-                f"🎁 *Saldo Hadiah:* Rp {shd:,}\n"
+                f"📢 *LAPORAN KAS AR-ROYHAAN 3* \n"
+                f" _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
+                f" *Saldo Kas:* Rp {sk:,}\n"
+                f" *Saldo Hadiah:* Rp {shd:,}\n"
                 f"━━━━━━━━━━━━━━━━━━\n"
-                f"🏧 *TOTAL DANA: Rp {sk+shd:,}*\n\n"
+                f" *TOTAL DANA: Rp {sk+shd:,}*\n\n"
                 f"Syukron jazakumullah khair. 🙏"
             )
             
