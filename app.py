@@ -209,28 +209,39 @@ elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
 elif menu == "📦 Inventaris":
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar", "➕ Tambah", "✏️ Update"])
     with tab_view:
-        if not df_inv.empty: 
-            st.dataframe(df_inv, hide_index=True, use_container_width=True)
-            # TOMBOL SHARE INVENTARIS (Disini posisinya biar bener)
-            itb = len(df_inv[df_inv['Kondisi'] == 'Baik'])
-            itr = len(df_inv[df_inv['Kondisi'] != 'Baik'])
-            p_inv = (
-                f"📦 *LAPORAN ASET AR-ROYHAAN 3* 🌵\n"
-                f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
-                f"📊 *Ringkasan Kondisi:*\n"
-                f"✅ Layak Pakai: {itb} Barang\n"
-                f"⚠️ Perlu Perbaikan: {itr} Barang\n"
-                f"━━━━━━━━━━━━━━━━━━\n"
-                f"📋 _Data otomatis dari sistem majelis._\n\n"
-                f"Mohon dijaga bersama. ✨"
-            )
-            
-            # --- PERBAIKAN DISINI ---
-            p_inv_encoded = p_inv.replace(' ', '%20').replace('\n', '%0A')
-            u_inv = f"https://wa.me/?text={p_inv_encoded}"
-            
-            st.divider()
-            st.link_button("📲 Share Status Aset ke WA", u_inv)
+        # --- FITUR SHARE INVENTARIS (VERSI DETAIL) ---
+    if not df_inv.empty:
+        # 1. Ambil daftar barang berdasarkan kondisi
+        list_baik = df_inv[df_inv['Kondisi'] == 'Baik']['Nama Barang'].tolist()
+        list_rusak = df_inv[df_inv['Kondisi'] != 'Baik']['Nama Barang'].tolist()
+        # 2. Ambil daftar barang yang lagi dipinjam
+        list_pinjam = df_inv[df_inv['Status'] == 'Dipinjam']['Nama Barang'].tolist()
+
+        # Format teks daftar barang
+        txt_baik = ", ".join(list_baik) if list_baik else "-"
+        txt_rusak = ", ".join(list_rusak) if list_rusak else "-"
+        txt_pinjam = ", ".join(list_pinjam) if list_pinjam else "Semua Tersedia"
+
+        p_inv = (
+            f"📦 *LAPORAN ASET AR-ROYHAAN 3* 🌵\n"
+            f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
+            f"✅ *BARANG LAYAK PAKAI:*\n"
+            f"_{txt_baik}_\n\n"
+            f"⚠️ *PERLU PERBAIKAN:*\n"
+            f"_{txt_rusak}_\n\n"
+            f"📢 *STATUS PEMINJAMAN:*\n"
+            f"_{txt_pinjam}_\n\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"📋 _Mohon lapor jika ingin meminjam atau ada kerusakan aset._\n\n"
+            f"Syukron. ✨"
+        )
+        
+        # Encoding biar gak error backslash
+        p_inv_encoded = p_inv.replace(' ', '%20').replace('\n', '%0A')
+        u_inv = f"https://wa.me/?text={p_inv_encoded}"
+        
+        st.divider()
+        st.link_button("📲 Share Daftar Detail Aset ke WA", u_inv)
     with tab_add and st.session_state['role'] == "admin":
         with st.form("f_inv_add", clear_on_submit=True):
             nb, sp, jml, lok = st.text_input("Nama Barang"), st.text_input("Spesifikasi"), st.number_input("Jumlah", min_value=1), st.text_input("Lokasi")
