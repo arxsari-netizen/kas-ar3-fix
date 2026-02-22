@@ -18,8 +18,11 @@ if not st.session_state['logged_in']:
         with st.form("login_form"):
             user, pwd = st.text_input("Username"), st.text_input("Password", type="password")
             if st.form_submit_button("Masuk"):
+                # GUE TAMBAHIN LOGIKA ROLE DISINI
                 if user == st.secrets["users"]["admin_user"] and pwd == st.secrets["users"]["admin_password"]:
                     st.session_state.update({"logged_in": True, "role": "admin"}); st.rerun()
+                elif user == st.secrets["users"]["inventaris_user"] and pwd == st.secrets["users"]["inventaris_password"]:
+                    st.session_state.update({"logged_in": True, "role": "admin_inventaris"}); st.rerun()
                 elif user == st.secrets["users"]["warga_user"] and pwd == st.secrets["users"]["warga_password"]:
                     st.session_state.update({"logged_in": True, "role": "user"}); st.rerun()
                 else: st.error("Akses Ditolak!")
@@ -35,25 +38,38 @@ sh = client.open_by_key("1i3OqFAeFYJ7aXy0QSS0IUF9r_yp3pwqNb7tJ8-CEXQE")
 def load_data(sheet_name):
     ws = sh.worksheet(sheet_name)
     df = pd.DataFrame(ws.get_all_records())
-    for col in ['Total', 'Kas', 'Hadiah', 'Jumlah', 'Tahun']:
+    # Proteksi kolom angka
+    cols_to_fix = ['Total', 'Kas', 'Hadiah', 'Jumlah', 'Tahun']
+    for col in cols_to_fix:
         if col in df.columns: df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
     return df
 
 df_masuk, df_keluar, df_warga, df_event = load_data("Pemasukan"), load_data("Pengeluaran"), load_data("Warga"), load_data("Event")
+try:
+    df_inv = load_data("Inventaris")
+except:
+    df_inv = pd.DataFrame(columns=['Nama Barang', 'Spesifikasi', 'Jumlah', 'Lokasi', 'Kondisi', 'Status'])
 
-# --- 4. SIDEBAR & DASHBOARD ---
+# --- 4. SIDEBAR (PEMBATASAN MENU) ---
 with st.sidebar:
     st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
     st.write(f"**USER: {st.session_state['role'].upper()}**")
-    list_menu = ["📊 Laporan", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📜 Log"] if st.session_state['role']=="admin" else ["📊 Laporan", "📜 Log"]
+    
+    # PAKEM MENU BERDASARKAN ROLE
+    if st.session_state['role'] == "admin":
+        list_menu = ["📊 Laporan", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "📜 Log"]
+    elif st.session_state['role'] == "admin_inventaris":
+        list_menu = ["📊 Laporan", "📦 Inventaris"]
+    else:
+        list_menu = ["📊 Laporan", "📜 Log"]
+        
     menu = st.radio("NAVIGASI", list_menu)
     if st.button("Logout"): st.session_state.clear(); st.rerun()
 
+# --- 5. DASHBOARD ---
 st.title(f"🏦 {menu}")
 in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Jumlah'].sum()
-out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
-out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
-out_e = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
+out_k, out_h, out_e = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum(), df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum(), df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
 
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("💰 SALDO KAS", f"Rp {int(in_k - out_k):,}")
@@ -62,10 +78,53 @@ m3.metric("🎭 SALDO EVENT", f"Rp {int(in_e - out_e):,}")
 m4.metric("🏧 TOTAL TUNAI", f"Rp {int((in_k+in_h+in_e)-(out_k+out_h+out_e)):,}")
 st.divider()
 
-bln_list = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-
 # --- 5. LOGIKA MENU ---
-if menu == "📊 Laporan":
+if menu == "📦 Inventaris":
+    st.subheader("📦 Manajemen Aset Majelis")
+    
+    # TAB TAMPILAN
+    tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Barang", "➕ Tambah Barang", "✏️ Update Status"])
+    
+    with tab_view:
+        if not df_inv.empty:
+            # Filter Lokasi biar gampang cari
+            lokasi_list = ["Semua"] + df_inv['Lokasi'].unique().tolist()
+            pilih_lok = st.selectbox("Filter Lokasi", lokasi_list)
+            
+            display_df = df_inv if pilih_lok == "Semua" else df_inv[df_inv['Lokasi'] == pilih_lok]
+            st.dataframe(display_df, hide_index=True, use_container_width=True)
+        else:
+            st.info("Belum ada barang terdaftar.")
+
+    with tab_add:
+        with st.form("f_inv_add", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            nb = c1.text_input("Nama Barang (Contoh: Lampu Teras)")
+            sp = c2.text_input("Spesifikasi (Contoh: Philip 30 Watt White)")
+            jml = c1.number_input("Jumlah", min_value=1, step=1)
+            lok = c2.text_input("Lokasi (Contoh: Gudang B, Aula, atau Teras)")
+            kon = st.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"])
+            sts = st.selectbox("Status", ["Tersedia", "Sedang Dipinjam", "Habis/Hilang"])
+            
+            if st.form_submit_button("Simpan Barang"):
+                if nb and lok:
+                    sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok, kon, sts])
+                    st.success(f"Berhasil input {nb} ke {lok}!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                else: st.error("Nama Barang & Lokasi wajib diisi!")
+
+    with tab_edit:
+        if not df_inv.empty:
+            with st.form("f_inv_edit"):
+                b_edit = st.selectbox("Pilih Barang yang Mau Update", df_inv['Nama Barang'].tolist())
+                new_kon = st.selectbox("Update Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"])
+                new_sts = st.selectbox("Update Status", ["Tersedia", "Sedang Dipinjam", "Habis/Hilang"])
+                if st.form_submit_button("Update Barang"):
+                    cell = sh.worksheet("Inventaris").find(b_edit)
+                    sh.worksheet("Inventaris").update_cell(cell.row, 5, new_kon)
+                    sh.worksheet("Inventaris").update_cell(cell.row, 6, new_sts)
+                    st.success("Status barang berhasil diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+        else: st.info("Data kosong.")
+elif menu == "📊 Laporan":
     t1, t2, t3 = st.tabs(["💰 Rekap Bulanan", "🎭 Detail Event", "📤 Riwayat Pengeluaran"])
     with t1:
         thn = st.selectbox("Pilih Tahun Laporan", range(2022, 2031), index=4)
