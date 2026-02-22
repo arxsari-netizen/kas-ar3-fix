@@ -144,8 +144,10 @@ if menu == "📚 Pustaka":
                         clean_url = gdrive_fix(row['Link'])
                         if row['Tipe'] == "PDF":
                             st.markdown(f'<iframe src="{clean_url}" width="100%" height="500px"></iframe>', unsafe_allow_html=True)
-                        elif row['Tipe'] == "Gambar":
-                            st.image(clean_url)
+                       elif row['Tipe'] == "Gambar":
+            clean_url = gdrive_fix(row['Link'])
+            st.write(f"Debug Link: {clean_url}") # Hapus tanda # di awal baris ini buat liat linknya
+            st.image(clean_url, use_container_width=True)
                         elif row['Tipe'] == "Audio":
                             st.audio(clean_url)
                         else:
