@@ -209,20 +209,33 @@ elif menu == "📦 Inventaris":
             with st.form("f_inv_edit"):
                 b_edit = st.selectbox("Pilih Barang", df_inv['Nama Barang'].tolist())
                 curr = df_inv[df_inv['Nama Barang'] == b_edit].iloc[0]
+                
                 c1, c2 = st.columns(2)
                 n_dipinjam = c1.number_input("Jumlah Dipinjam", min_value=0, max_value=int(curr['Jumlah']), value=int(curr.get('Dipinjam', 0)))
                 n_k = c2.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"], index=["Baik", "Rusak Ringan", "Rusak Parah"].index(curr['Kondisi']))
+                
+                # --- INPUT LOKASI & PEMINJAM SUDAH KEMBALI ---
+                n_lok = st.text_input("Update Lokasi (Gudang/Teras/dll)", value=curr.get('Lokasi', '-'))
                 n_ket = st.text_input("Peminjam / Keperluan", value=curr.get('Keterangan', '-'))
+                
                 if st.form_submit_button("Update Data"):
                     try:
                         r = sh.worksheet("Inventaris").find(b_edit).row
+                        # Update Kolom 4 (Lokasi), 5 (Kondisi), 7 (Jml Dipinjam), 8 (Keterangan)
+                        sh.worksheet("Inventaris").update_cell(r, 4, n_lok) # Balikin update lokasi
                         sh.worksheet("Inventaris").update_cell(r, 5, n_k)
                         sh.worksheet("Inventaris").update_cell(r, 7, int(n_dipinjam))
+                        
                         f_k = n_ket if n_dipinjam > 0 else "-"
                         sh.worksheet("Inventaris").update_cell(r, 8, f_k)
-                        sh.worksheet("Inventaris").update_cell(r, 6, "Dipinjam" if n_dipinjam > 0 else "Tersedia")
-                        st.success("Berhasil!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-                    except: st.error("Gagal update.")
+                        
+                        # Update status teks di kolom 6 (Tersedia/Dipinjam)
+                        st_teks = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
+                        sh.worksheet("Inventaris").update_cell(r, 6, st_teks)
+                        
+                        st.success(f"✅ Data {b_edit} Berhasil Diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                    except: 
+                        st.error("Gagal update. Cek koneksi atau nama barang.")
 
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     w_pilih = st.selectbox("Nama Warga", sorted(df_warga['Nama'].tolist()))
