@@ -177,11 +177,25 @@ elif menu == "📦 Inventaris":
     with tab_view:
         if not df_inv.empty:
             st.dataframe(df_inv, hide_index=True, use_container_width=True)
-            # Share WA Logic
+            
+            # --- PERBAIKAN DI SINI ---
             lb, lr, lp = df_inv[df_inv['Kondisi'] == 'Baik']['Nama Barang'].tolist(), df_inv[df_inv['Kondisi'] != 'Baik']['Nama Barang'].tolist(), df_inv[df_inv['Status'] == 'Dipinjam']['Nama Barang'].tolist()
-            p_inv = f"📦 *LAPORAN ASET AR-ROYHAAN 3*\n📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n✅ *BARANG LAYAK:* {', '.join(lb) if lb else '-'}\n\n⚠️ *RUSAK:* {', '.join(lr) if lr else '-'}\n\n📢 *DIPINJAM:* {', '.join(lp) if lp else 'Semua Tersedia'}\n\nSyukron. ✨"
-            st.link_button("📲 Share Detail Aset ke WA", f"https://wa.me/?text={p_inv.replace(' ', '%20').replace('\n', '%0A')}")
-
+            
+            p_inv = (
+                f"📦 *LAPORAN ASET AR-ROYHAAN 3*\n"
+                f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
+                f"✅ *BARANG LAYAK:* {', '.join(lb) if lb else '-'}\n\n"
+                f"⚠️ *RUSAK:* {', '.join(lr) if lr else '-'}\n\n"
+                f"📢 *DIPINJAM:* {', '.join(lp) if lp else 'Semua Tersedia'}\n\n"
+                f"Syukron. ✨"
+            )
+            
+            # Simpan hasil replace ke variabel dulu baru masuk f-string
+            p_inv_encoded = p_inv.replace(' ', '%20').replace('\n', '%0A')
+            url_wa_inv = f"https://wa.me/?text={p_inv_encoded}"
+            
+            st.link_button("📲 Share Detail Aset ke WA", url_wa_inv)
+            # --------------------------
     if st.session_state['role'] == "admin":
         with tab_add:
             with st.form("f_inv_add", clear_on_submit=True):
