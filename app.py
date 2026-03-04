@@ -44,11 +44,10 @@ def gdrive_fix(url):
         return url
     except: return url
 
-# --- 4. SIDEBAR (Login Admin Diselipkan di Sini) ---
+# --- 4. SIDEBAR ---
 with st.sidebar:
     st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
     
-    # Bagian Login/Logout Admin
     if st.session_state['logged_in']:
         st.success(f"🔓 MODE: {st.session_state['role'].upper()}")
         if st.button("Log Out"):
@@ -67,7 +66,6 @@ with st.sidebar:
                     else:
                         st.error("Akses Ditolak!")
 
-    # Menu Navigasi
     if st.session_state['role'] == "admin":
         list_menu = ["📊 Laporan", "📚 Pustaka", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "📜 Log"]
     else:
@@ -75,16 +73,14 @@ with st.sidebar:
     
     menu = st.radio("NAVIGASI", list_menu)
 
-# --- 5. LOGIKA IKON ---
+# --- 5. LOGIKA DISPLAY ---
 st.title(f"{menu}")
 
-# Hitung saldo global
 in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Jumlah'].sum()
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
 out_e = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
 
-# Dashboard Saldo (Muncul untuk Warga di menu Laporan, atau Admin di mana saja kecuali Inv/Pustaka)
 show_dashboard = (st.session_state['role'] == "admin" and menu not in ["📦 Inventaris", "📚 Pustaka"]) or \
                  (st.session_state['role'] == "user" and menu == "📊 Laporan")
 
@@ -99,7 +95,7 @@ if show_dashboard:
     if menu == "📊 Laporan":
        with st.expander("📢 Bagikan Laporan ke Grup"):
             sk, shd = int(in_k - out_k), int(in_h - out_h)
-            pesan_wa = (f"📢 *LAPORAN KAS AR-ROYHAAN 3* \n📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n*Saldo Kas:* Rp {sk:,}\n*Saldo Hadiah:* Rp {shd:,}\n━━━━━━━━━━━━━━━━━━\n*TOTAL DANA: Rp {sk+shd:,}*\n\nSyukron jazakumullah khair. 🙏")
+            pesan_wa = (f"📢 *LAPORAN KAS AR-ROYHAAN 3*\n📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n*Saldo Kas:* Rp {sk:,}\n*Saldo Hadiah:* Rp {shd:,}\n━━━━━━━━━━━━━━━━━━\n*TOTAL DANA: Rp {sk+shd:,}*\n\nSyukron jazakumullah khair. 🙏")
             p_enc = pesan_wa.replace(' ', '%20').replace('\n', '%0A')
             st.link_button("📲 Kirim Laporan Kas ke WA", f"https://wa.me/?text={p_enc}")
 
@@ -139,26 +135,19 @@ if menu == "📚 Pustaka":
                 col2.write(row['Deskripsi'])
                 with col2.expander("Lihat / Putar Materi"):
                     if row['Tipe'] == "Audio":
-                        # Khusus Audio Pakai Iframe Preview
                         p_url = row['Link'].replace('/view', '/preview') if '/view' in row['Link'] else row['Link']
                         st.markdown(f'<iframe src="{p_url}" width="100%" height="150" style="border:none; border-radius:10px;"></iframe>', unsafe_allow_html=True)
                         st.link_button("🚀 Putar di G-Drive", row['Link'])
                     elif row['Tipe'] == "PDF":
                         st.markdown(f'<iframe src="{gdrive_fix(row["Link"])}" width="100%" height="500px"></iframe>', unsafe_allow_html=True)
                     elif row['Tipe'] == "Gambar":
-                        # Kita pakai link khusus thumbnail biar gambar langsung muncul (lebih stabil)
                         file_id = ""
-                        url_gambar = row['Link']
-                        if '/d/' in url_gambar: file_id = url_gambar.split('/d/')[1].split('/')[0]
-                        elif 'id=' in url_gambar: file_id = url_gambar.split('id=')[1].split('&')[0]
-                        
+                        url_g = row['Link']
+                        if '/d/' in url_g: file_id = url_g.split('/d/')[1].split('/')[0]
+                        elif 'id=' in url_g: file_id = url_g.split('id=')[1].split('&')[0]
                         if file_id:
-                            # Link sakti untuk preview gambar di Streamlit
-                            img_preview = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
-                            st.image(img_preview, use_container_width=True, caption=row['Judul'])
-                            st.link_button("📂 Buka Gambar Asli", row['Link'])
-                        else:
-                            st.warning("Link gambar tidak valid. Pastikan pakai link Share Google Drive.")
+                            st.image(f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000", use_container_width=True)
+                        st.link_button("📂 Buka Gambar Asli", row['Link'])
             st.divider()
 
 elif menu == "📊 Laporan":
@@ -172,105 +161,65 @@ elif menu == "📊 Laporan":
     with t2:
         if not df_event.empty:
             ev_sel = st.selectbox("Pilih Event", df_event['Nama Event'].unique())
-            
-            # Filter Data
             df_ev_masuk = df_event[df_event['Nama Event'] == ev_sel]
-            # Filter pengeluaran yang mengandung nama event di keterangannya
             df_ev_keluar = df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(re.escape(ev_sel), na=False))]
-            
-            e_in = df_ev_masuk['Jumlah'].sum()
-            e_out = df_ev_keluar['Jumlah'].sum()
-            
+            e_in, e_out = df_ev_masuk['Jumlah'].sum(), df_ev_keluar['Jumlah'].sum()
             c1, c2, c3 = st.columns(3)
-            c1.metric("Total Iuran", f"Rp {int(e_in):,}")
-            c2.metric("Total Pengeluaran", f"Rp {int(e_out):,}")
-            c3.metric("Sisa Saldo Event", f"Rp {int(e_in - e_out):,}")
-            
+            c1.metric("Total Iuran", f"Rp {int(e_in):,}"); c2.metric("Total Belanja", f"Rp {int(e_out):,}"); c3.metric("Sisa Saldo", f"Rp {int(e_in - e_out):,}")
             st.divider()
-            
             col_in, col_out = st.columns(2)
-            with col_in:
-                st.write("#### 📥 Pemasukan (Iuran)")
-                st.dataframe(df_ev_masuk[['Tanggal', 'Nama', 'Jumlah']], hide_index=True, use_container_width=True)
-            
-            with col_out:
-                st.write("#### 📤 Pengeluaran (Belanja)")
-                if not df_ev_keluar.empty:
-                    st.dataframe(df_ev_keluar[['Tanggal', 'Keterangan', 'Jumlah']], hide_index=True, use_container_width=True)
-                else:
-                    st.info("Belum ada data pengeluaran untuk event ini.")
+            col_in.write("#### 📥 Pemasukan"); col_in.dataframe(df_ev_masuk[['Tanggal', 'Nama', 'Jumlah']], hide_index=True)
+            col_out.write("#### 📤 Pengeluaran"); col_out.dataframe(df_ev_keluar[['Tanggal', 'Keterangan', 'Jumlah']], hide_index=True)
     with t3:
         ck, ch = st.columns(2)
         ck.write("#### 📤 Pengeluaran KAS"); ck.dataframe(df_keluar[df_keluar['Kategori'] == 'Kas'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
         ch.write("#### 📤 Pengeluaran HADIAH"); ch.dataframe(df_keluar[df_keluar['Kategori'] == 'Hadiah'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
 
 elif menu == "📦 Inventaris":
-    tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Aset Baru", "🔄 Update Status & Pinjam"])
-    
+    tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
     with tab_view:
         if not df_inv.empty:
-            # Pastikan kolom angka aman
             df_inv['Jumlah'] = pd.to_numeric(df_inv['Jumlah'], errors='coerce').fillna(0).astype(int)
             df_inv['Dipinjam'] = pd.to_numeric(df_inv.get('Dipinjam', 0), errors='coerce').fillna(0).astype(int)
             df_inv['Tersedia'] = df_inv['Jumlah'] - df_inv['Dipinjam']
+            st.dataframe(df_inv[['Nama Barang', 'Jumlah', 'Dipinjam', 'Tersedia', 'Kondisi', 'Keterangan']], hide_index=True, use_container_width=True)
             
-            # Tampilkan tabel (tambah kolom Keterangan/Peminjam)
-            cols_show = ['Nama Barang', 'Jumlah', 'Dipinjam', 'Tersedia', 'Kondisi', 'Keterangan']
-            st.dataframe(df_inv[cols_show], hide_index=True, use_container_width=True)
-            
-            # Laporan WA yang lebih detail
-            summary = []
-            for _, row in df_inv.iterrows():
-                if row['Dipinjam'] > 0:
-                    summary.append(f"- {row['Nama Barang']}: {row['Dipinjam']} unit ({row['Keterangan']})")
-            
-            p_wa = f"📦 *UPDATE ASET AR-ROYHAAN 3*\n📅 _{datetime.now().strftime('%d/%m/%Y')}_\n\n*STATUS PINJAM:*\n" + ("\n".join(summary) if summary else "Semua Aman di Tempat.")
-            st.link_button("📲 Share ke WA", f"https://wa.me/?text={p_wa.replace(' ', '%20').replace('\n', '%0A')}")
+            # --- FIX SYNTAX WA ---
+            summary = [f"- {r['Nama Barang']}: {r['Dipinjam']} unit ({r['Keterangan']})" for _, r in df_inv.iterrows() if r['Dipinjam'] > 0]
+            txt_pinjam = "\n".join(summary) if summary else "Semua Aman di Tempat."
+            p_wa = f"📦 *UPDATE ASET AR-ROYHAAN 3*\n📅 _{datetime.now().strftime('%d/%m/%Y')}_\n\n*STATUS PINJAM:*\n{txt_pinjam}"
+            p_wa_enc = p_wa.replace(' ', '%20').replace('\n', '%0A')
+            st.link_button("📲 Share ke WA", f"https://wa.me/?text={p_wa_enc}")
 
     with tab_add:
         if st.session_state['role'] == "admin":
             with st.form("f_inv_add", clear_on_submit=True):
                 nb, sp, jml, lok = st.text_input("Nama Barang"), st.text_input("Spesifikasi"), st.number_input("Total Stok", min_value=1), st.text_input("Lokasi")
                 if st.form_submit_button("Simpan"):
-                    # Simpan: Nama, Spek, Stok, Lokasi, Kondisi (Baik), Status (Tersedia), Dipinjam (0), Keterangan (-)
                     sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok, "Baik", "Tersedia", 0, "-"])
                     st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-        else:
-            st.warning("⚠️ Khusus Admin.")
+        else: st.warning("Khusus Admin.")
 
     with tab_edit:
         if not df_inv.empty:
             with st.form("f_inv_edit"):
                 b_edit = st.selectbox("Pilih Barang", df_inv['Nama Barang'].tolist())
                 curr = df_inv[df_inv['Nama Barang'] == b_edit].iloc[0]
-                
                 c1, c2 = st.columns(2)
                 n_dipinjam = c1.number_input("Jumlah Dipinjam", min_value=0, max_value=int(curr['Jumlah']), value=int(curr.get('Dipinjam', 0)))
                 n_k = c2.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"], index=["Baik", "Rusak Ringan", "Rusak Parah"].index(curr['Kondisi']))
-                
-                # INPUT BARU: Peminjam/Keterangan
-                n_ket = st.text_input("Peminjam / Keperluan / Lokasi Baru", value=curr.get('Keterangan', '-'))
-                
+                n_ket = st.text_input("Peminjam / Keperluan", value=curr.get('Keterangan', '-'))
                 if st.form_submit_button("Update Data"):
                     try:
                         r = sh.worksheet("Inventaris").find(b_edit).row
-                        # Update Kolom 5 (Kondisi), 7 (Jml Dipinjam), 8 (Keterangan)
                         sh.worksheet("Inventaris").update_cell(r, 5, n_k)
                         sh.worksheet("Inventaris").update_cell(r, 7, int(n_dipinjam))
-                        
-                        # Logika keterangan otomatis
-                        final_ket = n_ket if n_dipinjam > 0 else "-"
-                        sh.worksheet("Inventaris").update_cell(r, 8, final_ket)
-                        
-                        # Update status teks di kolom 6
-                        st_teks = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
-                        sh.worksheet("Inventaris").update_cell(r, 6, st_teks)
-                        
-                        st.success("✅ Berhasil diupdate!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-                    except:
-                        st.error("Gagal update.")
+                        f_k = n_ket if n_dipinjam > 0 else "-"
+                        sh.worksheet("Inventaris").update_cell(r, 8, f_k)
+                        sh.worksheet("Inventaris").update_cell(r, 6, "Dipinjam" if n_dipinjam > 0 else "Tersedia")
+                        st.success("Berhasil!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                    except: st.error("Gagal update.")
 
-# --- MENU KHUSUS ADMIN ---
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     w_pilih = st.selectbox("Nama Warga", sorted(df_warga['Nama'].tolist()))
     with st.form("f_kas", clear_on_submit=True):
