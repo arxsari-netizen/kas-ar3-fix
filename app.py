@@ -179,12 +179,16 @@ elif menu == "📦 Inventaris":
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
     with tab_view:
         if not df_inv.empty:
+            # Pastikan kolom angka aman
             df_inv['Jumlah'] = pd.to_numeric(df_inv['Jumlah'], errors='coerce').fillna(0).astype(int)
             df_inv['Dipinjam'] = pd.to_numeric(df_inv.get('Dipinjam', 0), errors='coerce').fillna(0).astype(int)
             df_inv['Tersedia'] = df_inv['Jumlah'] - df_inv['Dipinjam']
-            st.dataframe(df_inv[['Nama Barang', 'Jumlah', 'Dipinjam', 'Tersedia', 'Kondisi', 'Keterangan']], hide_index=True, use_container_width=True)
             
-            # --- FIX SYNTAX WA ---
+            # --- KOLOM SUDAH LENGKAP DI SINI ---
+            cols_show = ['Nama Barang', 'Spesifikasi', 'Jumlah', 'Dipinjam', 'Tersedia', 'Lokasi', 'Kondisi', 'Keterangan']
+            st.dataframe(df_inv[cols_show], hide_index=True, use_container_width=True)
+            
+            # --- FIX SYNTAX WA (TANPA BACKSLASH DI F-STRING) ---
             summary = [f"- {r['Nama Barang']}: {r['Dipinjam']} unit ({r['Keterangan']})" for _, r in df_inv.iterrows() if r['Dipinjam'] > 0]
             txt_pinjam = "\n".join(summary) if summary else "Semua Aman di Tempat."
             p_wa = f"📦 *UPDATE ASET AR-ROYHAAN 3*\n📅 _{datetime.now().strftime('%d/%m/%Y')}_\n\n*STATUS PINJAM:*\n{txt_pinjam}"
