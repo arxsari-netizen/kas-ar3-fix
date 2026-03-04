@@ -163,10 +163,33 @@ elif menu == "📊 Laporan":
     with t2:
         if not df_event.empty:
             ev_sel = st.selectbox("Pilih Event", df_event['Nama Event'].unique())
-            e_in = df_event[df_event['Nama Event'] == ev_sel]['Jumlah'].sum()
-            e_out = df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(f"[{ev_sel}]"))]['Jumlah'].sum()
-            st.metric("Sisa Dana Event", f"Rp {int(e_in - e_out):,}")
-            st.dataframe(df_event[df_event['Nama Event'] == ev_sel][['Tanggal', 'Nama', 'Jumlah']], hide_index=True)
+            
+            # Filter Data
+            df_ev_masuk = df_event[df_event['Nama Event'] == ev_sel]
+            # Filter pengeluaran yang mengandung nama event di keterangannya
+            df_ev_keluar = df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(re.escape(ev_sel), na=False))]
+            
+            e_in = df_ev_masuk['Jumlah'].sum()
+            e_out = df_ev_keluar['Jumlah'].sum()
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Total Iuran", f"Rp {int(e_in):,}")
+            c2.metric("Total Pengeluaran", f"Rp {int(e_out):,}")
+            c3.metric("Sisa Saldo Event", f"Rp {int(e_in - e_out):,}")
+            
+            st.divider()
+            
+            col_in, col_out = st.columns(2)
+            with col_in:
+                st.write("#### 📥 Pemasukan (Iuran)")
+                st.dataframe(df_ev_masuk[['Tanggal', 'Nama', 'Jumlah']], hide_index=True, use_container_width=True)
+            
+            with col_out:
+                st.write("#### 📤 Pengeluaran (Belanja)")
+                if not df_ev_keluar.empty:
+                    st.dataframe(df_ev_keluar[['Tanggal', 'Keterangan', 'Jumlah']], hide_index=True, use_container_width=True)
+                else:
+                    st.info("Belum ada data pengeluaran untuk event ini.")
     with t3:
         ck, ch = st.columns(2)
         ck.write("#### 📤 Pengeluaran KAS"); ck.dataframe(df_keluar[df_keluar['Kategori'] == 'Kas'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
