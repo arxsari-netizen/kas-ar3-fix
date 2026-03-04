@@ -148,8 +148,19 @@ if menu == "📚 Pustaka":
                     elif row['Tipe'] == "PDF":
                         st.markdown(f'<iframe src="{gdrive_fix(row["Link"])}" width="100%" height="500px"></iframe>', unsafe_allow_html=True)
                     elif row['Tipe'] == "Gambar":
-                        st.image(gdrive_fix(row['Link']), use_container_width=True)
-                    else: st.link_button("Buka Materi Luar", row['Link'])
+                        # Kita pakai link khusus thumbnail biar gambar langsung muncul (lebih stabil)
+                        file_id = ""
+                        url_gambar = row['Link']
+                        if '/d/' in url_gambar: file_id = url_gambar.split('/d/')[1].split('/')[0]
+                        elif 'id=' in url_gambar: file_id = url_gambar.split('id=')[1].split('&')[0]
+                        
+                        if file_id:
+                            # Link sakti untuk preview gambar di Streamlit
+                            img_preview = f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000"
+                            st.image(img_preview, use_container_width=True, caption=row['Judul'])
+                            st.link_button("📂 Buka Gambar Asli", row['Link'])
+                        else:
+                            st.warning("Link gambar tidak valid. Pastikan pakai link Share Google Drive.")
             st.divider()
 
 elif menu == "📊 Laporan":
