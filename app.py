@@ -205,66 +205,70 @@ elif menu == "📊 Laporan":
         ch.write("#### 📤 Pengeluaran HADIAH"); ch.dataframe(df_keluar[df_keluar['Kategori'] == 'Hadiah'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
 
 elif menu == "📦 Inventaris":
-    tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar", "➕ Tambah", "✏️ Update"])
+    tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Aset Baru", "🔄 Update Status & Pinjam"])
     
     with tab_view:
         if not df_inv.empty:
-            st.dataframe(df_inv, hide_index=True, use_container_width=True)
+            # Pastikan kolom angka aman
+            df_inv['Jumlah'] = pd.to_numeric(df_inv['Jumlah'], errors='coerce').fillna(0).astype(int)
+            df_inv['Dipinjam'] = pd.to_numeric(df_inv.get('Dipinjam', 0), errors='coerce').fillna(0).astype(int)
+            df_inv['Tersedia'] = df_inv['Jumlah'] - df_inv['Dipinjam']
             
-            # Share WA Logic (Tetap Aman dari Backslash)
-            lb = df_inv[df_inv['Kondisi'] == 'Baik']['Nama Barang'].tolist()
-            lr = df_inv[df_inv['Kondisi'] != 'Baik']['Nama Barang'].tolist()
-            lp = df_inv[df_inv['Status'] == 'Dipinjam']['Nama Barang'].tolist()
+            # Tampilkan tabel (tambah kolom Keterangan/Peminjam)
+            cols_show = ['Nama Barang', 'Jumlah', 'Dipinjam', 'Tersedia', 'Kondisi', 'Keterangan']
+            st.dataframe(df_inv[cols_show], hide_index=True, use_container_width=True)
             
-            p_inv = (
-                f"📦 *LAPORAN ASET AR-ROYHAAN 3*\n"
-                f"📅 _Update: {datetime.now().strftime('%d/%m/%Y')}_\n\n"
-                f"✅ *BARANG LAYAK:* {', '.join(lb) if lb else '-'}\n\n"
-                f"⚠️ *RUSAK:* {', '.join(lr) if lr else '-'}\n\n"
-                f"📢 *DIPINJAM:* {', '.join(lp) if lp else 'Semua Tersedia'}\n\n"
-                f"Syukron. ✨"
-            )
-            p_inv_encoded = p_inv.replace(' ', '%20').replace('\n', '%0A')
-            st.link_button("📲 Share Detail Aset ke WA", f"https://wa.me/?text={p_inv_encoded}")
+            # Laporan WA yang lebih detail
+            summary = []
+            for _, row in df_inv.iterrows():
+                if row['Dipinjam'] > 0:
+                    summary.append(f"- {row['Nama Barang']}: {row['Dipinjam']} unit ({row['Keterangan']})")
+            
+            p_wa = f"📦 *UPDATE ASET AR-ROYHAAN 3*\n📅 _{datetime.now().strftime('%d/%m/%Y')}_\n\n*STATUS PINJAM:*\n" + ("\n".join(summary) if summary else "Semua Aman di Tempat.")
+            st.link_button("📲 Share ke WA", f"https://wa.me/?text={p_wa.replace(' ', '%20').replace('\n', '%0A')}")
 
-    # --- TAB TAMBAH (KHUSUS ADMIN) ---
     with tab_add:
         if st.session_state['role'] == "admin":
             with st.form("f_inv_add", clear_on_submit=True):
-                nb, sp, jml, lok = st.text_input("Nama Barang"), st.text_input("Spesifikasi"), st.number_input("Jumlah", min_value=1), st.text_input("Lokasi")
-                kon, sts = st.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"]), st.selectbox("Status", ["Tersedia", "Dipinjam", "Hilang"])
+                nb, sp, jml, lok = st.text_input("Nama Barang"), st.text_input("Spesifikasi"), st.number_input("Total Stok", min_value=1), st.text_input("Lokasi")
                 if st.form_submit_button("Simpan"):
-                    sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok, kon, sts])
+                    # Simpan: Nama, Spek, Stok, Lokasi, Kondisi (Baik), Status (Tersedia), Dipinjam (0), Keterangan (-)
+                    sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok, "Baik", "Tersedia", 0, "-"])
                     st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
         else:
-            st.warning("⚠️ Menambah barang baru hanya bisa dilakukan oleh Admin.")
+            st.warning("⚠️ Khusus Admin.")
 
-    # --- TAB UPDATE (WARGA & ADMIN BISA AKSES) ---
     with tab_edit:
         if not df_inv.empty:
-            st.info("💡 Warga dipersilakan mengupdate kondisi/lokasi barang jika ada perubahan.")
             with st.form("f_inv_edit"):
-                b_edit = st.selectbox("Pilih Barang yang Mau Diupdate", df_inv['Nama Barang'].tolist())
-                n_lok = st.text_input("Update Lokasi Baru (Kosongkan jika tetap)")
-                n_k = st.selectbox("Kondisi Saat Ini", ["Baik", "Rusak Ringan", "Rusak Parah"])
-                n_s = st.selectbox("Status Peminjaman", ["Tersedia", "Dipinjam", "Hilang"])
+                b_edit = st.selectbox("Pilih Barang", df_inv['Nama Barang'].tolist())
+                curr = df_inv[df_inv['Nama Barang'] == b_edit].iloc[0]
                 
-                if st.form_submit_button("Update Data Aset"):
-                    # Cari baris di Google Sheets
+                c1, c2 = st.columns(2)
+                n_dipinjam = c1.number_input("Jumlah Dipinjam", min_value=0, max_value=int(curr['Jumlah']), value=int(curr.get('Dipinjam', 0)))
+                n_k = c2.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"], index=["Baik", "Rusak Ringan", "Rusak Parah"].index(curr['Kondisi']))
+                
+                # INPUT BARU: Peminjam/Keterangan
+                n_ket = st.text_input("Peminjam / Keperluan / Lokasi Baru", value=curr.get('Keterangan', '-'))
+                
+                if st.form_submit_button("Update Data"):
                     try:
-                        cell = sh.worksheet("Inventaris").find(b_edit)
-                        r = cell.row
-                        # Update sel di kolom 4 (Lokasi), 5 (Kondisi), 6 (Status)
-                        if n_lok: 
-                            sh.worksheet("Inventaris").update_cell(r, 4, n_lok)
+                        r = sh.worksheet("Inventaris").find(b_edit).row
+                        # Update Kolom 5 (Kondisi), 7 (Jml Dipinjam), 8 (Keterangan)
                         sh.worksheet("Inventaris").update_cell(r, 5, n_k)
-                        sh.worksheet("Inventaris").update_cell(r, 6, n_s)
+                        sh.worksheet("Inventaris").update_cell(r, 7, int(n_dipinjam))
                         
-                        st.success(f"✅ Data {b_edit} berhasil diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                        # Logika keterangan otomatis
+                        final_ket = n_ket if n_dipinjam > 0 else "-"
+                        sh.worksheet("Inventaris").update_cell(r, 8, final_ket)
+                        
+                        # Update status teks di kolom 6
+                        st_teks = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
+                        sh.worksheet("Inventaris").update_cell(r, 6, st_teks)
+                        
+                        st.success("✅ Berhasil diupdate!"); st.cache_data.clear(); time.sleep(1); st.rerun()
                     except:
-                        st.error("Gagal update. Pastikan nama barang sesuai.")
-        else:
-            st.info("Belum ada data barang untuk diupdate.")
+                        st.error("Gagal update.")
 
 # --- MENU KHUSUS ADMIN ---
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
