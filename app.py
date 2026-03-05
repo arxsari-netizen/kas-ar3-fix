@@ -61,7 +61,7 @@ def gdrive_fix(url):
 with st.sidebar:
         st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
     # Tambahkan Motto di bawah logo
-    st.markdown("""
+        st.markdown("""
         <div style='text-align: left; margin-top: -30px; margin-bottom: -30px;'>
             <i style='font-size: 9px; color: #666;'>
                 "We come to learn & bring science back"
