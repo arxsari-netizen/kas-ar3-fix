@@ -357,12 +357,18 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
                     except Exception as e:
                         st.error(f"Error {curr_month}: {e}"); break
 
-               if input_log:
+               # --- BAGIAN YANG ERROR TADI (DILURUSKAN) ---
+            if input_log:
                 st.success(f"✅ Tersimpan: {', '.join(input_log)}")
-                if uang_sisa > 0: st.warning(f"💰 Sisa Rp {uang_sisa:,} (Lunas s/d Des)")
+                if uang_sisa > 0: 
+                    st.warning(f"💰 Sisa Rp {uang_sisa:,} (Lunas s/d Des)")
+                
+                # Biar langsung refresh & data baru muncul
                 st.cache_data.clear()
-                time.sleep(2)
+                time.sleep(1)
                 st.rerun()
+            else:
+                st.error("❌ Tidak ada data disimpan. Cek nominal atau status lunas.")
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
