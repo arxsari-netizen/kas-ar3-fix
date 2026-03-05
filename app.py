@@ -290,6 +290,9 @@ elif menu == "📦 Inventaris":
     with tab_edit:
         # Pindahkan pengecekan role ke dalam fitur spesifik
         if not df_inv.empty:
+            # 0. DEFINISI LIST LOKASI (Ini yang tadi kurang)
+            list_lokasi = sorted(df_inv['Lokasi'].dropna().unique().tolist())
+            
             # 1. Bikin Label yang Informatif
             df_inv['label_edit'] = (
                 df_inv['Nama Barang'] + " [" + 
@@ -298,11 +301,8 @@ elif menu == "📦 Inventaris":
             )
 
             st.markdown("### 🔄 Update Status & Peminjaman")
-            st.info("💡 Semua warga dapat memperbarui status peminjaman atau lokasi barang.")
             
             # Selectbox di luar form biar reaktif
-            # --- UBAH BAGIAN INI ---
-            # Kita paksa ambil list terbaru dari df_inv yang fresh
             pilihan = df_inv['label_edit'].tolist()
             pilih_barang = st.selectbox("Pilih Barang:", pilihan)
             
@@ -319,17 +319,15 @@ elif menu == "📦 Inventaris":
                 idx_k = list_k.index(curr['Kondisi']) if curr['Kondisi'] in list_k else 0
                 n_kondisi = c2.selectbox("Kondisi Barang", list_k, index=idx_k)
                 
-                # --- INI BAGIAN SELECTBOX LOKASI ---
+                # --- INI BAGIAN SELECTBOX LOKASI YANG UDAH FIX ---
                 idx_l = list_lokasi.index(curr['Lokasi']) if curr['Lokasi'] in list_lokasi else 0
                 n_lokasi = st.selectbox("Update Lokasi", options=list_lokasi, index=idx_l)
                 # -----------------------------------
                 
                 n_peminjam = st.text_input("Nama Peminjam / Keperluan", value=curr['Keterangan'])
                 
-                # ... (kode sebelum form)
                 if st.form_submit_button("💾 Simpan Perubahan"):
-                    # Kunci pencarian: Pake data asli dari database (curr)
-                    # JANGAN pake n_lokasi atau n_kondisi di sini!
+                    # Kunci pencarian: Pake data ASLI dari database (curr)
                     idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
                     
                     if idx:
@@ -347,10 +345,7 @@ elif menu == "📦 Inventaris":
                         time.sleep(1)
                         st.rerun()
                     else:
-                        # Kalau ini muncul, berarti Nama Barang atau Lokasi di database 
-                        # beda dengan yang terbaca oleh sistem
                         st.error(f"Gagal cari baris: {curr['Nama Barang']} di {curr['Lokasi']}")
-
             st.divider()
 
             # 2. Fitur Pecah Stok (Terbuka untuk Umum)
