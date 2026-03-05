@@ -160,14 +160,18 @@ elif menu == "📊 Laporan":
             # --- FIX URUTAN BULAN ---
             # Set kolom Bulan jadi kategori dengan urutan yang benar
             df_y['Bulan'] = pd.Categorical(df_y['Bulan'], categories=bln_list, ordered=True)
-            
+            # Fungsi untuk memberi warna merah jika belum memenuhi kewajiban
+            def highlight_kurang(val, target):
+                color = 'red' if val < target and val > 0 else 'black'
+                return f'color: {color}'
+
             st.write("#### 🟢 Kas (15rb)")
-            pivot_kas = df_y.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum', observed=False).fillna(0).astype(int)
-            st.dataframe(pivot_kas, use_container_width=True)
+            # Tampilkan dengan style
+            st.dataframe(pivot_kas.style.applymap(lambda x: highlight_kurang(x, 15000)), use_container_width=True)
             
             st.write("#### 🟡 Hadiah (35rb)")
-            pivot_hadiah = df_y.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum', observed=False).fillna(0).astype(int)
-            st.dataframe(pivot_hadiah, use_container_width=True)
+            # Tampilkan dengan style
+            st.dataframe(pivot_hadiah.style.applymap(lambda x: highlight_kurang(x, 35000)), use_container_width=True)
     with t2:
         if not df_event.empty:
             ev_sel = st.selectbox("Pilih Event", df_event['Nama Event'].unique())
@@ -323,26 +327,27 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
                 total_per_baris = pakai_kas + pakai_hadiah
                 
                 # Masukkan ke Database jika ada angka yang dialokasikan
-                if total_per_baris > 0:
-                    tipe_db = mode.split(" (")[0] # Mengambil text: Paket Lengkap, Hanya Kas, dsb.
+               if total_input_baris > 0:
+                    tipe_db = mode.split(" (")[0]
+                    
+                    # --- LOGIKA PENENTU STATUS (NEW) ---
+                    # Cek total akumulasi di bulan ini (Main Warga wajib 50rb)
+                    total_terkumpul = kas_terbayar + hadiah_terbayar + total_input_baris
+                    status_db = "LUNAS" if total_terkumpul >= 50000 else "BELUM LUNAS"
                     
                     try:
-                        # Append 9 Kolom: Tanggal, Nama, Tahun, Bulan, Total, Kas, Hadiah, Ket, Tipe
                         sh.worksheet("Pemasukan").append_row([
                             datetime.now().strftime("%d/%m/%Y"), 
                             w_pilih, 
                             t, 
                             curr_month, 
-                            int(total_per_baris), 
+                            int(total_input_baris), 
                             int(pakai_kas), 
                             int(pakai_hadiah), 
-                            "LUNAS",
+                            status_db,  # Status dinamis (LUNAS/BELUM LUNAS)
                             tipe_db
                         ])
-                        input_log.append(f"{curr_month}")
-                    except Exception as e:
-                        st.error(f"Gagal simpan bulan {curr_month}: {e}")
-                        break
+                        input_log.append(f"{curr_month} ({status_db})")
 
             # 4. Notifikasi Akhir
             if input_log:
