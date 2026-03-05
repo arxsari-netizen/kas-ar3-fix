@@ -324,24 +324,18 @@ elif menu == "📦 Inventaris":
                 n_lokasi = st.text_input("Update Lokasi", value=curr['Lokasi'])
                 n_peminjam = st.text_input("Nama Peminjam / Keperluan", value=curr['Keterangan'])
                 
+                # ... (kode sebelum form)
                 if st.form_submit_button("💾 Simpan Perubahan"):
-    idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
-    if idx:
-        status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
-        
-        # Update satu per satu per kolom (D=4, E=5, F=6, G=7, H=8)
-        ws_inv.update_cell(idx, 4, n_lokasi)
-        ws_inv.update_cell(idx, 5, n_kondisi)
-        ws_inv.update_cell(idx, 6, status_txt)
-        ws_inv.update_cell(idx, 7, int(n_dipinjam))
-        ws_inv.update_cell(idx, 8, n_peminjam)
-        
-        st.success("Data berhasil diperbarui ke Google Sheets!")
-        st.cache_data.clear()
-        time.sleep(1)
-        st.rerun()
-    else:
-        st.error(f"Gagal menemukan baris untuk '{curr['Nama Barang']}'. Cek spasi di Google Sheets!")
+                    # Pastikan baris di bawah ini menjorok ke dalam (4 spasi dari 'if')
+                    idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
+                    
+                    if idx:
+                        # Baris di dalam 'if idx' harus lebih menjorok lagi (8 spasi dari 'if' awal)
+                        status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
+                        ws_inv.update(f"D{idx}:H{idx}", [[n_lokasi, n_kondisi, status_txt, int(n_dipinjam), n_peminjam]])
+                        st.success("Data berhasil diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                    else:
+                        st.error("Barang tidak ditemukan.")
 
             st.divider()
 
