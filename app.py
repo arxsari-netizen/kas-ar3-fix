@@ -154,10 +154,20 @@ elif menu == "📊 Laporan":
     t1, t2, t3 = st.tabs(["💰 Rekap Bulanan", "🎭 Detail Event", "📤 Riwayat Pengeluaran"])
     with t1:
         thn = st.selectbox("Tahun", range(2022, 2031), index=4)
-        df_y = df_masuk[df_masuk['Tahun'] == thn]
+        df_y = df_masuk[df_masuk['Tahun'] == thn].copy() # Tambahkan .copy() agar aman
+        
         if not df_y.empty:
-            st.write("#### 🟢 Kas (15rb)"); st.dataframe(df_y.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum').fillna(0).astype(int), use_container_width=True)
-            st.write("#### 🟡 Hadiah (35rb)"); st.dataframe(df_y.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum').fillna(0).astype(int), use_container_width=True)
+            # --- FIX URUTAN BULAN ---
+            # Set kolom Bulan jadi kategori dengan urutan yang benar
+            df_y['Bulan'] = pd.Categorical(df_y['Bulan'], categories=bln_list, ordered=True)
+            
+            st.write("#### 🟢 Kas (15rb)")
+            pivot_kas = df_y.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum', observed=False).fillna(0).astype(int)
+            st.dataframe(pivot_kas, use_container_width=True)
+            
+            st.write("#### 🟡 Hadiah (35rb)")
+            pivot_hadiah = df_y.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum', observed=False).fillna(0).astype(int)
+            st.dataframe(pivot_hadiah, use_container_width=True)
     with t2:
         if not df_event.empty:
             ev_sel = st.selectbox("Pilih Event", df_event['Nama Event'].unique())
