@@ -47,7 +47,7 @@ def gdrive_fix(url):
 # --- 4. SIDEBAR ---
 with st.sidebar:
     # Bikin kolom buat centering logo (karena st.image defaultnya kiri)
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([2, 2, 1])
     with col2:
         st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
     # Tambahkan Motto di bawah logo
