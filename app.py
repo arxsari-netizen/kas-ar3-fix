@@ -7,7 +7,7 @@ import time
 import re
 
 # --- 1. CONFIG ---
-st.set_page_config(page_title="AR-ROYHAAN 3", layout="wide")
+st.set_page_config(page_title="AR-ROYHAAN 3", layout="wide",initial_sidebar_state="expanded")
 st.markdown("""<style>header {visibility: hidden;} .stApp { background-color: #f8f9fa; } [data-testid="stMetric"] { background: white; border: 1px solid #D4AF37; padding: 15px; border-radius: 12px; }</style>""", unsafe_allow_html=True)
 
 # --- 2. SESSION STATE (Default: Warga/User) ---
