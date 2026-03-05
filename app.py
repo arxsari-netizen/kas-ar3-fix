@@ -257,11 +257,7 @@ elif menu == "📦 Inventaris":
             df_inv['Tersedia'] = df_inv['Jumlah'] - df_inv['Dipinjam']
             st.dataframe(df_inv[['Nama Barang', 'Spesifikasi', 'Jumlah', 'Dipinjam', 'Tersedia', 'Lokasi', 'Kondisi', 'Keterangan']], 
                          hide_index=True, use_container_width=True)
-            
-            # WA Share
-            pinjaman = [f"- {r['Nama Barang']} ({r['Dipinjam']} unit)" for _, r in df_inv.iterrows() if r['Dipinjam'] > 0]
-            txt = "*STATUS PINJAM:* \n" + "\n".join(pinjaman) if pinjaman else "Semua aman di gudang."
-            st.link_button("📲 Share ke WA", f"https://wa.me/?text={txt.replace(' ', '%20').replace('\n', '%0A')}")
+    
 
     with tab_add:
         if st.session_state['role'] == "admin":
