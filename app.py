@@ -304,27 +304,35 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
                     st.error(f"❌ {w_pilih} sudah lunas sampai Desember {t}!")
                     st.stop()
 
-            # 3. Logika Pembagian Saldo (sama kayak sebelumnya)
+          # --- LOGIKA PEMBAGIAN SALDO YANG BENER (MAX 50rb per bulan) ---
             if mode == "Hanya Kas (15rb)":
-                pk, ph = n, 0
+                pk, ph = min(n, 15000), 0
+                n_digunakan = pk # Uang yang dicatat cuma 15rb
             elif mode == "Hanya Hadiah (35rb)":
-                pk, ph = 0, n
+                pk, ph = 0, min(n, 35000)
+                n_digunakan = ph # Uang yang dicatat cuma 35rb
             else:
+                # Mode Paket Lengkap / Custom (Maksimal 50rb per baris/bulan)
                 pk = min(n, 15000)
-                ph = max(0, n - 15000)
+                ph = min(max(0, n - 15000), 35000)
+                n_digunakan = pk + ph # Maksimal total yang dicatat 50rb
             
             try:
-                # 4. Simpan dengan target_bulan yang sudah divalidasi
+                # Simpan dengan n_digunakan (biar di Sheets gak bengkak)
                 sh.worksheet("Pemasukan").append_row([
                     datetime.now().strftime("%d/%m/%Y"), 
-                    w_pilih, t, target_bulan, int(n), int(pk), int(ph), "LUNAS"
+                    w_pilih, t, target_bulan, int(n_digunakan), int(pk), int(ph), "LUNAS"
                 ])
-                st.success(f"✅ Tersimpan ke bulan: **{target_bulan}** {t}")
+                
+                # Kasih info kalau ada uang kembalian atau sisa
+                sisa_uang = n - n_digunakan
+                if sisa_uang > 0:
+                    st.info(f"💰 Ada sisa uang Rp {sisa_uang:,}. Silakan input lagi untuk bulan berikutnya.")
+                
+                st.success(f"✅ Tersimpan ke {target_bulan}: Kas {pk:,} | Hadiah {ph:,}")
                 st.cache_data.clear()
-                time.sleep(2)
+                time.sleep(3)
                 st.rerun()
-            except Exception as e:
-                st.error(f"Gagal simpan: {e}")
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
