@@ -70,14 +70,16 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    # 3. Status Login (Lurus di dalam with)
+    # 3. Status Login (Versi Ramping)
+    st.divider() 
     if st.session_state['logged_in']:
-        st.success(f"🔓 MODE: {st.session_state['role'].upper()}")
-        if st.button("Log Out", use_container_width=True):
+        c1, c2 = st.columns([2, 1])
+        c1.caption(f"🔓 **{st.session_state['role'].upper()}**")
+        if c2.button("Log Out"):
             st.session_state.update({'logged_in': False, 'role': 'user'})
             st.rerun()
     else:
-        st.info("🔒 MODE: WARGA (Read-Only)")
+        st.caption("🔒 **WARGA (Read-Only)**")
         with st.expander("Masuk sebagai Admin"):
             with st.form("login_admin"):
                 u = st.text_input("Username")
