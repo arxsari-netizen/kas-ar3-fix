@@ -357,37 +357,12 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
                     except Exception as e:
                         st.error(f"Error {curr_month}: {e}"); break
 
-            if input_log:
+             if input_log:
                 st.success(f"✅ Tersimpan: {', '.join(input_log)}")
-                
-                # --- FITUR TEKS WA (NEW) ---
-                # Kita bikin format teksnya
-                pesan_wa = (
-                    f"*BUKTI PEMBAYARAN IURAN AR-ROYHAAN 3* 📋\n"
-                    f"--------------------------------------------------\n"
-                    f"👤 *Nama:* {w_pilih} ({role_warga})\n"
-                    f"🗓️ *Tanggal:* {datetime.now().strftime('%d/%m/%Y')}\n"
-                    f"📂 *Periode:* {', '.join(input_log)}\n"
-                    f"💰 *Total:* Rp {n:,}\n"
-                    f"✅ *Status:* {status_db}\n"
-                    f"--------------------------------------------------\n"
-                    f"_Terima kasih atas partisipasinya!_ 🙏"
-                )
-                
-                # Tombol buat Copy Teks (Biar gampang di-paste ke WA)
-                st.text_area("Salin Pesan WA di bawah ini:", value=pesan_wa, height=200)
-                
-                # Opsi: Tombol langsung buka WA (Web/App)
-                import urllib.parse
-                pesan_encoded = urllib.parse.quote(pesan_wa)
-                link_wa = f"https://wa.me/?text={pesan_encoded}"
-                st.link_button("📲 Kirim via WhatsApp", link_wa)
-                # ---------------------------
-
-                if uang_sisa > 0: st.warning(f"💰 Sisa Rp {uang_sisa:,}")
+                if uang_sisa > 0: st.warning(f"💰 Sisa Rp {uang_sisa:,} (Lunas s/d Des)")
                 st.cache_data.clear()
-                # time.sleep(2) # Matikan sementara rerun-nya biar admin sempet copy pesan
-                # st.rerun()
+                time.sleep(2)
+                st.rerun()
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
