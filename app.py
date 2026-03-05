@@ -265,18 +265,28 @@ elif menu == "📦 Inventaris":
         else: st.warning("Khusus Admin.")
 
     with tab_edit:
-        sukses_update = sukses_pindah = sukses_kondisi = False
+        # 1. Siapin variabel sukses biar gak error rerun
+        sukses_update = False
+        sukses_pindah = False
+        sukses_kondisi = False
+        
         if not df_inv.empty:
+            # Bikin label pilihan (Nama + Lokasi)
             df_inv['label_pilih'] = df_inv['Nama Barang'] + " (" + df_inv['Lokasi'].astype(str) + ")"
+
+            # --- FITUR 1: UPDATE STATUS & PINJAM ---
+            # Gunakan ini kalau mau ganti info barang secara keseluruhan
             with st.expander("📝 Update Status / Peminjaman", expanded=True):
                 with st.form("f_inv_edit"):
                     b_edit = st.selectbox("Pilih Barang", df_inv['label_pilih'].tolist())
                     curr = df_inv[df_inv['label_pilih'] == b_edit].iloc[0]
+                    
                     c1, c2 = st.columns(2)
                     n_dipinjam = c1.number_input("Jumlah Dipinjam", min_value=0, max_value=int(curr['Jumlah']), value=int(curr.get('Dipinjam', 0)))
                     n_k = c2.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"], index=["Baik", "Rusak Ringan", "Rusak Parah"].index(curr['Kondisi']))
                     n_lok = st.text_input("Update Nama Lokasi", value=curr.get('Lokasi', '-'))
                     n_ket = st.text_input("Peminjam / Keperluan", value=curr.get('Keterangan', '-'))
+                    
                     if st.form_submit_button("Update Data"):
                         try:
                             rows = sh.worksheet("Inventaris").get_all_records()
@@ -290,14 +300,19 @@ elif menu == "📦 Inventaris":
                                 sukses_update = True
                         except Exception as e: st.error(f"Gagal: {e}")
 
+            # --- FITUR 2: PINDAH SEBAGIAN LOKASI ---
+            # Gunakan ini kalau punya 10 barang, mau dipindah 5 ke tempat lain
             with st.expander("📦 Pindah Sebagian ke Lokasi Lain"):
                 b_pindah = st.selectbox("Pilih Barang yg mau dipindah", df_inv['label_pilih'].tolist(), key="pindah_select")
                 curr_p = df_inv[df_inv['label_pilih'] == b_pindah].iloc[0]
+                
+                # Cek stok: Kalau cuma 1, jangan pake fitur pecah/pindah
                 if int(curr_p['Jumlah']) <= 1:
                     st.info("💡 Stok cuma 1 unit. Gunakan 'Update Status' di atas untuk ganti lokasi.")
                 else:
                     with st.form("f_pindah_lokasi"):
                         c_jml, c_lok = st.columns(2)
+                        # Kita kunci maksimal pindah adalah Jumlah - 1
                         jml_pindah = c_jml.number_input("Jumlah yg dipindah", min_value=1, max_value=int(curr_p['Jumlah'])-1)
                         lok_baru = c_lok.text_input("Lokasi Tujuan")
                         if st.form_submit_button("Konfirmasi Pindah"):
@@ -310,11 +325,14 @@ elif menu == "📦 Inventaris":
                                     sukses_pindah = True
                             except Exception as e: st.error(f"Gagal: {e}")
 
+            # --- FITUR 3: PECAH KONDISI (LAPOR RUSAK) ---
+            # Gunakan ini kalau punya 3 barang baik, terus 1 rusak
             with st.expander("🛠️ Pecah Kondisi (Misal: Sebagian Rusak)"):
                 b_kondisi = st.selectbox("Pilih Barang yg Rusak Sebagian", df_inv['label_pilih'].tolist(), key="rusak_select")
                 curr_k = df_inv[df_inv['label_pilih'] == b_kondisi].iloc[0]
+                
                 if int(curr_k['Jumlah']) <= 1:
-                    st.info("💡 Stok cuma 1 unit. Gunakan 'Update Status' di atas untuk ganti lokasi.")
+                    st.info("💡 Stok cuma 1 unit. Gunakan 'Update Status' di atas untuk ganti kondisi.")
                 else:
                     with st.form("f_pecah_kondisi"):
                         c_jml_r, c_kon_r = st.columns(2)
@@ -330,8 +348,12 @@ elif menu == "📦 Inventaris":
                                     sukses_kondisi = True
                             except Exception as e: st.error(f"Gagal: {e}")
 
+            # --- PROSES REFRESH OTOMATIS ---
             if sukses_update or sukses_pindah or sukses_kondisi:
-                st.success("✅ Berhasil Diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                st.success("✅ Berhasil Diperbarui!")
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
 
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     st.subheader("📥 Input Pembayaran Iuran")
