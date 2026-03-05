@@ -278,7 +278,7 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
         b = c_bln.selectbox("Bulan", bln_list)
         
         # Baris 288 yang bermasalah ada di sini (pastikan sejajar)
-       if st.form_submit_button("Simpan Pembayaran"):
+        if st.form_submit_button("Simpan Pembayaran"):
             # 1. Cari tahu dulu: Bulan apa aja yang sudah dibayar warga ini di tahun tsb
             df_cek = df_masuk[(df_masuk['Nama'] == w_pilih) & (df_masuk['Tahun'] == t)]
             bulan_lunas = df_cek['Bulan'].tolist()
