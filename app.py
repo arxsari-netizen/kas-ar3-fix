@@ -249,7 +249,21 @@ elif menu == "📦 Inventaris":
 
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     st.subheader("📥 Input Pembayaran Iuran")
-    w_pilih = st.selectbox("Nama Warga", sorted(df_warga['Nama'].tolist()))
+    
+    # --- LOGIKA PENAMPILAN NAMA + STATUS ---
+    # Gabungkan Nama dan Role untuk tampilan di Selectbox
+    warga_options = []
+    if not df_warga.empty:
+        for _, row in df_warga.iterrows():
+            warga_options.append(f"{row['Nama']} ({row['Role']})")
+    
+    # Urutkan biar enak carinya
+    warga_options.sort()
+    
+    selected_display = st.selectbox("Pilih Nama Warga", warga_options)
+    
+    # Ambil kembali nama aslinya saja (sebelum tanda kurung) untuk disimpan ke database
+    w_pilih = selected_display.split(" (")[0]
     
     # --- RADIO BUTTON DI LUAR FORM AGAR RESPONSIF ---
     mode = st.radio("Pilih Jenis Pembayaran:", 
