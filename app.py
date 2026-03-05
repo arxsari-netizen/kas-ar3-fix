@@ -368,25 +368,19 @@ elif menu == "📦 Inventaris":
                 else:
                     st.caption("Unit hanya ada 1, gunakan form utama di atas.")
 
-            # 3. Fitur Hapus (HANYA ADMIN)
-            if st.session_state['role'] == "admin":
-                with st.expander("🗑️ Zona Bahaya (Hapus Aset)"):
-                    with st.form("f_delete_asset"):
-                        st.error("Hanya Admin yang bisa menghapus aset dari daftar permanen.")
-                        alasan_hapus = st.text_input("Alasan Penghapusan")
-                        if st.form_submit_button("Hapus Permanen"):
-                            if alasan_hapus:
-                                idx_h = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
-                                ws_inv.delete_rows(idx_h)
-                                try: sh.worksheet("Log").append_row([datetime.now().strftime("%Y-%m-%d %H:%M"), st.session_state['role'], f"HAPUS: {curr['Nama Barang']} - {alasan_hapus}"])
-                                except: pass
-                                st.success("Dihapus!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-                            else: st.warning("Alasan wajib diisi.")
+            # --- INI BAGIAN HAPUS ASET (CUMA ADMIN) ---
+        with st.expander("🗑️ Zona Bahaya (Hapus Aset)"):
+            if st.session_state.get('role') == "admin": # Cek apakah dia admin
+                with st.form("f_delete_aset"):
+                    alasan = st.text_input("Alasan Penghapusan")
+                    if st.form_submit_button("Hapus Permanen"):
+                        idx_del = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
+                        if idx_del:
+                            ws_inv.delete_rows(idx_del) # Hapus baris di Google Sheets
+                            st.success("Aset berhasil dihapus!"); st.cache_data.clear(); time.sleep(1); st.rerun()
             else:
-                st.caption("🔒 *Fitur penghapusan hanya tersedia untuk Admin.*")
-        else:
-            st.info("Belum ada data inventaris.")
-
+                # Pesan kalau bukan admin
+                st.warning("Hanya Admin yang bisa menghapus aset dari daftar permanen.")
 # --- 9. LOG KAS BULANAN & LAINNYA ---
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     st.subheader("📥 Input Pembayaran Iuran")
