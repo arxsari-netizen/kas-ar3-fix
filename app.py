@@ -328,14 +328,17 @@ elif menu == "📦 Inventaris":
                 
                 # ... (kode sebelum form)
                 if st.form_submit_button("💾 Simpan Perubahan"):
+                    # Kunci pencarian: Pake data asli dari database (curr)
+                    # JANGAN pake n_lokasi atau n_kondisi di sini!
                     idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
+                    
                     if idx:
                         status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
                         
-                        # Update pake update_cell biar lebih stabil
-                        ws_inv.update_cell(idx, 4, n_lokasi)
-                        ws_inv.update_cell(idx, 5, n_kondisi)
-                        ws_inv.update_cell(idx, 6, status_txt)
+                        # Update baris tersebut dengan data baru
+                        ws_inv.update_cell(idx, 4, n_lokasi)       # Lokasi baru
+                        ws_inv.update_cell(idx, 5, n_kondisi)      # Kondisi baru
+                        ws_inv.update_cell(idx, 6, status_txt)     # Status baru
                         ws_inv.update_cell(idx, 7, int(n_dipinjam))
                         ws_inv.update_cell(idx, 8, n_peminjam)
                         
@@ -344,7 +347,9 @@ elif menu == "📦 Inventaris":
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("Gagal cari baris di database. Coba cek lagi ya!")
+                        # Kalau ini muncul, berarti Nama Barang atau Lokasi di database 
+                        # beda dengan yang terbaca oleh sistem
+                        st.error(f"Gagal cari baris: {curr['Nama Barang']} di {curr['Lokasi']}")
 
             st.divider()
 
