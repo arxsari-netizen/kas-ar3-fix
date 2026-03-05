@@ -250,62 +250,55 @@ elif menu == "📦 Inventaris":
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     st.subheader("📥 Input Pembayaran Iuran")
     
-    # --- LOGIKA PENAMPILAN NAMA + STATUS ---
-    # Gabungkan Nama dan Role untuk tampilan di Selectbox
+    # 1. Logika Penampilan Nama + Status Role
     warga_options = []
     if not df_warga.empty:
         for _, row in df_warga.iterrows():
             warga_options.append(f"{row['Nama']} ({row['Role']})")
-    
-    # Urutkan biar enak carinya
     warga_options.sort()
     
     selected_display = st.selectbox("Pilih Nama Warga", warga_options)
+    w_pilih = selected_display.split(" (")[0] # Ambil nama asli saja
     
-    # Ambil kembali nama aslinya saja (sebelum tanda kurung) untuk disimpan ke database
-    w_pilih = selected_display.split(" (")[0]
-    
-    # --- RADIO BUTTON DI LUAR FORM AGAR RESPONSIF ---
+    # 2. Radio Button di Luar Form agar Responsif
     mode = st.radio("Pilih Jenis Pembayaran:", 
                     ["Paket Lengkap (50rb)", "Hanya Kas (15rb)", "Hanya Hadiah (35rb)", "Custom Nominal"], 
                     horizontal=True)
     
-    # Logika Penentuan Nominal (Langsung berubah saat diklik)
     if mode == "Paket Lengkap (50rb)": n_val = 50000
     elif mode == "Hanya Kas (15rb)": n_val = 15000
     elif mode == "Hanya Hadiah (35rb)": n_val = 35000
     else: n_val = 0
     
-    # --- FORM DIMULAI DI SINI ---
+    # 3. Form Input
     with st.form("f_kas", clear_on_submit=True):
         c_nom, c_thn, c_bln = st.columns([2, 1, 1])
-        
-        # Nominal sekarang pakai value n_val yang dinamis
         n = c_nom.number_input("Nominal Pembayaran (Rp)", value=n_val, step=5000)
         t = c_thn.selectbox("Tahun", range(2022, 2031), index=4)
         b = c_bln.selectbox("Bulan", bln_list)
         
-       if st.form_submit_button("Simpan Pembayaran"):
-            # --- LOGIKA PEMBAGIAN SALDO YANG BENER ---
+        # Baris 288 yang bermasalah ada di sini (pastikan sejajar)
+        if st.form_submit_button("Simpan Pembayaran"):
+            # Logika Pembagian Saldo
             if mode == "Hanya Kas (15rb)":
                 pk, ph = n, 0
             elif mode == "Hanya Hadiah (35rb)":
                 pk, ph = 0, n
             else:
-                # Ini buat "Paket Lengkap" DAN "Custom Nominal"
-                # Algoritma: Isi Kas dulu maksimal 15rb, sisanya lempar ke Hadiah
                 pk = min(n, 15000)
                 ph = max(0, n - 15000)
             
-            # Simpan ke Sheets
-            sh.worksheet("Pemasukan").append_row([
-                datetime.now().strftime("%d/%m/%Y"), 
-                w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"
-            ])
-            st.success(f"✅ Berhasil! {w_pilih} ({b} {t}) -> Kas: {pk:,}, Hadiah: {ph:,}")
-            st.cache_data.clear()
-            time.sleep(1)
-            st.rerun()
+            try:
+                sh.worksheet("Pemasukan").append_row([
+                    datetime.now().strftime("%d/%m/%Y"), 
+                    w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"
+                ])
+                st.success(f"✅ Tersimpan: {w_pilih} - {b} {t}")
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Gagal simpan ke Sheets: {e}")
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
