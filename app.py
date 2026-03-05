@@ -101,7 +101,7 @@ with st.sidebar:
             st.rerun()
     else:
         st.caption("🔒 **WARGA (Read-Only)**")
-        with st.expander("Masuk sebagai Admin"):
+        with st.expander("Login Admin"):
             with st.form("login_admin"):
                 u = st.text_input("Username")
                 p = st.text_input("Password", type="password")
