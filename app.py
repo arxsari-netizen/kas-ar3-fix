@@ -274,7 +274,11 @@ elif menu == "📦 Inventaris":
 
     with tab_edit:
         if not df_inv.empty:
-            df_inv['label'] = df_inv['Nama Barang'] + " [" + df_inv['Lokasi'] + "]"
+            df_inv['label'] = (
+    df_inv['Nama Barang'] + 
+    " [" + df_inv['Lokasi'] + "] " + 
+    " - Kondisi: " + df_inv['Kondisi']
+)
             
             # 1. Update & Pinjam (Batch Update)
             with st.expander("📝 Update Status / Pinjam", expanded=True):
