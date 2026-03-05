@@ -285,35 +285,37 @@ elif menu == "📦 Inventaris":
                     st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
         else: st.warning("Khusus Admin.")
 
+    Sori, sori, Bre! Gue kejauhan tadi jelasin teknisnya. Intinya gini: Streamlit itu sensitif sama perintah st.rerun() kalau ditaruh di dalam try...except. Dia nyangka itu error, padahal itu perintah buat refresh halaman.
+
+Biar lu nggak pusing, ini satu blok utuh yang udah gue bersihin. Lu tinggal HAPUS semua isi di dalam with tab_edit: lu yang sekarang, terus GANTI pakai ini semua. Gue jamin rapi dan nggak merah lagi.
+
+Python
     with tab_edit:
         if not df_inv.empty:
+            # Kita siapin variabel buat tanda sukses di luar try
+            sukses_update = False
+            sukses_pindah = False
+
             # --- FITUR 1: UPDATE STATUS & PINJAM ---
             with st.expander("📝 Update Status / Peminjaman", expanded=True):
                 with st.form("f_inv_edit"):
-                    # Tambahin lokasi di label biar gak tertukar kalau ada barang sama beda tempat
                     df_inv['label_pilih'] = df_inv['Nama Barang'] + " (" + df_inv['Lokasi'] + ")"
                     b_edit = st.selectbox("Pilih Barang & Lokasi Asal", df_inv['label_pilih'].tolist())
-                    
-                    # Ambil data asli berdasarkan label yang dipilih
                     curr = df_inv[df_inv['label_pilih'] == b_edit].iloc[0]
                     
                     c1, c2 = st.columns(2)
                     n_dipinjam = c1.number_input("Jumlah Dipinjam", min_value=0, max_value=int(curr['Jumlah']), value=int(curr.get('Dipinjam', 0)))
                     n_k = c2.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"], index=["Baik", "Rusak Ringan", "Rusak Parah"].index(curr['Kondisi']))
-                    
-                    n_lok = st.text_input("Update Nama Lokasi (Jika perlu ganti nama)", value=curr.get('Lokasi', '-'))
+                    n_lok = st.text_input("Update Nama Lokasi", value=curr.get('Lokasi', '-'))
                     n_ket = st.text_input("Peminjam / Keperluan", value=curr.get('Keterangan', '-'))
                     
                     if st.form_submit_button("Update Data"):
                         try:
-                            # Cari baris yang bener di Google Sheets (berdasarkan nama DAN lokasi)
-                            cell = sh.worksheet("Inventaris").find(curr['Nama Barang'])
-                            # Filter lagi biar barisnya pas (khawatir ada nama sama beda lokasi)
                             rows = sh.worksheet("Inventaris").get_all_records()
                             r_idx = 0
                             for i, r in enumerate(rows):
                                 if r['Nama Barang'] == curr['Nama Barang'] and r['Lokasi'] == curr['Lokasi']:
-                                    r_idx = i + 2 # +2 karena index 0 dan header
+                                    r_idx = i + 2
                                     break
                             
                             sh.worksheet("Inventaris").update_cell(r_idx, 4, n_lok)
@@ -321,23 +323,22 @@ elif menu == "📦 Inventaris":
                             sh.worksheet("Inventaris").update_cell(r_idx, 7, int(n_dipinjam))
                             sh.worksheet("Inventaris").update_cell(r_idx, 8, n_ket if n_dipinjam > 0 else "-")
                             sh.worksheet("Inventaris").update_cell(r_idx, 6, "Dipinjam" if n_dipinjam > 0 else "Tersedia")
-                            
-                            st.success("✅ Data Berhasil Diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-                        except: st.error("Gagal update.")
+                            sukses_update = True
+                        except Exception as e:
+                            st.error(f"Gagal: {e}")
 
-            # --- FITUR 2: PINDAH GUDANG (OPSI 1) ---
+            # --- FITUR 2: PINDAH GUDANG (MUTASI) ---
             with st.expander("📦 Pindah Sebagian ke Lokasi Lain"):
                 with st.form("f_pindah_lokasi"):
                     b_pindah = st.selectbox("Barang yang akan dipindah", df_inv['label_pilih'].tolist())
                     curr_p = df_inv[df_inv['label_pilih'] == b_pindah].iloc[0]
                     
                     c_jml, c_lok = st.columns(2)
-                    jml_pindah = c_jml.number_input("Jumlah yg dipindah", min_value=1, max_value=int(curr_p['Jumlah'])-1, help="Sisakan minimal 1 di lokasi asal")
-                    lok_baru = c_lok.text_input("Lokasi Tujuan (Contoh: Gudang B)")
+                    jml_pindah = c_jml.number_input("Jumlah yg dipindah", min_value=1, max_value=int(curr_p['Jumlah'])-1)
+                    lok_baru = c_lok.text_input("Lokasi Tujuan")
                     
                     if st.form_submit_button("Konfirmasi Pindah Lokasi"):
                         try:
-                            # 1. Kurangi jumlah di lokasi lama
                             rows = sh.worksheet("Inventaris").get_all_records()
                             r_asal = 0
                             for i, r in enumerate(rows):
@@ -345,17 +346,22 @@ elif menu == "📦 Inventaris":
                                     r_asal = i + 2
                                     break
                             
-                            stok_sisa = int(curr_p['Jumlah']) - int(jml_pindah)
-                            sh.worksheet("Inventaris").update_cell(r_asal, 3, stok_sisa)
-                            
-                            # 2. Tambah baris baru untuk lokasi baru
+                            # Update stok asal & tambah baris baru
+                            sh.worksheet("Inventaris").update_cell(r_asal, 3, int(curr_p['Jumlah']) - int(jml_pindah))
                             sh.worksheet("Inventaris").append_row([
                                 curr_p['Nama Barang'], curr_p['Spesifikasi'], int(jml_pindah), 
                                 lok_baru, curr_p['Kondisi'], "Tersedia", 0, "-"
                             ])
-                            
-                            st.success(f"✅ {jml_pindah} unit {curr_p['Nama Barang']} pindah ke {lok_baru}"); st.cache_data.clear(); time.sleep(1); st.rerun()
-                        except: st.error("Gagal proses mutasi.")
+                            sukses_pindah = True
+                        except Exception as e:
+                            st.error(f"Gagal Mutasi: {e}")
+
+            # --- PROSES REFRESH (Di luar Try-Except) ---
+            if sukses_update or sukses_pindah:
+                st.success("✅ Berhasil diproses!")
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
 
 # --- MENU INPUT KAS ---
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
