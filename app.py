@@ -154,24 +154,29 @@ elif menu == "📊 Laporan":
     t1, t2, t3 = st.tabs(["💰 Rekap Bulanan", "🎭 Detail Event", "📤 Riwayat Pengeluaran"])
     with t1:
         thn = st.selectbox("Tahun", range(2022, 2031), index=4)
-        df_y = df_masuk[df_masuk['Tahun'] == thn].copy() # Tambahkan .copy() agar aman
+        df_y = df_masuk[df_masuk['Tahun'] == thn].copy()
         
-        if not df_y.empty:
-            # --- FIX URUTAN BULAN ---
-            # Set kolom Bulan jadi kategori dengan urutan yang benar
-            df_y['Bulan'] = pd.Categorical(df_y['Bulan'], categories=bln_list, ordered=True)
-            # Fungsi untuk memberi warna merah jika belum memenuhi kewajiban
-            def highlight_kurang(val, target):
-                color = 'red' if val < target and val > 0 else 'black'
-                return f'color: {color}'
+        # --- 1. DEFINISIKAN FUNGSI HIGHLIGHT (WAJIB DI SINI) ---
+        def highlight_kurang(val, target):
+            # Jika angka di bawah target (tapi bukan 0), kasih warna merah
+            color = 'red' if 0 < val < target else 'black'
+            return f'color: {color}'
 
-            st.write("#### 🟢 Kas (15rb)")
-            # Tampilkan dengan style
-            st.dataframe(pivot_kas.style.applymap(lambda x: highlight_kurang(x, 15000)), use_container_width=True)
+        if not df_y.empty:
+            # Set urutan bulan agar tidak berantakan (Abjad)
+            df_y['Bulan'] = pd.Categorical(df_y['Bulan'], categories=bln_list, ordered=True)
             
-            st.write("#### 🟡 Hadiah (35rb)")
-            # Tampilkan dengan style
-            st.dataframe(pivot_hadiah.style.applymap(lambda x: highlight_kurang(x, 35000)), use_container_width=True)
+            st.write("#### 🟢 Kas (Kewajiban 15rb)")
+            pivot_kas = df_y.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum', observed=False).fillna(0).astype(int)
+            # --- 2. PAKAI .map() UNTUK STYLING ---
+            st.dataframe(pivot_kas.style.map(lambda x: highlight_kurang(x, 15000)), use_container_width=True)
+            
+            st.write("#### 🟡 Hadiah (Kewajiban 35rb)")
+            pivot_hadiah = df_y.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum', observed=False).fillna(0).astype(int)
+            # --- 3. PAKAI .map() UNTUK STYLING ---
+            st.dataframe(pivot_hadiah.style.map(lambda x: highlight_kurang(x, 35000)), use_container_width=True)
+            
+            st.info("💡 Angka berwarna **Merah** artinya pembayaran belum mencapai target kewajiban bulanan.")
     with t2:
         if not df_event.empty:
             ev_sel = st.selectbox("Pilih Event", df_event['Nama Event'].unique())
