@@ -285,28 +285,27 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
         t = c_thn.selectbox("Tahun", range(2022, 2031), index=4)
         b = c_bln.selectbox("Bulan", bln_list)
         
-        if st.form_submit_button("Simpan Pembayaran"):
-            # Logika Pemecahan Saldo (Berdasarkan Mode yang dipilih di luar form)
+       if st.form_submit_button("Simpan Pembayaran"):
+            # --- LOGIKA PEMBAGIAN SALDO YANG BENER ---
             if mode == "Hanya Kas (15rb)":
                 pk, ph = n, 0
             elif mode == "Hanya Hadiah (35rb)":
                 pk, ph = 0, n
-            elif mode == "Paket Lengkap (50rb)":
-                pk, ph = 15000, 35000
             else:
-                # Logika Custom: Prioritas Kas 15rb, sisanya Hadiah
+                # Ini buat "Paket Lengkap" DAN "Custom Nominal"
+                # Algoritma: Isi Kas dulu maksimal 15rb, sisanya lempar ke Hadiah
                 pk = min(n, 15000)
                 ph = max(0, n - 15000)
             
+            # Simpan ke Sheets
             sh.worksheet("Pemasukan").append_row([
                 datetime.now().strftime("%d/%m/%Y"), 
                 w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"
             ])
-            st.success(f"✅ Berhasil! {w_pilih} - {b} {t} (Kas: {pk:,}, Hadiah: {ph:,})")
+            st.success(f"✅ Berhasil! {w_pilih} ({b} {t}) -> Kas: {pk:,}, Hadiah: {ph:,}")
             st.cache_data.clear()
             time.sleep(1)
             st.rerun()
-
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
