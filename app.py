@@ -70,37 +70,35 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    # 3. Status Login (Ramping & Sejajar)
+    # 3. Status Login (Pojok Kiri & Ramping)
     if st.session_state['logged_in']:
-        # CSS sakti buat ngecilin tombol biar gak 'mblendung'
+        # CSS buat maksa tombol jadi mungil dan mepet kiri
         st.markdown("""
             <style>
-                /* Tombol Log Out jadi mungil */
-                div[data-testid="stSidebar"] button {
-                    padding: 0px 8px !important;
-                    height: 22px !important;
-                    min-height: 22px !important;
-                    line-height: 1 !important;
-                    font-size: 10px !important;
-                    border-radius: 4px !important;
+                /* Perkecil container tombol */
+                div[data-testid="stSidebar"] div.stButton button {
+                    display: inline-flex;
+                    padding: 0px 10px !important;
+                    height: 24px !important;
+                    min-height: 24px !important;
+                    width: auto !important;
+                    font-size: 11px !important;
+                    margin-top: -5px !important;
                 }
             </style>
         """, unsafe_allow_html=True)
         
-        # Susun ADMIN dan Tombol Log Out sejajar (Flexbox)
+        # Susun pake HTML biar gak kepotong kolom Streamlit
         st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; margin-bottom: 5px;">
-                <span style="font-size: 11px; font-weight: bold; color: #4CAF50;">🔓 {st.session_state['role'].upper()}</span>
-                <div id="btn-container"></div>
+            <div style="margin-bottom: 5px;">
+                <span style="font-size: 12px; font-weight: bold; color: #4CAF50; margin-right: 10px;">🔓 {st.session_state['role'].upper()}</span>
             </div>
         """, unsafe_allow_html=True)
         
-        # Taruh tombol di sebelah kanan label Admin
-        cols = st.columns([1.2, 1])
-        with cols[1]:
-            if st.button("Log Out ➔", key="btn_out"):
-                st.session_state.update({'logged_in': False, 'role': 'user'})
-                st.rerun()
+        # Tombol langsung ditaruh di bawahnya (akan mepet kiri otomatis)
+        if st.button("Log Out ➔", key="btn_out"):
+            st.session_state.update({'logged_in': False, 'role': 'user'})
+            st.rerun()
     else:
         st.caption("🔒 **WARGA (Read-Only)**")
         with st.expander("Masuk sebagai Admin"):
