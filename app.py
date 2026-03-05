@@ -69,8 +69,6 @@ with st.sidebar:
             </i>
         </div>
     """, unsafe_allow_html=True)
-    
-    st.divider() 
 
     # 3. Status Login (Lurus di dalam with)
     if st.session_state['logged_in']:
