@@ -279,7 +279,32 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
         
         # Baris 288 yang bermasalah ada di sini (pastikan sejajar)
         if st.form_submit_button("Simpan Pembayaran"):
-            # Logika Pembagian Saldo
+            # 1. Cari tahu dulu: Bulan apa aja yang sudah dibayar warga ini di tahun tsb
+            df_cek = df_masuk[(df_masuk['Nama'] == w_pilih) & (df_masuk['Tahun'] == t)]
+            bulan_lunas = df_cek['Bulan'].tolist()
+            
+            target_bulan = b
+            # 2. LOGIKA OTOMATIS GESER BULAN:
+            # Jika bulan yang dipilih (b) sudah ada di database, cari bulan berikutnya
+            if target_bulan in bulan_lunas:
+                st.warning(f"⚠️ {w_pilih} sudah lunas di {target_bulan}. Mencari bulan kosong berikutnya...")
+                
+                # Cari index bulan sekarang di bln_list
+                idx_sekarang = bln_list.index(target_bulan)
+                found = False
+                
+                # Cek bulan-bulan setelahnya
+                for i in range(idx_sekarang + 1, len(bln_list)):
+                    if bln_list[i] not in bulan_lunas:
+                        target_bulan = bln_list[i]
+                        found = True
+                        break
+                
+                if not found:
+                    st.error(f"❌ {w_pilih} sudah lunas sampai Desember {t}!")
+                    st.stop()
+
+            # 3. Logika Pembagian Saldo (sama kayak sebelumnya)
             if mode == "Hanya Kas (15rb)":
                 pk, ph = n, 0
             elif mode == "Hanya Hadiah (35rb)":
@@ -289,16 +314,17 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
                 ph = max(0, n - 15000)
             
             try:
+                # 4. Simpan dengan target_bulan yang sudah divalidasi
                 sh.worksheet("Pemasukan").append_row([
                     datetime.now().strftime("%d/%m/%Y"), 
-                    w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"
+                    w_pilih, t, target_bulan, int(n), int(pk), int(ph), "LUNAS"
                 ])
-                st.success(f"✅ Tersimpan: {w_pilih} - {b} {t}")
+                st.success(f"✅ Tersimpan ke bulan: **{target_bulan}** {t}")
                 st.cache_data.clear()
-                time.sleep(1)
+                time.sleep(2)
                 st.rerun()
             except Exception as e:
-                st.error(f"Gagal simpan ke Sheets: {e}")
+                st.error(f"Gagal simpan: {e}")
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
