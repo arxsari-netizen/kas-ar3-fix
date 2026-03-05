@@ -249,13 +249,41 @@ elif menu == "📦 Inventaris":
 
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     w_pilih = st.selectbox("Nama Warga", sorted(df_warga['Nama'].tolist()))
+    
     with st.form("f_kas", clear_on_submit=True):
-        n = st.number_input("Nominal", step=5000)
-        t, b = st.selectbox("Tahun", range(2022, 2031), index=4), st.selectbox("Bulan", bln_list)
-        if st.form_submit_button("Simpan"):
-            pk, ph = (min(n, 15000), max(0, n-15000))
-            sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"])
-            st.success("OK!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+        col_m, col_t, col_b = st.columns([2, 1, 1])
+        
+        # Pilihan Mode Bayar
+        mode = col_m.radio("Pilih Jenis Pembayaran:", ["Paket Lengkap (50rb)", "Hanya Kas (15rb)", "Hanya Hadiah (35rb)", "Custom Nominal"], horizontal=True)
+        
+        # Logika Nominal Berdasarkan Mode
+        if mode == "Paket Lengkap (50rb)": nominal_default = 50000
+        elif mode == "Hanya Kas (15rb)": nominal_default = 15000
+        elif mode == "Hanya Hadiah (35rb)": nominal_default = 35000
+        else: nominal_default = 0
+            
+        n = st.number_input("Nominal Pembayaran (Rp)", value=nominal_default, step=5000)
+        t, b = col_t.selectbox("Tahun", range(2022, 2031), index=4), col_b.selectbox("Bulan", bln_list)
+        
+        if st.form_submit_button("Simpan Pembayaran"):
+            # Logika Pemecahan Saldo
+            if mode == "Hanya Kas (15rb)":
+                pk, ph = n, 0
+            elif mode == "Hanya Hadiah (35rb)":
+                pk, ph = 0, n
+            elif mode == "Paket Lengkap (50rb)":
+                pk, ph = 15000, 35000
+            else:
+                # Mode Custom: Jika >= 15rb, isi Kas dulu sisanya Hadiah, 
+                # atau lu bisa sesuaikan logikanya di sini
+                pk = min(n, 15000)
+                ph = max(0, n - 15000)
+            
+            sh.worksheet("Pemasukan").append_row([
+                datetime.now().strftime("%d/%m/%Y"), 
+                w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"
+            ])
+            st.success(f"✅ Berhasil! Kas: Rp {pk:,} | Hadiah: Rp {ph:,}"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
