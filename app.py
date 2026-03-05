@@ -70,25 +70,37 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    # Status Login (Sekarang Status & Tombol mepet dalam satu baris)
+    # 3. Status Login (Ramping & Sejajar)
     if st.session_state['logged_in']:
-        # CSS buat ngecilin tombol Log Out biar gak kegedean
+        # CSS sakti buat ngecilin tombol biar gak 'mblendung'
         st.markdown("""
             <style>
+                /* Tombol Log Out jadi mungil */
                 div[data-testid="stSidebar"] button {
                     padding: 0px 8px !important;
-                    height: 24px !important;
-                    font-size: 11px !important;
-                    min-height: 24px !important;
+                    height: 22px !important;
+                    min-height: 22px !important;
+                    line-height: 1 !important;
+                    font-size: 10px !important;
+                    border-radius: 4px !important;
                 }
             </style>
         """, unsafe_allow_html=True)
         
-        c1, c2 = st.columns([1, 1])
-        c1.markdown(f"<p style='font-size: 11px; font-weight: bold; color: #4CAF50; margin-top: 5px;'>🔓 {st.session_state['role'].upper()}</p>", unsafe_allow_html=True)
-        if c2.button("Log Out ➔"):
-            st.session_state.update({'logged_in': False, 'role': 'user'})
-            st.rerun()
+        # Susun ADMIN dan Tombol Log Out sejajar (Flexbox)
+        st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; margin-bottom: 5px;">
+                <span style="font-size: 11px; font-weight: bold; color: #4CAF50;">🔓 {st.session_state['role'].upper()}</span>
+                <div id="btn-container"></div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Taruh tombol di sebelah kanan label Admin
+        cols = st.columns([1.2, 1])
+        with cols[1]:
+            if st.button("Log Out ➔", key="btn_out"):
+                st.session_state.update({'logged_in': False, 'role': 'user'})
+                st.rerun()
     else:
         st.caption("🔒 **WARGA (Read-Only)**")
         with st.expander("Masuk sebagai Admin"):
