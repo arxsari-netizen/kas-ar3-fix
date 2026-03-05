@@ -248,25 +248,31 @@ elif menu == "📦 Inventaris":
                         st.error("Gagal update. Cek koneksi atau nama barang.")
 
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
+    st.subheader("📥 Input Pembayaran Iuran")
     w_pilih = st.selectbox("Nama Warga", sorted(df_warga['Nama'].tolist()))
     
+    # --- RADIO BUTTON DI LUAR FORM AGAR RESPONSIF ---
+    mode = st.radio("Pilih Jenis Pembayaran:", 
+                    ["Paket Lengkap (50rb)", "Hanya Kas (15rb)", "Hanya Hadiah (35rb)", "Custom Nominal"], 
+                    horizontal=True)
+    
+    # Logika Penentuan Nominal (Langsung berubah saat diklik)
+    if mode == "Paket Lengkap (50rb)": n_val = 50000
+    elif mode == "Hanya Kas (15rb)": n_val = 15000
+    elif mode == "Hanya Hadiah (35rb)": n_val = 35000
+    else: n_val = 0
+    
+    # --- FORM DIMULAI DI SINI ---
     with st.form("f_kas", clear_on_submit=True):
-        col_m, col_t, col_b = st.columns([2, 1, 1])
+        c_nom, c_thn, c_bln = st.columns([2, 1, 1])
         
-        # Pilihan Mode Bayar
-        mode = col_m.radio("Pilih Jenis Pembayaran:", ["Paket Lengkap (50rb)", "Hanya Kas (15rb)", "Hanya Hadiah (35rb)", "Custom Nominal"], horizontal=True)
-        
-        # Logika Nominal Berdasarkan Mode
-        if mode == "Paket Lengkap (50rb)": nominal_default = 50000
-        elif mode == "Hanya Kas (15rb)": nominal_default = 15000
-        elif mode == "Hanya Hadiah (35rb)": nominal_default = 35000
-        else: nominal_default = 0
-            
-        n = st.number_input("Nominal Pembayaran (Rp)", value=nominal_default, step=5000)
-        t, b = col_t.selectbox("Tahun", range(2022, 2031), index=4), col_b.selectbox("Bulan", bln_list)
+        # Nominal sekarang pakai value n_val yang dinamis
+        n = c_nom.number_input("Nominal Pembayaran (Rp)", value=n_val, step=5000)
+        t = c_thn.selectbox("Tahun", range(2022, 2031), index=4)
+        b = c_bln.selectbox("Bulan", bln_list)
         
         if st.form_submit_button("Simpan Pembayaran"):
-            # Logika Pemecahan Saldo
+            # Logika Pemecahan Saldo (Berdasarkan Mode yang dipilih di luar form)
             if mode == "Hanya Kas (15rb)":
                 pk, ph = n, 0
             elif mode == "Hanya Hadiah (35rb)":
@@ -274,8 +280,7 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
             elif mode == "Paket Lengkap (50rb)":
                 pk, ph = 15000, 35000
             else:
-                # Mode Custom: Jika >= 15rb, isi Kas dulu sisanya Hadiah, 
-                # atau lu bisa sesuaikan logikanya di sini
+                # Logika Custom: Prioritas Kas 15rb, sisanya Hadiah
                 pk = min(n, 15000)
                 ph = max(0, n - 15000)
             
@@ -283,7 +288,10 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
                 datetime.now().strftime("%d/%m/%Y"), 
                 w_pilih, t, b, int(n), int(pk), int(ph), "LUNAS"
             ])
-            st.success(f"✅ Berhasil! Kas: Rp {pk:,} | Hadiah: Rp {ph:,}"); st.cache_data.clear(); time.sleep(1); st.rerun()
+            st.success(f"✅ Berhasil! {w_pilih} - {b} {t} (Kas: {pk:,}, Hadiah: {ph:,})")
+            st.cache_data.clear()
+            time.sleep(1)
+            st.rerun()
 
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
