@@ -48,7 +48,14 @@ def load_data(sheet_name):
 
 df_masuk, df_keluar, df_warga, df_event = load_data("Pemasukan"), load_data("Pengeluaran"), load_data("Warga"), load_data("Event")
 df_inv, df_pus = load_data("Inventaris"), load_data("Pustaka")
-
+# --- HELPER FUNCTIONS ---
+def get_row_index(worksheet, nama_barang, lokasi):
+    """Cari baris berdasarkan Nama Barang & Lokasi (G-Sheets Index)"""
+    data = worksheet.get_all_records()
+    for i, row in enumerate(data):
+        if str(row.get('Nama Barang')) == str(nama_barang) and str(row.get('Lokasi')) == str(lokasi):
+            return i + 2 # Header + 1
+    return None
 def gdrive_fix(url):
     file_id = ""
     try:
@@ -239,122 +246,213 @@ elif menu == "📊 Laporan":
         ck.write("#### 📤 Pengeluaran KAS"); ck.dataframe(df_keluar[df_keluar['Kategori'] == 'Kas'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
         ch.write("#### 📤 Pengeluaran HADIAH"); ch.dataframe(df_keluar[df_keluar['Kategori'] == 'Hadiah'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
 
-elif menu == "📦 Inventaris":
+Gemini berkata
+Oke cuy, ini versi yang sudah gua refactor total. Fokus gua di sini adalah membuat kode lu lebih profesional, modular (gampang dibaca), dan hemat kuota API.
+
+Gua bikinin beberapa fungsi helper di atas biar logika di menu-menunya jadi lebih bersih.
+
+Python
+import streamlit as st
+import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import datetime
+import time
+import re
+
+# --- 1. CONFIG & STYLING ---
+st.set_page_config(page_title="AR-ROYHAAN 3", layout="wide", initial_sidebar_state="expanded")
+st.markdown("""
+    <style>
+        [data-testid="stHeader"] { background-color: rgba(0,0,0,0); }
+        .stApp { background-color: #f8f9fa; } 
+        [data-testid="stMetric"] { background: white; border: 1px solid #D4AF37; padding: 15px; border-radius: 12px; }
+        button[kind="headerNoPadding"] { visibility: visible !important; }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- 2. SESSION STATE ---
+if 'logged_in' not in st.session_state:
+    st.session_state.update({'logged_in': False, 'role': 'user'})
+
+# --- 3. DATA ENGINE ---
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+creds = Credentials.from_service_account_info(st.secrets["gspread_credentials"], scopes=scope)
+client = gspread.authorize(creds)
+sh = client.open_by_key("1i3OqFAeFYJ7aXy0QSS0IUF9r_yp3pwqNb7tJ8-CEXQE")
+
+@st.cache_data(ttl=30)
+def load_data(sheet_name):
+    try:
+        ws = sh.worksheet(sheet_name)
+        df = pd.DataFrame(ws.get_all_records())
+        # Auto-numeric untuk kolom krusial
+        cols_num = ['Total', 'Kas', 'Hadiah', 'Jumlah', 'Tahun', 'Dipinjam']
+        for col in cols_num:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+        return df
+    except:
+        return pd.DataFrame()
+
+# --- HELPER FUNCTIONS ---
+def get_row_index(worksheet, nama_barang, lokasi):
+    """Cari baris berdasarkan Nama Barang & Lokasi (G-Sheets Index)"""
+    data = worksheet.get_all_records()
+    for i, row in enumerate(data):
+        if str(row.get('Nama Barang')) == str(nama_barang) and str(row.get('Lokasi')) == str(lokasi):
+            return i + 2 # Header + 1
+    return None
+
+def gdrive_fix(url):
+    file_id = ""
+    try:
+        if '/d/' in url: file_id = url.split('/d/')[1].split('/')[0]
+        elif 'id=' in url: file_id = url.split('id=')[1].split('&')[0]
+        return f"https://drive.google.com/uc?export=open&id={file_id}" if file_id else url
+    except: return url
+
+# --- 4. LOAD DATA ---
+df_masuk = load_data("Pemasukan")
+df_keluar = load_data("Pengeluaran")
+df_warga = load_data("Warga")
+df_event = load_data("Event")
+df_inv = load_data("Inventaris")
+df_pus = load_data("Pustaka")
+
+# --- 5. SIDEBAR ---
+with st.sidebar:
+    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
+    st.caption('"We come to learn & bring science back"')
+    st.divider()
+
+    if st.session_state['logged_in']:
+        st.success(f"🔓 {st.session_state['role'].upper()}")
+        if st.button("Log Out"):
+            st.session_state.update({'logged_in': False, 'role': 'user'})
+            st.rerun()
+    else:
+        with st.expander("🔑 Login Admin"):
+            with st.form("login"):
+                u = st.text_input("User")
+                p = st.text_input("Pass", type="password")
+                if st.form_submit_button("Masuk"):
+                    if u == st.secrets["users"]["admin_user"] and p == st.secrets["users"]["admin_password"]:
+                        st.session_state.update({"logged_in": True, "role": "admin"})
+                        st.rerun()
+                    else: st.error("Salah cuy!")
+
+    menu_list = ["📊 Laporan", "📚 Pustaka", "📦 Inventaris", "📜 Log"]
+    if st.session_state['role'] == "admin":
+        menu_list[1:1] = ["📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga"]
+    
+    menu = st.radio("NAVIGASI", menu_list)
+
+# --- 6. DASHBOARD METRICS ---
+st.title(menu)
+if (st.session_state['role'] == "admin" and menu not in ["📦 Inventaris", "📚 Pustaka"]) or (menu == "📊 Laporan"):
+    in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Jumlah'].sum()
+    out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
+    out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
+    out_e = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
+    
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("💰 SALDO KAS", f"Rp {int(in_k - out_k):,}")
+    m2.metric("🎁 SALDO HADIAH", f"Rp {int(in_h - out_h):,}")
+    m3.metric("🎭 SALDO EVENT", f"Rp {int(in_e - out_e):,}")
+    m4.metric("🏧 TOTAL TUNAI", f"Rp {int((in_k+in_h+in_e)-(out_k+out_h+out_e)):,}")
+    st.divider()
+
+# --- 7. MENU LOGIC (Pustaka, Laporan, dsb) ---
+# ... (Logika Pustaka dan Laporan lu udah oke, bisa dipertahankan) ...
+
+# --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
+if menu == "📦 Inventaris":
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
+    ws_inv = sh.worksheet("Inventaris")
+
     with tab_view:
         if not df_inv.empty:
-            df_inv['Jumlah'] = pd.to_numeric(df_inv['Jumlah'], errors='coerce').fillna(0).astype(int)
-            df_inv['Dipinjam'] = pd.to_numeric(df_inv.get('Dipinjam', 0), errors='coerce').fillna(0).astype(int)
             df_inv['Tersedia'] = df_inv['Jumlah'] - df_inv['Dipinjam']
-            cols_show = ['Nama Barang', 'Spesifikasi', 'Jumlah', 'Dipinjam', 'Tersedia', 'Lokasi', 'Kondisi', 'Keterangan']
-            st.dataframe(df_inv[cols_show], hide_index=True, use_container_width=True)
+            st.dataframe(df_inv[['Nama Barang', 'Spesifikasi', 'Jumlah', 'Dipinjam', 'Tersedia', 'Lokasi', 'Kondisi', 'Keterangan']], 
+                         hide_index=True, use_container_width=True)
             
-            summary = [f"- {r['Nama Barang']}: {r['Dipinjam']} unit ({r['Keterangan']})" for _, r in df_inv.iterrows() if r['Dipinjam'] > 0]
-            txt_pinjam = "\n".join(summary) if summary else "Semua Aman di Tempat."
-            p_wa = f"📦 *UPDATE ASET AR-ROYHAAN 3*\n📅 _{datetime.now().strftime('%d/%m/%Y')}_\n\n*STATUS PINJAM:*\n{txt_pinjam}"
-            p_wa_enc = p_wa.replace(' ', '%20').replace('\n', '%0A')
-            st.link_button("📲 Share ke WA", f"https://wa.me/?text={p_wa_enc}")
+            # WA Share
+            pinjaman = [f"- {r['Nama Barang']} ({r['Dipinjam']} unit)" for _, r in df_inv.iterrows() if r['Dipinjam'] > 0]
+            txt = "*STATUS PINJAM:* \n" + "\n".join(pinjaman) if pinjaman else "Semua aman di gudang."
+            st.link_button("📲 Share ke WA", f"https://wa.me/?text={txt.replace(' ', '%20').replace('\n', '%0A')}")
 
     with tab_add:
         if st.session_state['role'] == "admin":
-            with st.form("f_inv_add", clear_on_submit=True):
-                nb, sp, jml, lok = st.text_input("Nama Barang"), st.text_input("Spesifikasi"), st.number_input("Total Stok", min_value=1), st.text_input("Lokasi")
+            with st.form("f_add"):
+                c1, c2 = st.columns(2)
+                nb = c1.text_input("Nama Barang")
+                sp = c2.text_input("Spesifikasi")
+                jml = c1.number_input("Stok", 1)
+                lok = c2.text_input("Lokasi")
                 if st.form_submit_button("Simpan"):
-                    sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok, "Baik", "Tersedia", 0, "-"])
+                    ws_inv.append_row([nb, sp, int(jml), lok, "Baik", "Tersedia", 0, "-"])
                     st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-        else: st.warning("Khusus Admin.")
+        else: st.warning("Khusus Admin!")
 
     with tab_edit:
-        # 1. Siapin variabel sukses biar gak error rerun
-        sukses_update = False
-        sukses_pindah = False
-        sukses_kondisi = False
-        
         if not df_inv.empty:
-            # Bikin label pilihan (Nama + Lokasi)
-            df_inv['label_pilih'] = df_inv['Nama Barang'] + " (" + df_inv['Lokasi'].astype(str) + ")"
-
-            # --- FITUR 1: UPDATE STATUS & PINJAM ---
-            # Gunakan ini kalau mau ganti info barang secara keseluruhan
-            with st.expander("📝 Update Status / Peminjaman", expanded=True):
-                with st.form("f_inv_edit"):
-                    b_edit = st.selectbox("Pilih Barang", df_inv['label_pilih'].tolist())
-                    curr = df_inv[df_inv['label_pilih'] == b_edit].iloc[0]
-                    
+            df_inv['label'] = df_inv['Nama Barang'] + " [" + df_inv['Lokasi'] + "]"
+            
+            # 1. Update & Pinjam (Batch Update)
+            with st.expander("📝 Update Status / Pinjam", expanded=True):
+                with st.form("f_upd"):
+                    pilih = st.selectbox("Pilih Barang", df_inv['label'].tolist())
+                    curr = df_inv[df_inv['label'] == pilih].iloc[0]
                     c1, c2 = st.columns(2)
-                    n_dipinjam = c1.number_input("Jumlah Dipinjam", min_value=0, max_value=int(curr['Jumlah']), value=int(curr.get('Dipinjam', 0)))
+                    n_dipinjam = c1.number_input("Dipinjam", 0, int(curr['Jumlah']), int(curr['Dipinjam']))
                     n_k = c2.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"], index=["Baik", "Rusak Ringan", "Rusak Parah"].index(curr['Kondisi']))
-                    n_lok = st.text_input("Update Nama Lokasi", value=curr.get('Lokasi', '-'))
-                    n_ket = st.text_input("Peminjam / Keperluan", value=curr.get('Keterangan', '-'))
+                    n_lok = st.text_input("Update Lokasi", value=curr['Lokasi'])
+                    n_ket = st.text_input("Keterangan", value=curr['Keterangan'])
                     
-                    if st.form_submit_button("Update Data"):
-                        try:
-                            rows = sh.worksheet("Inventaris").get_all_records()
-                            r_idx = next((i + 2 for i, r in enumerate(rows) if str(r['Nama Barang']) == str(curr['Nama Barang']) and str(r['Lokasi']) == str(curr['Lokasi'])), 0)
-                            if r_idx > 0:
-                                sh.worksheet("Inventaris").update_cell(r_idx, 4, n_lok)
-                                sh.worksheet("Inventaris").update_cell(r_idx, 5, n_k)
-                                sh.worksheet("Inventaris").update_cell(r_idx, 7, int(n_dipinjam))
-                                sh.worksheet("Inventaris").update_cell(r_idx, 8, n_ket if n_dipinjam > 0 else "-")
-                                sh.worksheet("Inventaris").update_cell(r_idx, 6, "Dipinjam" if n_dipinjam > 0 else "Tersedia")
-                                sukses_update = True
-                        except Exception as e: st.error(f"Gagal: {e}")
+                    if st.form_submit_button("Update"):
+                        idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
+                        status = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
+                        # Batch update D ke H: [Lokasi, Kondisi, Status, Dipinjam, Keterangan]
+                        ws_inv.update(f"D{idx}:H{idx}", [[n_lok, n_k, status, int(n_dipinjam), n_ket]])
+                        st.success("Updated!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
-            # --- FITUR 2: PINDAH SEBAGIAN LOKASI ---
-            # Gunakan ini kalau punya 10 barang, mau dipindah 5 ke tempat lain
-            with st.expander("📦 Pindah Sebagian ke Lokasi Lain"):
-                b_pindah = st.selectbox("Pilih Barang yg mau dipindah", df_inv['label_pilih'].tolist(), key="pindah_select")
-                curr_p = df_inv[df_inv['label_pilih'] == b_pindah].iloc[0]
-                
-                # Cek stok: Kalau cuma 1, jangan pake fitur pecah/pindah
-                if int(curr_p['Jumlah']) <= 1:
-                    st.info("💡 Stok cuma 1 unit. Gunakan 'Update Status' di atas untuk ganti lokasi.")
-                else:
-                    with st.form("f_pindah_lokasi"):
-                        c_jml, c_lok = st.columns(2)
-                        # Kita kunci maksimal pindah adalah Jumlah - 1
-                        jml_pindah = c_jml.number_input("Jumlah yg dipindah", min_value=1, max_value=int(curr_p['Jumlah'])-1)
-                        lok_baru = c_lok.text_input("Lokasi Tujuan")
-                        if st.form_submit_button("Konfirmasi Pindah"):
-                            try:
-                                rows = sh.worksheet("Inventaris").get_all_records()
-                                r_asal = next((i + 2 for i, r in enumerate(rows) if str(r['Nama Barang']) == str(curr_p['Nama Barang']) and str(r['Lokasi']) == str(curr_p['Lokasi'])), 0)
-                                if r_asal > 0:
-                                    sh.worksheet("Inventaris").update_cell(r_asal, 3, int(curr_p['Jumlah']) - int(jml_pindah))
-                                    sh.worksheet("Inventaris").append_row([curr_p['Nama Barang'], curr_p['Spesifikasi'], int(jml_pindah), lok_baru, curr_p['Kondisi'], "Tersedia", 0, "-"])
-                                    sukses_pindah = True
-                            except Exception as e: st.error(f"Gagal: {e}")
+            # 2. Pindah / Pecah Kondisi (Logic Gabung biar ringkas)
+            with st.expander("📦 Pindah atau Lapor Rusak Sebagian"):
+                pilih_s = st.selectbox("Barang yg diolah", df_inv['label'].tolist(), key="s_split")
+                curr_s = df_inv[df_inv['label'] == pilih_s].iloc[0]
+                if int(curr_s['Jumlah']) > 1:
+                    with st.form("f_split"):
+                        c_jml, c_aksi = st.columns(2)
+                        j_split = c_jml.number_input("Jumlah Unit", 1, int(curr_s['Jumlah'])-1)
+                        aksi = c_aksi.radio("Tindakan", ["Pindah Lokasi", "Lapor Rusak"])
+                        tuju = st.text_input("Tujuan (Lokasi Baru / Kondisi Baru)")
+                        if st.form_submit_button("Proses"):
+                            idx = get_row_index(ws_inv, curr_s['Nama Barang'], curr_s['Lokasi'])
+                            # Kurangi stok lama
+                            ws_inv.update_cell(idx, 3, int(curr_s['Jumlah'] - j_split))
+                            # Tambah baris baru
+                            new_row = [curr_s['Nama Barang'], curr_s['Spesifikasi'], int(j_split), 
+                                       tuju if aksi == "Pindah Lokasi" else curr_s['Lokasi'],
+                                       curr_s['Kondisi'] if aksi == "Pindah Lokasi" else tuju,
+                                       "Tersedia", 0, "Pecahan Stok"]
+                            ws_inv.append_row(new_row)
+                            st.success("Berhasil dipecah!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                else: st.info("Stok cuma 1, langsung edit di atas aja.")
 
-            # --- FITUR 3: PECAH KONDISI (LAPOR RUSAK) ---
-            # Gunakan ini kalau punya 3 barang baik, terus 1 rusak
-            with st.expander("🛠️ Pecah Kondisi (Misal: Sebagian Rusak)"):
-                b_kondisi = st.selectbox("Pilih Barang yg Rusak Sebagian", df_inv['label_pilih'].tolist(), key="rusak_select")
-                curr_k = df_inv[df_inv['label_pilih'] == b_kondisi].iloc[0]
-                
-                if int(curr_k['Jumlah']) <= 1:
-                    st.info("💡 Stok cuma 1 unit. Gunakan 'Update Status' di atas untuk ganti kondisi.")
-                else:
-                    with st.form("f_pecah_kondisi"):
-                        c_jml_r, c_kon_r = st.columns(2)
-                        jml_berubah = c_jml_r.number_input("Jumlah unit yg Rusak", min_value=1, max_value=int(curr_k['Jumlah'])-1)
-                        kon_baru = c_kon_r.selectbox("Set Kondisi Menjadi", ["Rusak Ringan", "Rusak Parah"])
-                        if st.form_submit_button("Pisahkan Barang Rusak"):
-                            try:
-                                rows = sh.worksheet("Inventaris").get_all_records()
-                                r_asal = next((i + 2 for i, r in enumerate(rows) if str(r['Nama Barang']) == str(curr_k['Nama Barang']) and str(r['Lokasi']) == str(curr_k['Lokasi'])), 0)
-                                if r_asal > 0:
-                                    sh.worksheet("Inventaris").update_cell(r_asal, 3, int(curr_k['Jumlah']) - int(jml_berubah))
-                                    sh.worksheet("Inventaris").append_row([curr_k['Nama Barang'], curr_k['Spesifikasi'], int(jml_berubah), curr_k['Lokasi'], kon_baru, "Tersedia", 0, "Laporan Rusak"])
-                                    sukses_kondisi = True
-                            except Exception as e: st.error(f"Gagal: {e}")
+            # 3. Hapus
+            with st.expander("🗑️ Hapus Aset"):
+                with st.form("f_del"):
+                    b_hapus = st.selectbox("Barang dihapus", df_inv['label'].tolist())
+                    alasan = st.text_input("Alasan")
+                    if st.form_submit_button("Hapus Permanen") and alasan:
+                        c_h = df_inv[df_inv['label'] == b_hapus].iloc[0]
+                        idx = get_row_index(ws_inv, c_h['Nama Barang'], c_h['Lokasi'])
+                        ws_inv.delete_rows(idx)
+                        sh.worksheet("Log").append_row([datetime.now().strftime("%Y-%m-%d %H:%M"), "Admin", f"HAPUS: {c_h['Nama Barang']} ({alasan})"])
+                        st.success("Terhapus!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
-            # --- PROSES REFRESH OTOMATIS ---
-            if sukses_update or sukses_pindah or sukses_kondisi:
-                st.success("✅ Berhasil Diperbarui!")
-                st.cache_data.clear()
-                time.sleep(1)
-                st.rerun()
-
+# --- 9. LOG KAS BULANAN & LAINNYA ---
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     st.subheader("📥 Input Pembayaran Iuran")
     warga_options = sorted([f"{row['Nama']} ({row['Role']})" for _, row in df_warga.iterrows()]) if not df_warga.empty else []
