@@ -66,7 +66,7 @@ with st.sidebar:
     # Tambahkan Motto di bawah logo
     st.markdown("""
         <div style='text-align: center; margin-top: -30px; margin-bottom: 20px;'>
-            <i style='font-size: 14px; color: #666;'>
+            <i style='font-size: 9px; color: #666;'>
                 "We come to learn & bring science back"
             </i>
         </div>
