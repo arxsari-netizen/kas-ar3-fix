@@ -49,7 +49,7 @@ with st.sidebar:
     # Bikin kolom buat centering logo (karena st.image defaultnya kiri)
     col1, col2, col3 = st.columns([2, 2, 2])
     with col2:
-        st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
+        st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=100)
     # Tambahkan Motto di bawah logo
     st.markdown("""
         <div style='text-align: center; margin-top: -30px; margin-bottom: 20px;'>
