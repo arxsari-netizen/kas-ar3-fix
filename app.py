@@ -59,28 +59,42 @@ def gdrive_fix(url):
 
 # --- 4. SIDEBAR ---
 with st.sidebar:
+    # Logo
     st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
     
-    # 2. Motto (Lurus di dalam with)
+    # Motto (Mepetin jarak atas-bawah)
     st.markdown("""
-        <div style='text-align: left; margin-top: -30px; margin-bottom: 4px;'>
-            <i style='font-size: 9px; color: #666; display: block;'>
+        <div style='text-align: left; margin-top: -25px; margin-bottom: -20px;'>
+            <i style='font-size: 9px; color: #666; font-style: italic;'>
                 "We come to learn & bring science back"
             </i>
         </div>
     """, unsafe_allow_html=True)
 
-   # 3. Status Login (Ultra Minimalis)
-    st.divider()
+    # Paksa Garis Divider biar nggak terlalu jauh jaraknya
+    st.markdown("<hr style='margin: 10px 0; border: 0.5px solid #ddd;'>", unsafe_allow_html=True)
+
+    # Status Login & Logout (Versi Ramping)
     if st.session_state['logged_in']:
-        # Gabung status dan tombol dalam satu baris pake Flexbox
+        # CSS Khusus buat ngecilin tombol log out di sidebar doang
+        st.markdown("""
+            <style>
+                div[data-testid="stSidebar"] button {
+                    padding: 2px 10px !important;
+                    height: 28px !important;
+                    font-size: 12px !important;
+                    line-height: 1 !important;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        # Susun status dan tombol dalam satu baris (Flex)
         st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="font-size: 12px; font-weight: bold; color: #4CAF50;">🔓 {st.session_state['role'].upper()}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <span style="font-size: 11px; font-weight: bold; color: #4CAF50;">🔓 {st.session_state['role'].upper()}</span>
             </div>
         """, unsafe_allow_html=True)
         
-        # Tombol Log Out kecil tanpa padding gede
         if st.button("Log Out ➔", key="btn_out"):
             st.session_state.update({'logged_in': False, 'role': 'user'})
             st.rerun()
