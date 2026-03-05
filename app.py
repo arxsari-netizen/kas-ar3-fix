@@ -285,24 +285,28 @@ elif menu == "📦 Inventaris":
                     st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
         else: st.warning("Khusus Admin.")
     with tab_edit:
-        # Inisialisasi variabel sukses
+        # 1. Siapin variabel sukses biar gak error rerun
         sukses_update = False
         sukses_pindah = False
         sukses_kondisi = False
         
         if not df_inv.empty:
+            # Bikin label pilihan (Nama + Lokasi)
             df_inv['label_pilih'] = df_inv['Nama Barang'] + " (" + df_inv['Lokasi'].astype(str) + ")"
 
-            # --- FITUR 1: UPDATE STATUS & PINJAM (Tetap Sama) ---
+            # --- FITUR 1: UPDATE STATUS & PINJAM ---
+            # Gunakan ini kalau mau ganti info barang secara keseluruhan
             with st.expander("📝 Update Status / Peminjaman", expanded=True):
                 with st.form("f_inv_edit"):
-                    b_edit = st.selectbox("Pilih Barang & Lokasi Asal", df_inv['label_pilih'].tolist())
+                    b_edit = st.selectbox("Pilih Barang", df_inv['label_pilih'].tolist())
                     curr = df_inv[df_inv['label_pilih'] == b_edit].iloc[0]
+                    
                     c1, c2 = st.columns(2)
                     n_dipinjam = c1.number_input("Jumlah Dipinjam", min_value=0, max_value=int(curr['Jumlah']), value=int(curr.get('Dipinjam', 0)))
                     n_k = c2.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"], index=["Baik", "Rusak Ringan", "Rusak Parah"].index(curr['Kondisi']))
                     n_lok = st.text_input("Update Nama Lokasi", value=curr.get('Lokasi', '-'))
                     n_ket = st.text_input("Peminjam / Keperluan", value=curr.get('Keterangan', '-'))
+                    
                     if st.form_submit_button("Update Data"):
                         try:
                             rows = sh.worksheet("Inventaris").get_all_records()
@@ -316,55 +320,60 @@ elif menu == "📦 Inventaris":
                                 sukses_update = True
                         except Exception as e: st.error(f"Gagal: {e}")
 
-            # --- FITUR 2: PINDAH GUDANG (Tetap Sama) ---
+            # --- FITUR 2: PINDAH SEBAGIAN LOKASI ---
+            # Gunakan ini kalau punya 10 barang, mau dipindah 5 ke tempat lain
             with st.expander("📦 Pindah Sebagian ke Lokasi Lain"):
-                with st.form("f_pindah_lokasi"):
-                    b_pindah = st.selectbox("Barang yang akan dipindah", df_inv['label_pilih'].tolist())
-                    curr_p = df_inv[df_inv['label_pilih'] == b_pindah].iloc[0]
-                    c_jml, c_lok = st.columns(2)
-                    jml_pindah = c_jml.number_input("Jumlah yg dipindah", min_value=1, max_value=int(curr_p['Jumlah'])-1)
-                    lok_baru = c_lok.text_input("Lokasi Tujuan")
-                    if st.form_submit_button("Konfirmasi Pindah Lokasi"):
-                        try:
-                            rows = sh.worksheet("Inventaris").get_all_records()
-                            r_asal = next((i + 2 for i, r in enumerate(rows) if str(r['Nama Barang']) == str(curr_p['Nama Barang']) and str(r['Lokasi']) == str(curr_p['Lokasi'])), 0)
-                            if r_asal > 0:
-                                sh.worksheet("Inventaris").update_cell(r_asal, 3, int(curr_p['Jumlah']) - int(jml_pindah))
-                                sh.worksheet("Inventaris").append_row([curr_p['Nama Barang'], curr_p['Spesifikasi'], int(jml_pindah), lok_baru, curr_p['Kondisi'], "Tersedia", 0, "-"])
-                                sukses_pindah = True
-                        except Exception as e: st.error(f"Gagal Mutasi: {e}")
+                b_pindah = st.selectbox("Pilih Barang yg mau dipindah", df_inv['label_pilih'].tolist(), key="pindah_select")
+                curr_p = df_inv[df_inv['label_pilih'] == b_pindah].iloc[0]
+                
+                # Cek stok: Kalau cuma 1, jangan pake fitur pecah/pindah
+                if int(curr_p['Jumlah']) <= 1:
+                    st.info("💡 Stok cuma 1 unit. Gunakan 'Update Status' di atas untuk ganti lokasi.")
+                else:
+                    with st.form("f_pindah_lokasi"):
+                        c_jml, c_lok = st.columns(2)
+                        # Kita kunci maksimal pindah adalah Jumlah - 1
+                        jml_pindah = c_jml.number_input("Jumlah yg dipindah", min_value=1, max_value=int(curr_p['Jumlah'])-1)
+                        lok_baru = c_lok.text_input("Lokasi Tujuan")
+                        if st.form_submit_button("Konfirmasi Pindah"):
+                            try:
+                                rows = sh.worksheet("Inventaris").get_all_records()
+                                r_asal = next((i + 2 for i, r in enumerate(rows) if str(r['Nama Barang']) == str(curr_p['Nama Barang']) and str(r['Lokasi']) == str(curr_p['Lokasi'])), 0)
+                                if r_asal > 0:
+                                    sh.worksheet("Inventaris").update_cell(r_asal, 3, int(curr_p['Jumlah']) - int(jml_pindah))
+                                    sh.worksheet("Inventaris").append_row([curr_p['Nama Barang'], curr_p['Spesifikasi'], int(jml_pindah), lok_baru, curr_p['Kondisi'], "Tersedia", 0, "-"])
+                                    sukses_pindah = True
+                            except Exception as e: st.error(f"Gagal: {e}")
 
-            # --- FITUR 3: LAPOR RUSAK (BARU - UNTUK PECAH KONDISI) ---
-            with st.expander("🛠️ Pecah Kondisi (Misal: 1 dari 3 Rusak)"):
-                with st.form("f_pecah_kondisi"):
-                    b_kondisi = st.selectbox("Pilih Barang yang Rusak Sebagian", df_inv['label_pilih'].tolist())
-                    curr_k = df_inv[df_inv['label_pilih'] == b_kondisi].iloc[0]
-                    c_jml_r, c_kon_r = st.columns(2)
-                    jml_berubah = c_jml_r.number_input("Jumlah unit yg Rusak", min_value=1, max_value=int(curr_k['Jumlah'])-1)
-                    kon_baru = c_kon_r.selectbox("Set Kondisi Menjadi", ["Rusak Ringan", "Rusak Parah"])
-                    
-                    if st.form_submit_button("Pisahkan Barang Rusak"):
-                        try:
-                            rows = sh.worksheet("Inventaris").get_all_records()
-                            r_asal = next((i + 2 for i, r in enumerate(rows) if str(r['Nama Barang']) == str(curr_k['Nama Barang']) and str(r['Lokasi']) == str(curr_k['Lokasi'])), 0)
-                            if r_asal > 0:
-                                # 1. Kurangi stok di baris yang "Baik"
-                                sh.worksheet("Inventaris").update_cell(r_asal, 3, int(curr_k['Jumlah']) - int(jml_berubah))
-                                # 2. Tambah baris baru untuk yang "Rusak"
-                                sh.worksheet("Inventaris").append_row([
-                                    curr_k['Nama Barang'], curr_k['Spesifikasi'], int(jml_berubah), 
-                                    curr_k['Lokasi'], kon_baru, "Tersedia", 0, "Laporan Kerusakan"
-                                ])
-                                sukses_kondisi = True
-                        except Exception as e: st.error(f"Gagal Pecah Kondisi: {e}")
+            # --- FITUR 3: PECAH KONDISI (LAPOR RUSAK) ---
+            # Gunakan ini kalau punya 3 barang baik, terus 1 rusak
+            with st.expander("🛠️ Pecah Kondisi (Misal: Sebagian Rusak)"):
+                b_kondisi = st.selectbox("Pilih Barang yg Rusak Sebagian", df_inv['label_pilih'].tolist(), key="rusak_select")
+                curr_k = df_inv[df_inv['label_pilih'] == b_kondisi].iloc[0]
+                
+                if int(curr_k['Jumlah']) <= 1:
+                    st.info("💡 Stok cuma 1 unit. Gunakan 'Update Status' di atas untuk ganti kondisi.")
+                else:
+                    with st.form("f_pecah_kondisi"):
+                        c_jml_r, c_kon_r = st.columns(2)
+                        jml_berubah = c_jml_r.number_input("Jumlah unit yg Rusak", min_value=1, max_value=int(curr_k['Jumlah'])-1)
+                        kon_baru = c_kon_r.selectbox("Set Kondisi Menjadi", ["Rusak Ringan", "Rusak Parah"])
+                        if st.form_submit_button("Pisahkan Barang Rusak"):
+                            try:
+                                rows = sh.worksheet("Inventaris").get_all_records()
+                                r_asal = next((i + 2 for i, r in enumerate(rows) if str(r['Nama Barang']) == str(curr_k['Nama Barang']) and str(r['Lokasi']) == str(curr_k['Lokasi'])), 0)
+                                if r_asal > 0:
+                                    sh.worksheet("Inventaris").update_cell(r_asal, 3, int(curr_k['Jumlah']) - int(jml_berubah))
+                                    sh.worksheet("Inventaris").append_row([curr_k['Nama Barang'], curr_k['Spesifikasi'], int(jml_berubah), curr_k['Lokasi'], kon_baru, "Tersedia", 0, "Laporan Rusak"])
+                                    sukses_kondisi = True
+                            except Exception as e: st.error(f"Gagal: {e}")
 
-            # --- PROSES REFRESH ---
+            # --- PROSES REFRESH OTOMATIS ---
             if sukses_update or sukses_pindah or sukses_kondisi:
-                st.success("✅ Berhasil diperbarui!")
+                st.success("✅ Berhasil Diperbarui!")
                 st.cache_data.clear()
                 time.sleep(1)
                 st.rerun()
-
 # --- MENU INPUT KAS ---
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     st.subheader("📥 Input Pembayaran Iuran")
