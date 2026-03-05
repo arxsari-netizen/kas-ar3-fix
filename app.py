@@ -59,43 +59,34 @@ def gdrive_fix(url):
 
 # --- 4. SIDEBAR ---
 with st.sidebar:
-    # Logo
-    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
-    
-    # Motto (Mepetin jarak atas-bawah)
-    st.markdown("""
-        <div style='text-align: left; margin-top: -25px; margin-bottom: -20px;'>
-            <i style='font-size: 9px; color: #666; font-style: italic;'>
+    # Gabungin Logo, Motto, dan Garis dalam satu blok HTML biar bisa diatur jaraknya secara presisi
+    st.markdown(f"""
+        <div style="text-align: left;">
+            <img src="https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png" width="80" style="margin-bottom: 0px;">
+            <p style="font-size: 9px; color: #666; font-style: italic; margin-top: -5px; margin-bottom: 0px;">
                 "We come to learn & bring science back"
-            </i>
+            </p>
+            <hr style="margin-top: 10px; margin-bottom: 15px; border: 0; border-top: 1px solid #ddd;">
         </div>
     """, unsafe_allow_html=True)
 
-    # Paksa Garis Divider biar nggak terlalu jauh jaraknya
-    st.markdown("<hr style='margin: 10px 0; border: 0.5px solid #ddd;'>", unsafe_allow_html=True)
-
-    # Status Login & Logout (Versi Ramping)
+    # Status Login (Sekarang Status & Tombol mepet dalam satu baris)
     if st.session_state['logged_in']:
-        # CSS Khusus buat ngecilin tombol log out di sidebar doang
+        # CSS buat ngecilin tombol Log Out biar gak kegedean
         st.markdown("""
             <style>
                 div[data-testid="stSidebar"] button {
-                    padding: 2px 10px !important;
-                    height: 28px !important;
-                    font-size: 12px !important;
-                    line-height: 1 !important;
+                    padding: 0px 8px !important;
+                    height: 24px !important;
+                    font-size: 11px !important;
+                    min-height: 24px !important;
                 }
             </style>
         """, unsafe_allow_html=True)
         
-        # Susun status dan tombol dalam satu baris (Flex)
-        st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <span style="font-size: 11px; font-weight: bold; color: #4CAF50;">🔓 {st.session_state['role'].upper()}</span>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("Log Out ➔", key="btn_out"):
+        c1, c2 = st.columns([1, 1])
+        c1.markdown(f"<p style='font-size: 11px; font-weight: bold; color: #4CAF50; margin-top: 5px;'>🔓 {st.session_state['role'].upper()}</p>", unsafe_allow_html=True)
+        if c2.button("Log Out ➔"):
             st.session_state.update({'logged_in': False, 'role': 'user'})
             st.rerun()
     else:
