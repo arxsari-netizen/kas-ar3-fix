@@ -285,85 +285,82 @@ elif menu == "📦 Inventaris":
         else: st.warning("Menu ini hanya untuk Admin.")
 
     with tab_edit:
-        if st.session_state['role'] == "admin":
-            if not df_inv.empty:
-                # 1. Bikin Label yang Informatif (Nama + Lokasi + Kondisi)
-                df_inv['label_edit'] = (
-                    df_inv['Nama Barang'] + " [" + 
-                    df_inv['Lokasi'].astype(str) + "] - (" + 
-                    df_inv['Kondisi'] + ")"
-                )
+        # Pindahkan pengecekan role ke dalam fitur spesifik
+        if not df_inv.empty:
+            # 1. Bikin Label yang Informatif
+            df_inv['label_edit'] = (
+                df_inv['Nama Barang'] + " [" + 
+                df_inv['Lokasi'].astype(str) + "] - (" + 
+                df_inv['Kondisi'] + ")"
+            )
 
-                st.markdown("### 🔄 Update Status & Peminjaman")
-                # PENTING: Selectbox ditaruh DI LUAR form supaya inputan di bawahnya reaktif (otomatis berubah)
-                pilih_barang = st.selectbox("Pilih Barang yang akan diolah:", df_inv['label_edit'].tolist())
+            st.markdown("### 🔄 Update Status & Peminjaman")
+            st.info("💡 Semua warga dapat memperbarui status peminjaman atau lokasi barang.")
+            
+            # Selectbox di luar form biar reaktif
+            pilih_barang = st.selectbox("Pilih Barang yang akan diolah:", df_inv['label_edit'].tolist())
+            curr = df_inv[df_inv['label_edit'] == pilih_barang].iloc[0]
+
+            with st.form("f_inv_update"):
+                c1, c2 = st.columns(2)
                 
-                # Ambil data barang yang sedang dipilih
-                curr = df_inv[df_inv['label_edit'] == pilih_barang].iloc[0]
+                # Input otomatis terisi sesuai data 'curr'
+                n_dipinjam = c1.number_input("Jumlah Dipinjam", 0, int(curr['Jumlah']), int(curr['Dipinjam']))
+                
+                list_k = ["Baik", "Rusak Ringan", "Rusak Parah"]
+                idx_k = list_k.index(curr['Kondisi']) if curr['Kondisi'] in list_k else 0
+                n_kondisi = c2.selectbox("Kondisi Barang", list_k, index=idx_k)
+                
+                n_lokasi = st.text_input("Update Lokasi", value=curr['Lokasi'])
+                n_peminjam = st.text_input("Nama Peminjam / Keperluan", value=curr['Keterangan'])
+                
+                if st.form_submit_button("💾 Simpan Perubahan"):
+                    idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
+                    if idx:
+                        status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
+                        ws_inv.update(f"D{idx}:H{idx}", [[n_lokasi, n_kondisi, status_txt, int(n_dipinjam), n_peminjam]])
+                        st.success("Data berhasil diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
-                with st.form("f_inv_update"):
-                    c1, c2 = st.columns(2)
-                    
-                    # Input otomatis terisi sesuai data 'curr'
-                    n_dipinjam = c1.number_input("Jumlah Dipinjam", 0, int(curr['Jumlah']), int(curr['Dipinjam']))
-                    
-                    list_k = ["Baik", "Rusak Ringan", "Rusak Parah"]
-                    idx_k = list_k.index(curr['Kondisi']) if curr['Kondisi'] in list_k else 0
-                    n_kondisi = c2.selectbox("Kondisi Barang", list_k, index=idx_k)
-                    
-                    n_lokasi = st.text_input("Update Lokasi", value=curr['Lokasi'])
-                    n_peminjam = st.text_input("Nama Peminjam / Keperluan", value=curr['Keterangan'])
-                    
-                    if st.form_submit_button("💾 Simpan Perubahan"):
-                        idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
-                        if idx:
-                            status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
-                            # Batch update kolom Lokasi(D) sampai Keterangan(H)
-                            ws_inv.update(f"D{idx}:H{idx}", [[n_lokasi, n_kondisi, status_txt, int(n_dipinjam), n_peminjam]])
-                            st.success("Data berhasil diupdate!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+            st.divider()
 
-                st.divider()
+            # 2. Fitur Pecah Stok (Terbuka untuk Umum)
+            with st.expander("🛠️ Fitur Pecah Stok (Jika sebagian unit rusak/pindah)"):
+                if int(curr['Jumlah']) > 1:
+                    with st.form("f_split_stok"):
+                        st.write(f"Mengolah sebagian dari total {curr['Jumlah']} unit '{curr['Nama Barang']}'")
+                        c_jml, c_aksi = st.columns(2)
+                        j_potong = c_jml.number_input("Jumlah unit", 1, int(curr['Jumlah'])-1)
+                        opsi = c_aksi.radio("Tindakan:", ["Pindah Lokasi", "Lapor Rusak"])
+                        tujuan_baru = st.text_input("Lokasi Baru / Info Kerusakan")
+                        
+                        if st.form_submit_button("Konfirmasi Pecah"):
+                            idx_asal = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
+                            ws_inv.update_cell(idx_asal, 3, int(curr['Jumlah'] - j_potong))
+                            n_lok = tujuan_baru if opsi == "Pindah Lokasi" else curr['Lokasi']
+                            n_kon = curr['Kondisi'] if opsi == "Pindah Lokasi" else "Rusak Ringan"
+                            ws_inv.append_row([curr['Nama Barang'], curr['Spesifikasi'], int(j_potong), n_lok, n_kon, "Tersedia", 0, tujuan_baru])
+                            st.success("Berhasil dipecah!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                else:
+                    st.caption("Unit hanya ada 1, gunakan form utama di atas.")
 
-                # 2. Fitur Pecah Stok (Pindah atau Lapor Rusak)
-                with st.expander("🛠️ Fitur Pecah Stok (Gunakan jika hanya sebagian unit yang rusak/pindah)"):
-                    if int(curr['Jumlah']) > 1:
-                        with st.form("f_split_stok"):
-                            st.info(f"Mengolah sebagian dari total {curr['Jumlah']} unit '{curr['Nama Barang']}'")
-                            c_jml, c_aksi = st.columns(2)
-                            j_potong = c_jml.number_input("Jumlah unit yang diolah", 1, int(curr['Jumlah'])-1)
-                            opsi = c_aksi.radio("Tindakan:", ["Pindah Lokasi", "Lapor Rusak"])
-                            tujuan_baru = st.text_input("Lokasi Baru / Info Kerusakan", placeholder="Misal: Gudang B atau Pecah Kaca")
-                            
-                            if st.form_submit_button("Konfirmasi Pecah Stok"):
-                                idx_asal = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
-                                # Kurangi stok di baris lama
-                                ws_inv.update_cell(idx_asal, 3, int(curr['Jumlah'] - j_potong))
-                                # Tambah baris baru dengan kondisi/lokasi berbeda
-                                n_lok = tujuan_baru if opsi == "Pindah Lokasi" else curr['Lokasi']
-                                n_kon = curr['Kondisi'] if opsi == "Pindah Lokasi" else "Rusak Ringan"
-                                ws_inv.append_row([curr['Nama Barang'], curr['Spesifikasi'], int(j_potong), n_lok, n_kon, "Tersedia", 0, tujuan_baru])
-                                st.success("Stok berhasil dipecah!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-                    else:
-                        st.caption("Unit hanya ada 1, silakan gunakan form utama di atas untuk merubah data.")
-
-                # 3. Fitur Hapus
+            # 3. Fitur Hapus (HANYA ADMIN)
+            if st.session_state['role'] == "admin":
                 with st.expander("🗑️ Zona Bahaya (Hapus Aset)"):
                     with st.form("f_delete_asset"):
-                        st.warning(f"Menghapus '{curr['Nama Barang']}' dari database secara permanen.")
-                        alasan_hapus = st.text_input("Alasan Penghapusan (Wajib)")
-                        if st.form_submit_button("Hapus Barang Ini"):
+                        st.error("Hanya Admin yang bisa menghapus aset dari daftar permanen.")
+                        alasan_hapus = st.text_input("Alasan Penghapusan")
+                        if st.form_submit_button("Hapus Permanen"):
                             if alasan_hapus:
                                 idx_h = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
                                 ws_inv.delete_rows(idx_h)
-                                # Catat ke Log
-                                try: sh.worksheet("Log").append_row([datetime.now().strftime("%Y-%m-%d %H:%M"), "Admin", f"HAPUS ASET: {curr['Nama Barang']} - {alasan_hapus}"])
+                                try: sh.worksheet("Log").append_row([datetime.now().strftime("%Y-%m-%d %H:%M"), st.session_state['role'], f"HAPUS: {curr['Nama Barang']} - {alasan_hapus}"])
                                 except: pass
-                                st.success("Barang telah dihapus."); st.cache_data.clear(); time.sleep(1); st.rerun()
-                            else: st.error("Isi alasan dulu cuy!")
+                                st.success("Dihapus!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                            else: st.warning("Alasan wajib diisi.")
             else:
-                st.info("Belum ada data inventaris.")
+                st.caption("🔒 *Fitur penghapusan hanya tersedia untuk Admin.*")
         else:
-            st.warning("Menu ini hanya untuk Admin.")
+            st.info("Belum ada data inventaris.")
 
 # --- 9. LOG KAS BULANAN & LAINNYA ---
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
