@@ -313,29 +313,38 @@ elif menu == "📦 Inventaris":
 
             with st.form("f_inv_update"):
                 c1, c2 = st.columns(2)
-                
-                # Input otomatis terisi sesuai data 'curr'
                 n_dipinjam = c1.number_input("Jumlah Dipinjam", 0, int(curr['Jumlah']), int(curr['Dipinjam']))
                 
                 list_k = ["Baik", "Rusak Ringan", "Rusak Parah"]
                 idx_k = list_k.index(curr['Kondisi']) if curr['Kondisi'] in list_k else 0
                 n_kondisi = c2.selectbox("Kondisi Barang", list_k, index=idx_k)
                 
-                n_lokasi = st.text_input("Update Lokasi", value=curr['Lokasi'])
+                # --- INI BAGIAN SELECTBOX LOKASI ---
+                idx_l = list_lokasi.index(curr['Lokasi']) if curr['Lokasi'] in list_lokasi else 0
+                n_lokasi = st.selectbox("Update Lokasi", options=list_lokasi, index=idx_l)
+                # -----------------------------------
+                
                 n_peminjam = st.text_input("Nama Peminjam / Keperluan", value=curr['Keterangan'])
                 
                 # ... (kode sebelum form)
                 if st.form_submit_button("💾 Simpan Perubahan"):
-                    # Pastikan baris di bawah ini menjorok ke dalam (4 spasi dari 'if')
                     idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
-                    
                     if idx:
-                        # Baris di dalam 'if idx' harus lebih menjorok lagi (8 spasi dari 'if' awal)
                         status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
-                        ws_inv.update(f"D{idx}:H{idx}", [[n_lokasi, n_kondisi, status_txt, int(n_dipinjam), n_peminjam]])
-                        st.success("Data berhasil diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+                        
+                        # Update pake update_cell biar lebih stabil
+                        ws_inv.update_cell(idx, 4, n_lokasi)
+                        ws_inv.update_cell(idx, 5, n_kondisi)
+                        ws_inv.update_cell(idx, 6, status_txt)
+                        ws_inv.update_cell(idx, 7, int(n_dipinjam))
+                        ws_inv.update_cell(idx, 8, n_peminjam)
+                        
+                        st.success("Data berhasil diupdate!")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
                     else:
-                        st.error("Barang tidak ditemukan.")
+                        st.error("Gagal cari baris di database. Coba cek lagi ya!")
 
             st.divider()
 
