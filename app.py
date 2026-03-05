@@ -59,9 +59,9 @@ def gdrive_fix(url):
 
 # --- 4. SIDEBAR ---
 with st.sidebar:
-        st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
+    st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
     
-    # 2. Motto (Gue set Center biar simetris sama logo)
+    # 2. Motto (Lurus di dalam with)
     st.markdown("""
         <div style='text-align: left; margin-top: -30px; margin-bottom: -20px;'>
             <i style='font-size: 9px; color: #666; display: block;'>
@@ -70,9 +70,9 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
     
-    st.divider() # Garis pembatas biar rapi
+    st.divider() 
 
-    # 3. Status Login
+    # 3. Status Login (Lurus di dalam with)
     if st.session_state['logged_in']:
         st.success(f"🔓 MODE: {st.session_state['role'].upper()}")
         if st.button("Log Out", use_container_width=True):
