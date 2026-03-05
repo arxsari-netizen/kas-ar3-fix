@@ -357,7 +357,7 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
                     except Exception as e:
                         st.error(f"Error {curr_month}: {e}"); break
 
-              if input_log:
+               if input_log:
                 st.success(f"✅ Tersimpan: {', '.join(input_log)}")
                 if uang_sisa > 0: st.warning(f"💰 Sisa Rp {uang_sisa:,} (Lunas s/d Des)")
                 st.cache_data.clear()
