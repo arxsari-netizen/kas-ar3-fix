@@ -63,7 +63,7 @@ with st.sidebar:
     
     # 2. Motto (Lurus di dalam with)
     st.markdown("""
-        <div style='text-align: left; margin-top: -30px; margin-bottom: -20px;'>
+        <div style='text-align: left; margin-top: -30px; margin-bottom: 4px;'>
             <i style='font-size: 9px; color: #666; display: block;'>
                 "We come to learn & bring science back"
             </i>
