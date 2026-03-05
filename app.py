@@ -250,7 +250,7 @@ elif menu == "📦 Inventaris":
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     st.subheader("📥 Input Pembayaran Iuran")
     
-    # 1. Logika Penampilan Nama + Status Role
+    # 1. Logika Penampilan Nama + Status Role (Agar tidak salah orang)
     warga_options = []
     if not df_warga.empty:
         for _, row in df_warga.iterrows():
@@ -258,13 +258,14 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     warga_options.sort()
     
     selected_display = st.selectbox("Pilih Nama Warga", warga_options)
-    w_pilih = selected_display.split(" (")[0] # Ambil nama asli saja
+    w_pilih = selected_display.split(" (")[0] # Ambil nama asli saja untuk DB
     
     # 2. Radio Button di Luar Form agar Responsif
-    mode = st.radio("Pilih Jenis Pembayaran:", 
+    mode = st.radio("Pilih Mode Alokasi Dana:", 
                     ["Paket Lengkap (50rb)", "Hanya Kas (15rb)", "Hanya Hadiah (35rb)", "Custom Nominal"], 
                     horizontal=True)
     
+    # Penentuan nominal default berdasarkan klik
     if mode == "Paket Lengkap (50rb)": n_val = 50000
     elif mode == "Hanya Kas (15rb)": n_val = 15000
     elif mode == "Hanya Hadiah (35rb)": n_val = 35000
@@ -273,75 +274,74 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     # 3. Form Input
     with st.form("f_kas", clear_on_submit=True):
         c_nom, c_thn, c_bln = st.columns([2, 1, 1])
-        n = c_nom.number_input("Nominal Pembayaran (Rp)", value=n_val, step=5000)
+        n = c_nom.number_input("Nominal Total yang Diterima (Rp)", value=n_val, step=5000)
         t = c_thn.selectbox("Tahun", range(2022, 2031), index=4)
-        b = c_bln.selectbox("Bulan", bln_list)
+        b = c_bln.selectbox("Mulai dari Bulan", bln_list)
         
-        # Baris 288 yang bermasalah ada di sini (pastikan sejajar)
-        if st.form_submit_button("Simpan Pembayaran"):
-            uang_masuk = n
-            bulan_awal = b
-            tahun_awal = t
+        if st.form_submit_button("🚀 Proses & Simpan Pembayaran"):
+            uang_sisa = n
+            idx_start = bln_list.index(b)
+            input_log = []
             
-            # 1. Ambil data bulan yang sudah lunas tahun ini
-            df_cek = df_masuk[(df_masuk['Nama'] == w_pilih) & (df_masuk['Tahun'] == tahun_awal)]
-            bulan_lunas = df_cek['Bulan'].tolist()
+            # Ambil data pembayaran warga ini di tahun tsb untuk pengecekan lunas
+            df_cek = df_masuk[(df_masuk['Nama'] == w_pilih) & (df_masuk['Tahun'] == t)]
             
-            # Cari index mulai
-            idx_start = bln_list.index(bulan_awal)
-            
-            # 2. Loop: Selama uang masih ada, cari bulan yang kosong
-            uang_sisa = uang_masuk
-            input_log = [] # Buat nyatet apa aja yang berhasil diinput
-            
+            # --- LOGIKA HABISKAN UANG (ROLL-OVER) ---
             for i in range(idx_start, len(bln_list)):
                 if uang_sisa <= 0: break
-                
                 curr_month = bln_list[i]
                 
-                # Cek apakah bulan ini sudah ada isinya (Kas/Hadiah)
-                # Kita cek khusus bulan ini di dataframe cek
+                # Cek histori bulan ini
                 df_curr = df_cek[df_cek['Bulan'] == curr_month]
                 kas_terbayar = df_curr['Kas'].sum()
                 hadiah_terbayar = df_curr['Hadiah'].sum()
+
+                # Filter Jatah berdasarkan Mode Radio Button
+                if mode == "Hanya Kas (15rb)":
+                    jatah_kas = max(0, 15000 - kas_terbayar)
+                    jatah_hadiah = 0
+                elif mode == "Hanya Hadiah (35rb)":
+                    jatah_kas = 0
+                    jatah_hadiah = max(0, 35000 - hadiah_terbayar)
+                else: # Paket Lengkap atau Custom Nominal
+                    jatah_kas = max(0, 15000 - kas_terbayar)
+                    jatah_hadiah = max(0, 35000 - hadiah_terbayar)
                 
-                # Jatah maksimal
-                jatah_kas = max(0, 15000 - kas_terbayar)
-                jatah_hadiah = max(0, 35000 - hadiah_terbayar)
+                # Jika bulan ini sudah lunas sesuai jatahnya, skip ke bulan depan
+                if jatah_kas <= 0 and jatah_hadiah <= 0:
+                    continue
                 
-                if jatah_kas == 0 and jatah_hadiah == 0:
-                    continue # Bulan ini sudah lunas, lanjut bulan depan
-                
-                # Alokasikan uang
+                # Alokasi Uang yang ada
                 pakai_kas = min(uang_sisa, jatah_kas)
                 uang_sisa -= pakai_kas
                 
                 pakai_hadiah = min(uang_sisa, jatah_hadiah)
                 uang_sisa -= pakai_hadiah
                 
-                total_baris = pakai_kas + pakai_hadiah
+                total_input_baris = pakai_kas + pakai_hadiah
                 
-                if total_baris > 0:
+                if total_input_baris > 0:
                     try:
                         sh.worksheet("Pemasukan").append_row([
                             datetime.now().strftime("%d/%m/%Y"), 
-                            w_pilih, tahun_awal, curr_month, int(total_baris), 
+                            w_pilih, t, curr_month, int(total_input_baris), 
                             int(pakai_kas), int(pakai_hadiah), "LUNAS"
                         ])
-                        input_log.append(f"{curr_month} (Rp {total_baris:,})")
+                        input_log.append(f"{curr_month}")
                     except Exception as e:
-                        st.error(f"Error di bulan {curr_month}: {e}")
-            
-            # 3. Hasil Akhir
+                        st.error(f"Gagal simpan bulan {curr_month}: {e}")
+                        break
+
+            # 4. Final Notification
             if input_log:
-                st.success(f"✅ Berhasil input ke: {', '.join(input_log)}")
+                st.success(f"✅ Berhasil! Uang teralokasi ke: {', '.join(input_log)}")
                 if uang_sisa > 0:
-                    st.warning(f"💰 Uang masih sisa Rp {uang_sisa:,} (Sudah lunas sampai Desember!)")
+                    st.warning(f"💰 Sisa uang Rp {uang_sisa:,} tidak terinput (Sudah lunas sampai Desember {t})")
                 st.cache_data.clear()
                 time.sleep(3)
                 st.rerun()
             else:
-                st.error("❌ Tidak ada data yang diinput. Mungkin sudah lunas atau nominal 0.")
+                st.error("❌ Tidak ada data yang disimpan. Cek nominal atau status lunas warga.")
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
