@@ -153,48 +153,46 @@ if menu == "📚 Pustaka":
 elif menu == "📊 Laporan":
     t1, t2, t3 = st.tabs(["💰 Rekap Bulanan", "🎭 Detail Event", "📤 Riwayat Pengeluaran"])
     with t1:
-        thn = st.selectbox("Tahun", range(2022, 2031), index=4)
+        thn = st.selectbox("Pilih Tahun Laporan", range(2022, 2031), index=4)
         
-        # Gabungkan data pemasukan dengan data warga buat dapet kolom 'Role'
+        # 1. Pastikan data iuran digabung dengan data warga buat tau Role-nya
         df_y = df_masuk[df_masuk['Tahun'] == thn].copy()
+        
         if not df_y.empty and not df_warga.empty:
+            # Gabungkan Role ke data iuran
             df_y = df_y.merge(df_warga[['Nama', 'Role']], on='Nama', how='left')
-            
-            # Set urutan bulan
             df_y['Bulan'] = pd.Categorical(df_y['Bulan'], categories=bln_list, ordered=True)
 
-            # --- 1. FUNGSI STYLING PINTER ---
-            def style_laporan(df_pivot, target_val):
-                def apply_color(row):
-                    # Ambil nama dari index baris ini
-                    nama_warga = row.name
-                    # Cari role warga tersebut di df_warga
-                    role = df_warga[df_warga['Nama'] == nama_warga]['Role'].values[0] if nama_warga in df_warga['Nama'].values else "Main"
+            # 2. INI FUNGSI STYLING-NYA (Taruh di sini)
+            def warna_iuran(df_pivot, target_nominal):
+                def terapkan_style(row):
+                    nama_idx = row.name
+                    # Cek role warga dari data utama
+                    role = df_warga[df_warga['Nama'] == nama_idx]['Role'].values[0] if nama_idx in df_warga['Nama'].values else "Main Warga"
                     
                     styles = []
-                    for val in row:
-                        # HANYA kasih warna merah JIKA:
-                        # 1. Role-nya 'Main'
-                        # 2. Angkanya > 0 (pernah bayar tapi kurang)
-                        # 3. Angkanya < target (15rb/35rb)
-                        if role == "Main" and 0 < val < target_val:
+                    for nilai in row:
+                        # Syarat Merah: Role Main DAN Bayar > 0 DAN Bayar < Target
+                        if role == "Main Warga" and 0 < nilai < target_nominal:
                             styles.append('color: red; font-weight: bold')
                         else:
                             styles.append('color: black')
                     return styles
-                return df_pivot.style.apply(apply_color, axis=1)
+                return df_pivot.style.apply(terapkan_style, axis=1)
 
-            # --- 2. TAMPILKAN TABEL KAS ---
-            st.write("#### 🟢 Kas (Kewajiban Main: 15rb)")
-            pivot_kas = df_y.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum', observed=False).fillna(0).astype(int)
-            st.dataframe(style_laporan(pivot_kas, 15000), use_container_width=True)
+            # 3. TAMPILKAN TABEL KAS
+            st.write("#### 🟢 Kas (Target Main: 15rb)")
+            p_kas = df_y.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum', observed=False).fillna(0).astype(int)
+            # Panggil fungsi styling di sini
+            st.dataframe(warna_iuran(p_kas, 15000), use_container_width=True)
             
-            # --- 3. TAMPILKAN TABEL HADIAH ---
-            st.write("#### 🟡 Hadiah (Kewajiban Main: 35rb)")
-            pivot_hadiah = df_y.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum', observed=False).fillna(0).astype(int)
-            st.dataframe(style_laporan(pivot_hadiah, 35000), use_container_width=True)
+            # 4. TAMPILKAN TABEL HADIAH
+            st.write("#### 🟡 Hadiah (Target Main: 35rb)")
+            p_had = df_y.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum', observed=False).fillna(0).astype(int)
+            # Panggil fungsi styling di sini
+            st.dataframe(warna_iuran(p_had, 35000), use_container_width=True)
             
-            st.info("💡 **Merah:** Khusus 'Main Warga' yang pembayarannya belum mencapai target kewajiban.")
+            st.info("💡 **Merah Bold:** Hanya berlaku untuk 'Main Warga' yang cicilannya belum mencapai target kewajiban.")
     with t2:
         if not df_event.empty:
             ev_sel = st.selectbox("Pilih Event", df_event['Nama Event'].unique())
