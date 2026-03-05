@@ -284,12 +284,6 @@ elif menu == "📦 Inventaris":
                     sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok, "Baik", "Tersedia", 0, "-"])
                     st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
         else: st.warning("Khusus Admin.")
-
-    Sori, sori, Bre! Gue kejauhan tadi jelasin teknisnya. Intinya gini: Streamlit itu sensitif sama perintah st.rerun() kalau ditaruh di dalam try...except. Dia nyangka itu error, padahal itu perintah buat refresh halaman.
-
-Biar lu nggak pusing, ini satu blok utuh yang udah gue bersihin. Lu tinggal HAPUS semua isi di dalam with tab_edit: lu yang sekarang, terus GANTI pakai ini semua. Gue jamin rapi dan nggak merah lagi.
-
-Python
     with tab_edit:
         if not df_inv.empty:
             # Kita siapin variabel buat tanda sukses di luar try
