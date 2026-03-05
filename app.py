@@ -154,29 +154,47 @@ elif menu == "📊 Laporan":
     t1, t2, t3 = st.tabs(["💰 Rekap Bulanan", "🎭 Detail Event", "📤 Riwayat Pengeluaran"])
     with t1:
         thn = st.selectbox("Tahun", range(2022, 2031), index=4)
-        df_y = df_masuk[df_masuk['Tahun'] == thn].copy()
         
-        # --- 1. DEFINISIKAN FUNGSI HIGHLIGHT (WAJIB DI SINI) ---
-        def highlight_kurang(val, target):
-            # Jika angka di bawah target (tapi bukan 0), kasih warna merah
-            color = 'red' if 0 < val < target else 'black'
-            return f'color: {color}'
-
-        if not df_y.empty:
-            # Set urutan bulan agar tidak berantakan (Abjad)
+        # Gabungkan data pemasukan dengan data warga buat dapet kolom 'Role'
+        df_y = df_masuk[df_masuk['Tahun'] == thn].copy()
+        if not df_y.empty and not df_warga.empty:
+            df_y = df_y.merge(df_warga[['Nama', 'Role']], on='Nama', how='left')
+            
+            # Set urutan bulan
             df_y['Bulan'] = pd.Categorical(df_y['Bulan'], categories=bln_list, ordered=True)
-            
-            st.write("#### 🟢 Kas (Kewajiban 15rb)")
+
+            # --- 1. FUNGSI STYLING PINTER ---
+            def style_laporan(df_pivot, target_val):
+                def apply_color(row):
+                    # Ambil nama dari index baris ini
+                    nama_warga = row.name
+                    # Cari role warga tersebut di df_warga
+                    role = df_warga[df_warga['Nama'] == nama_warga]['Role'].values[0] if nama_warga in df_warga['Nama'].values else "Main"
+                    
+                    styles = []
+                    for val in row:
+                        # HANYA kasih warna merah JIKA:
+                        # 1. Role-nya 'Main'
+                        # 2. Angkanya > 0 (pernah bayar tapi kurang)
+                        # 3. Angkanya < target (15rb/35rb)
+                        if role == "Main" and 0 < val < target_val:
+                            styles.append('color: red; font-weight: bold')
+                        else:
+                            styles.append('color: black')
+                    return styles
+                return df_pivot.style.apply(apply_color, axis=1)
+
+            # --- 2. TAMPILKAN TABEL KAS ---
+            st.write("#### 🟢 Kas (Kewajiban Main: 15rb)")
             pivot_kas = df_y.pivot_table(index='Nama', columns='Bulan', values='Kas', aggfunc='sum', observed=False).fillna(0).astype(int)
-            # --- 2. PAKAI .map() UNTUK STYLING ---
-            st.dataframe(pivot_kas.style.map(lambda x: highlight_kurang(x, 15000)), use_container_width=True)
+            st.dataframe(style_laporan(pivot_kas, 15000), use_container_width=True)
             
-            st.write("#### 🟡 Hadiah (Kewajiban 35rb)")
+            # --- 3. TAMPILKAN TABEL HADIAH ---
+            st.write("#### 🟡 Hadiah (Kewajiban Main: 35rb)")
             pivot_hadiah = df_y.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum', observed=False).fillna(0).astype(int)
-            # --- 3. PAKAI .map() UNTUK STYLING ---
-            st.dataframe(pivot_hadiah.style.map(lambda x: highlight_kurang(x, 35000)), use_container_width=True)
+            st.dataframe(style_laporan(pivot_hadiah, 35000), use_container_width=True)
             
-            st.info("💡 Angka berwarna **Merah** artinya pembayaran belum mencapai target kewajiban bulanan.")
+            st.info("💡 **Merah:** Khusus 'Main Warga' yang pembayarannya belum mencapai target kewajiban.")
     with t2:
         if not df_event.empty:
             ev_sel = st.selectbox("Pilih Event", df_event['Nama Event'].unique())
