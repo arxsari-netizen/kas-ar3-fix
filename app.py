@@ -279,55 +279,69 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
         
         # Baris 288 yang bermasalah ada di sini (pastikan sejajar)
         if st.form_submit_button("Simpan Pembayaran"):
-            # 1. Cari tahu dulu: Bulan apa aja yang sudah dibayar warga ini di tahun tsb
-            df_cek = df_masuk[(df_masuk['Nama'] == w_pilih) & (df_masuk['Tahun'] == t)]
+            uang_masuk = n
+            bulan_awal = b
+            tahun_awal = t
+            
+            # 1. Ambil data bulan yang sudah lunas tahun ini
+            df_cek = df_masuk[(df_masuk['Nama'] == w_pilih) & (df_masuk['Tahun'] == tahun_awal)]
             bulan_lunas = df_cek['Bulan'].tolist()
             
-            target_bulan = b
-            # 2. LOGIKA OTOMATIS GESER BULAN:
-            if target_bulan in bulan_lunas:
-                st.warning(f"⚠️ {target_bulan} sudah lunas. Mencari bulan kosong berikutnya...")
-                idx_sekarang = bln_list.index(target_bulan)
-                found = False
-                for i in range(idx_sekarang + 1, len(bln_list)):
-                    if bln_list[i] not in bulan_lunas:
-                        target_bulan = bln_list[i]
-                        found = True
-                        break
-                if not found:
-                    st.error(f"❌ {w_pilih} sudah lunas sampai Desember {t}!")
-                    st.stop()
-
-            # 3. LOGIKA PEMBAGIAN SALDO (MAX 50rb per bulan)
-            if mode == "Hanya Kas (15rb)":
-                pk, ph = min(n, 15000), 0
-                n_digunakan = pk
-            elif mode == "Hanya Hadiah (35rb)":
-                pk, ph = 0, min(n, 35000)
-                n_digunakan = ph
-            else:
-                pk = min(n, 15000)
-                ph = min(max(0, n - 15000), 35000)
-                n_digunakan = pk + ph
+            # Cari index mulai
+            idx_start = bln_list.index(bulan_awal)
             
-            # 4. PROSES SIMPAN (DENGAN TRY DAN EXCEPT LENGKAP)
-            try:
-                sh.worksheet("Pemasukan").append_row([
-                    datetime.now().strftime("%d/%m/%Y"), 
-                    w_pilih, t, target_bulan, int(n_digunakan), int(pk), int(ph), "LUNAS"
-                ])
+            # 2. Loop: Selama uang masih ada, cari bulan yang kosong
+            uang_sisa = uang_masuk
+            input_log = [] # Buat nyatet apa aja yang berhasil diinput
+            
+            for i in range(idx_start, len(bln_list)):
+                if uang_sisa <= 0: break
                 
-                sisa_uang = n - n_digunakan
-                if sisa_uang > 0:
-                    st.info(f"💰 Ada sisa uang Rp {sisa_uang:,}. Silakan input lagi untuk bulan berikutnya.")
+                curr_month = bln_list[i]
                 
-                st.success(f"✅ Tersimpan ke {target_bulan}: Kas {pk:,} | Hadiah {ph:,}")
+                # Cek apakah bulan ini sudah ada isinya (Kas/Hadiah)
+                # Kita cek khusus bulan ini di dataframe cek
+                df_curr = df_cek[df_cek['Bulan'] == curr_month]
+                kas_terbayar = df_curr['Kas'].sum()
+                hadiah_terbayar = df_curr['Hadiah'].sum()
+                
+                # Jatah maksimal
+                jatah_kas = max(0, 15000 - kas_terbayar)
+                jatah_hadiah = max(0, 35000 - hadiah_terbayar)
+                
+                if jatah_kas == 0 and jatah_hadiah == 0:
+                    continue # Bulan ini sudah lunas, lanjut bulan depan
+                
+                # Alokasikan uang
+                pakai_kas = min(uang_sisa, jatah_kas)
+                uang_sisa -= pakai_kas
+                
+                pakai_hadiah = min(uang_sisa, jatah_hadiah)
+                uang_sisa -= pakai_hadiah
+                
+                total_baris = pakai_kas + pakai_hadiah
+                
+                if total_baris > 0:
+                    try:
+                        sh.worksheet("Pemasukan").append_row([
+                            datetime.now().strftime("%d/%m/%Y"), 
+                            w_pilih, tahun_awal, curr_month, int(total_baris), 
+                            int(pakai_kas), int(pakai_hadiah), "LUNAS"
+                        ])
+                        input_log.append(f"{curr_month} (Rp {total_baris:,})")
+                    except Exception as e:
+                        st.error(f"Error di bulan {curr_month}: {e}")
+            
+            # 3. Hasil Akhir
+            if input_log:
+                st.success(f"✅ Berhasil input ke: {', '.join(input_log)}")
+                if uang_sisa > 0:
+                    st.warning(f"💰 Uang masih sisa Rp {uang_sisa:,} (Sudah lunas sampai Desember!)")
                 st.cache_data.clear()
                 time.sleep(3)
                 st.rerun()
-                
-            except Exception as e:
-                st.error(f"Gagal simpan ke Sheets: {e}")
+            else:
+                st.error("❌ Tidak ada data yang diinput. Mungkin sudah lunas atau nominal 0.")
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
