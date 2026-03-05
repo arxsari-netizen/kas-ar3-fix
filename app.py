@@ -59,19 +59,26 @@ def gdrive_fix(url):
 
 # --- 4. SIDEBAR ---
 with st.sidebar:
+    # 1. Bikin Logo di Tengah
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
         st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
-    # Tambahkan Motto di bawah logo
-        st.markdown("""
-        <div style='text-align: left; margin-top: -30px; margin-bottom: -30px;'>
-            <i style='font-size: 9px; color: #666;'>
+    
+    # 2. Motto (Gue set Center biar simetris sama logo)
+    st.markdown("""
+        <div style='text-align: center; margin-top: -15px; margin-bottom: 20px;'>
+            <i style='font-size: 11px; color: #666; display: block;'>
                 "We come to learn & bring science back"
             </i>
         </div>
     """, unsafe_allow_html=True)
     
+    st.divider() # Garis pembatas biar rapi
+
+    # 3. Status Login
     if st.session_state['logged_in']:
         st.success(f"🔓 MODE: {st.session_state['role'].upper()}")
-        if st.button("Log Out"):
+        if st.button("Log Out", use_container_width=True):
             st.session_state.update({'logged_in': False, 'role': 'user'})
             st.rerun()
     else:
