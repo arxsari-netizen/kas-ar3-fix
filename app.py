@@ -70,12 +70,18 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    # 3. Status Login (Versi Ramping)
-    st.divider() 
+   # 3. Status Login (Ultra Minimalis)
+    st.divider()
     if st.session_state['logged_in']:
-        c1, c2 = st.columns([2, 1])
-        c1.caption(f"🔓 **{st.session_state['role'].upper()}**")
-        if c2.button("Log Out"):
+        # Gabung status dan tombol dalam satu baris pake Flexbox
+        st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: bold; color: #4CAF50;">🔓 {st.session_state['role'].upper()}</span>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Tombol Log Out kecil tanpa padding gede
+        if st.button("Log Out ➔", key="btn_out"):
             st.session_state.update({'logged_in': False, 'role': 'user'})
             st.rerun()
     else:
