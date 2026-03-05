@@ -285,20 +285,26 @@ elif menu == "📦 Inventaris":
                     st.success("Tersimpan!"); st.cache_data.clear(); time.sleep(1); st.rerun()
         else: st.warning("Khusus Admin.")
     with tab_edit:
+        # PENTING: Inisialisasi di luar expander biar gak Error
+        sukses_update = False
+        sukses_pindah = False
+        
         if not df_inv.empty:
-            # Kita siapin variabel buat tanda sukses di luar try
-            sukses_update = False
-            sukses_pindah = False
+            # Bikin label pilih satu kali aja di sini biar dipake semua expander
+            df_inv['label_pilih'] = df_inv['Nama Barang'] + " (" + df_inv['Lokasi'].astype(str) + ")"
 
             # --- FITUR 1: UPDATE STATUS & PINJAM ---
             with st.expander("📝 Update Status / Peminjaman", expanded=True):
                 with st.form("f_inv_edit"):
-                    df_inv['label_pilih'] = df_inv['Nama Barang'] + " (" + df_inv['Lokasi'] + ")"
                     b_edit = st.selectbox("Pilih Barang & Lokasi Asal", df_inv['label_pilih'].tolist())
                     curr = df_inv[df_inv['label_pilih'] == b_edit].iloc[0]
                     
                     c1, c2 = st.columns(2)
-                    n_dipinjam = c1.number_input("Jumlah Dipinjam", min_value=0, max_value=int(curr['Jumlah']), value=int(curr.get('Dipinjam', 0)))
+                    # Pastikan convert ke int biar gak error di number_input
+                    max_val = int(curr['Jumlah']) if pd.notnull(curr['Jumlah']) else 0
+                    val_pinjam = int(curr.get('Dipinjam', 0)) if pd.notnull(curr.get('Dipinjam', 0)) else 0
+                    
+                    n_dipinjam = c1.number_input("Jumlah Dipinjam", min_value=0, max_value=max_val, value=val_pinjam)
                     n_k = c2.selectbox("Kondisi", ["Baik", "Rusak Ringan", "Rusak Parah"], index=["Baik", "Rusak Ringan", "Rusak Parah"].index(curr['Kondisi']))
                     n_lok = st.text_input("Update Nama Lokasi", value=curr.get('Lokasi', '-'))
                     n_ket = st.text_input("Peminjam / Keperluan", value=curr.get('Keterangan', '-'))
@@ -308,16 +314,17 @@ elif menu == "📦 Inventaris":
                             rows = sh.worksheet("Inventaris").get_all_records()
                             r_idx = 0
                             for i, r in enumerate(rows):
-                                if r['Nama Barang'] == curr['Nama Barang'] and r['Lokasi'] == curr['Lokasi']:
+                                if str(r['Nama Barang']) == str(curr['Nama Barang']) and str(r['Lokasi']) == str(curr['Lokasi']):
                                     r_idx = i + 2
                                     break
                             
-                            sh.worksheet("Inventaris").update_cell(r_idx, 4, n_lok)
-                            sh.worksheet("Inventaris").update_cell(r_idx, 5, n_k)
-                            sh.worksheet("Inventaris").update_cell(r_idx, 7, int(n_dipinjam))
-                            sh.worksheet("Inventaris").update_cell(r_idx, 8, n_ket if n_dipinjam > 0 else "-")
-                            sh.worksheet("Inventaris").update_cell(r_idx, 6, "Dipinjam" if n_dipinjam > 0 else "Tersedia")
-                            sukses_update = True
+                            if r_idx > 0:
+                                sh.worksheet("Inventaris").update_cell(r_idx, 4, n_lok)
+                                sh.worksheet("Inventaris").update_cell(r_idx, 5, n_k)
+                                sh.worksheet("Inventaris").update_cell(r_idx, 7, int(n_dipinjam))
+                                sh.worksheet("Inventaris").update_cell(r_idx, 8, n_ket if n_dipinjam > 0 else "-")
+                                sh.worksheet("Inventaris").update_cell(r_idx, 6, "Dipinjam" if n_dipinjam > 0 else "Tersedia")
+                                sukses_update = True
                         except Exception as e:
                             st.error(f"Gagal: {e}")
 
@@ -328,29 +335,34 @@ elif menu == "📦 Inventaris":
                     curr_p = df_inv[df_inv['label_pilih'] == b_pindah].iloc[0]
                     
                     c_jml, c_lok = st.columns(2)
-                    jml_pindah = c_jml.number_input("Jumlah yg dipindah", min_value=1, max_value=int(curr_p['Jumlah'])-1)
+                    # Sisakan minimal 1 di lokasi lama
+                    max_pindah = int(curr_p['Jumlah']) - 1 if int(curr_p['Jumlah']) > 1 else 1
+                    jml_pindah = c_jml.number_input("Jumlah yg dipindah", min_value=1, max_value=max_pindah)
                     lok_baru = c_lok.text_input("Lokasi Tujuan")
                     
                     if st.form_submit_button("Konfirmasi Pindah Lokasi"):
-                        try:
-                            rows = sh.worksheet("Inventaris").get_all_records()
-                            r_asal = 0
-                            for i, r in enumerate(rows):
-                                if r['Nama Barang'] == curr_p['Nama Barang'] and r['Lokasi'] == curr_p['Lokasi']:
-                                    r_asal = i + 2
-                                    break
-                            
-                            # Update stok asal & tambah baris baru
-                            sh.worksheet("Inventaris").update_cell(r_asal, 3, int(curr_p['Jumlah']) - int(jml_pindah))
-                            sh.worksheet("Inventaris").append_row([
-                                curr_p['Nama Barang'], curr_p['Spesifikasi'], int(jml_pindah), 
-                                lok_baru, curr_p['Kondisi'], "Tersedia", 0, "-"
-                            ])
-                            sukses_pindah = True
-                        except Exception as e:
-                            st.error(f"Gagal Mutasi: {e}")
+                        if not lok_baru or lok_baru == curr_p['Lokasi']:
+                            st.error("Lokasi tujuan harus diisi dan berbeda!")
+                        else:
+                            try:
+                                rows = sh.worksheet("Inventaris").get_all_records()
+                                r_asal = 0
+                                for i, r in enumerate(rows):
+                                    if str(r['Nama Barang']) == str(curr_p['Nama Barang']) and str(r['Lokasi']) == str(curr_p['Lokasi']):
+                                        r_asal = i + 2
+                                        break
+                                
+                                if r_asal > 0:
+                                    sh.worksheet("Inventaris").update_cell(r_asal, 3, int(curr_p['Jumlah']) - int(jml_pindah))
+                                    sh.worksheet("Inventaris").append_row([
+                                        curr_p['Nama Barang'], curr_p['Spesifikasi'], int(jml_pindah), 
+                                        lok_baru, curr_p['Kondisi'], "Tersedia", 0, "-"
+                                    ])
+                                    sukses_pindah = True
+                            except Exception as e:
+                                st.error(f"Gagal Mutasi: {e}")
 
-            # --- PROSES REFRESH (Di luar Try-Except) ---
+            # --- PROSES REFRESH ---
             if sukses_update or sukses_pindah:
                 st.success("✅ Berhasil diproses!")
                 st.cache_data.clear()
