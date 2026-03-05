@@ -50,11 +50,14 @@ df_masuk, df_keluar, df_warga, df_event = load_data("Pemasukan"), load_data("Pen
 df_inv, df_pus = load_data("Inventaris"), load_data("Pustaka")
 # --- HELPER FUNCTIONS ---
 def get_row_index(worksheet, nama_barang, lokasi):
-    """Cari baris berdasarkan Nama Barang & Lokasi (G-Sheets Index)"""
-    data = worksheet.get_all_records()
-    for i, row in enumerate(data):
-        if str(row.get('Nama Barang')) == str(nama_barang) and str(row.get('Lokasi')) == str(lokasi):
-            return i + 2 # Header + 1
+    # Mengambil semua nilai mentah (list of lists)
+    data = worksheet.get_all_values()
+    # Asumsi: baris 1 adalah header, data mulai baris 2 (index 1)
+    for i, row in enumerate(data[1:], start=2):
+        # row[0] = Nama Barang, row[3] = Lokasi (menurut struktur sheet kamu)
+        # .strip() untuk membersihkan spasi di awal/akhir
+        if row[0].strip() == str(nama_barang).strip() and row[3].strip() == str(lokasi).strip():
+            return i
     return None
 def gdrive_fix(url):
     file_id = ""
@@ -322,11 +325,23 @@ elif menu == "📦 Inventaris":
                 n_peminjam = st.text_input("Nama Peminjam / Keperluan", value=curr['Keterangan'])
                 
                 if st.form_submit_button("💾 Simpan Perubahan"):
-                    idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
-                    if idx:
-                        status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
-                        ws_inv.update(f"D{idx}:H{idx}", [[n_lokasi, n_kondisi, status_txt, int(n_dipinjam), n_peminjam]])
-                        st.success("Data berhasil diperbarui!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+    idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
+    if idx:
+        status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
+        
+        # Update satu per satu per kolom (D=4, E=5, F=6, G=7, H=8)
+        ws_inv.update_cell(idx, 4, n_lokasi)
+        ws_inv.update_cell(idx, 5, n_kondisi)
+        ws_inv.update_cell(idx, 6, status_txt)
+        ws_inv.update_cell(idx, 7, int(n_dipinjam))
+        ws_inv.update_cell(idx, 8, n_peminjam)
+        
+        st.success("Data berhasil diperbarui ke Google Sheets!")
+        st.cache_data.clear()
+        time.sleep(1)
+        st.rerun()
+    else:
+        st.error(f"Gagal menemukan baris untuk '{curr['Nama Barang']}'. Cek spasi di Google Sheets!")
 
             st.divider()
 
