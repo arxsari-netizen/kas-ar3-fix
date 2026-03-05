@@ -298,8 +298,15 @@ elif menu == "📦 Inventaris":
             st.info("💡 Semua warga dapat memperbarui status peminjaman atau lokasi barang.")
             
             # Selectbox di luar form biar reaktif
-            pilih_barang = st.selectbox("Pilih Barang yang akan diolah:", df_inv['label_edit'].tolist())
-            curr = df_inv[df_inv['label_edit'] == pilih_barang].iloc[0]
+            # --- UBAH BAGIAN INI ---
+            # Kita paksa ambil list terbaru dari df_inv yang fresh
+            pilihan = df_inv['label_edit'].tolist()
+            pilih_barang = st.selectbox("Pilih Barang:", pilihan)
+            
+            # Filter ulang berdasarkan pilihan agar 'curr' tidak ambil index yang salah
+            df_filtered = df_inv[df_inv['label_edit'] == pilih_barang]
+            if not df_filtered.empty:
+                curr = df_filtered.iloc[0]
 
             with st.form("f_inv_update"):
                 c1, c2 = st.columns(2)
