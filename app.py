@@ -8,8 +8,21 @@ import re
 
 # --- 1. CONFIG ---
 st.set_page_config(page_title="AR-ROYHAAN 3", layout="wide",initial_sidebar_state="expanded")
-st.markdown("""<style>header {visibility: hidden;} .stApp { background-color: #f8f9fa; } [data-testid="stMetric"] { background: white; border: 1px solid #D4AF37; padding: 15px; border-radius: 12px; }</style>""", unsafe_allow_html=True)
-
+st.markdown("""
+    <style>
+        /* Sembunyikan garis pelangi di paling atas tapi biarkan tombol sidebar ada */
+        [data-testid="stHeader"] {
+            background-color: rgba(0,0,0,0);
+        }
+        .stApp { background-color: #f8f9fa; } 
+        [data-testid="stMetric"] { background: white; border: 1px solid #D4AF37; padding: 15px; border-radius: 12px; }
+        
+        /* CSS Tambahan biar tombol sidebar tetep kelihatan meski header transparan */
+        button[kind="headerNoPadding"] {
+            visibility: visible !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 # --- 2. SESSION STATE (Default: Warga/User) ---
 if 'logged_in' not in st.session_state:
     st.session_state.update({'logged_in': False, 'role': 'user'})
