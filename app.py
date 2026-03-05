@@ -264,13 +264,6 @@ elif menu == "📦 Inventaris":
                 hide_index=True, 
                 use_container_width=True
             )
-            
-            # Olah pesan WA di luar f-string biar gak error backslash
-            summary = [f"- {r['Nama Barang']} ({r['Dipinjam']} unit)" for _, r in df_inv.iterrows() if r['Dipinjam'] > 0]
-            txt_wa = "📦 *STATUS PINJAM ASET:*\n" + ("\n".join(summary) if summary else "Semua aman di tempat.")
-            txt_encoded = txt_wa.replace(' ', '%20').replace('\n', '%0A')
-            st.link_button("📲 Share Status ke WA", f"https://wa.me/?text={txt_encoded}")
-
     with tab_add:
         if st.session_state['role'] == "admin":
             with st.form("f_inv_add", clear_on_submit=True):
