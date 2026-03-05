@@ -59,15 +59,12 @@ def gdrive_fix(url):
 
 # --- 4. SIDEBAR ---
 with st.sidebar:
-    # 1. Bikin Logo di Tengah
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
         st.image("https://raw.githubusercontent.com/arxsari-netizen/kas-ar3-fix/main/AR%20ROYHAAN.png", width=80)
     
     # 2. Motto (Gue set Center biar simetris sama logo)
     st.markdown("""
-        <div style='text-align: center; margin-top: -15px; margin-bottom: 20px;'>
-            <i style='font-size: 11px; color: #666; display: block;'>
+        <div style='text-align: left; margin-top: -30px; margin-bottom: -20px;'>
+            <i style='font-size: 9px; color: #666; display: block;'>
                 "We come to learn & bring science back"
             </i>
         </div>
