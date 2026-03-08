@@ -48,16 +48,17 @@ def load_data(sheet_name):
 
 df_masuk, df_keluar, df_warga, df_event = load_data("Pemasukan"), load_data("Pengeluaran"), load_data("Warga"), load_data("Event")
 df_inv, df_pus = load_data("Inventaris"), load_data("Pustaka")
-# --- HELPER FUNCTIONS ---
-def get_row_index(worksheet, nama_barang, lokasi):
-    # Mengambil semua nilai mentah (list of lists)
+def get_row_index(worksheet, nama, kriteria_kedua=None, role=None):
     data = worksheet.get_all_values()
-    # Asumsi: baris 1 adalah header, data mulai baris 2 (index 1)
-    for i, row in enumerate(data[1:], start=2):
-        # row[0] = Nama Barang, row[3] = Lokasi (menurut struktur sheet kamu)
-        # .strip() untuk membersihkan spasi di awal/akhir
-        if row[0].strip() == str(nama_barang).strip() and row[3].strip() == str(lokasi).strip():
-            return i
+    for i, row in enumerate(data):
+        # Kalau lagi nyari warga (pake parameter role)
+        if role is not None:
+            if row[0] == nama and row[1] == role:
+                return i + 1
+        # Kalau lagi nyari barang inventaris (pake lokasi)
+        elif kriteria_kedua is not None:
+            if row[0] == nama and row[3] == kriteria_kedua:
+                return i + 1
     return None
 def gdrive_fix(url):
     file_id = ""
