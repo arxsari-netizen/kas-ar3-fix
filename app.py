@@ -427,10 +427,83 @@ elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
             st.success("Tercatat!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
 elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
+    st.markdown("### 👥 Manajemen Warga & Hak Akses")
+    
+    # 1. Tampilkan Data Warga Saat Ini
     st.dataframe(df_warga[['Nama', 'Role']], hide_index=True, use_container_width=True)
-    with st.form("t_w"):
-        nw, nr = st.text_input("Nama"), st.selectbox("Role", ["Main Warga", "Warga Support"])
-        if st.form_submit_button("Tambah"): sh.worksheet("Warga").append_row([nw, nr]); st.cache_data.clear(); st.rerun()
+    
+    tab_update, tab_tambah = st.tabs(["🔄 Update / Hapus Warga", "➕ Tambah Warga Baru"])
+    
+    with tab_update:
+        if not df_warga.empty:
+            nama_list = df_warga['Nama'].tolist()
+            pilih_nama = st.selectbox("Pilih Warga yang mau di-edit:", nama_list)
+            
+            # Ambil data warga yang dipilih
+            curr_warga = df_warga[df_warga['Nama'] == pilih_nama].iloc[0]
+            
+            with st.form("f_edit_warga"):
+                nama_baru = st.text_input("Nama Warga", value=curr_warga['Nama'])
+                role_baru = st.selectbox("Role", ["Main Warga", "Warga Support"], 
+                                         index=0 if curr_warga['Role'] == "Main Warga" else 1)
+                
+                col1, col2 = st.columns(2)
+                simpan = col1.form_submit_button("💾 Simpan Perubahan")
+                hapus = col2.form_submit_button("🗑️ Hapus Warga")
+                
+                if simpan:
+                    # 1. Update di Tab Warga
+                    ws_w = sh.worksheet("Warga")
+                    idx_w = get_row_index(ws_w, pilih_nama, role=curr_warga['Role']) # Pastikan fungsi get_row_index lu support cari nama
+                    
+                    if idx_w:
+                        ws_w.update_cell(idx_w, 1, nama_baru)
+                        ws_w.update_cell(idx_w, 2, role_baru)
+                        
+                        # --- FITUR OPSI 1: UPDATE BORONGAN ---
+                        st.info("Sedang mensinkronkan nama di semua database...")
+                        
+                        # Update di Inventaris (Kolom Peminjam/Keterangan biasanya kolom 8)
+                        ws_inv = sh.worksheet("Inventaris")
+                        data_inv = ws_inv.get_all_values()
+                        for i, row in enumerate(data_inv):
+                            if len(row) >= 8 and row[7] == pilih_nama:
+                                ws_inv.update_cell(i+1, 8, nama_baru)
+                        
+                        # Update di Kas (Misal Nama ada di kolom 3)
+                        ws_kas = sh.worksheet("Kas")
+                        data_kas = ws_kas.get_all_values()
+                        for i, row in enumerate(data_kas):
+                            if len(row) >= 3 and row[2] == pilih_nama:
+                                ws_kas.update_cell(i+1, 3, nama_baru)
+                        
+                        st.success(f"Berhasil! Nama {pilih_nama} sudah diupdate jadi {nama_baru} di semua tabel.")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
+                
+                if hapus:
+                    ws_w = sh.worksheet("Warga")
+                    idx_w = get_row_index(ws_w, pilih_nama, role=curr_warga['Role'])
+                    if idx_w:
+                        ws_w.delete_rows(idx_w)
+                        st.warning(f"Warga {pilih_nama} telah dihapus.")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
+
+    with tab_tambah:
+        with st.form("t_w_baru"):
+            nw = st.text_input("Nama Warga Baru")
+            nr = st.selectbox("Role Baru", ["Main Warga", "Warga Support"])
+            if st.form_submit_button("Tambah Warga"):
+                if nw:
+                    sh.worksheet("Warga").append_row([nw, nr])
+                    st.success("Warga berhasil ditambahkan!")
+                    st.cache_data.clear()
+                    st.rerun()
+                else:
+                    st.error("Nama tidak boleh kosong!")
 
 elif menu == "🎭 Event & Iuran" and st.session_state['role'] == "admin":
     with st.form("f_ev", clear_on_submit=True):
