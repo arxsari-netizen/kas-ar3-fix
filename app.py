@@ -455,30 +455,48 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
                 if simpan:
                     # 1. Update di Tab Warga
                     ws_w = sh.worksheet("Warga")
-                    idx_w = get_row_index(ws_w, pilih_nama, role=curr_warga['Role']) # Pastikan fungsi get_row_index lu support cari nama
+                    # Gunakan kriteria yang sesuai dengan fungsi get_row_index terbaru lu
+                    idx_w = get_row_index(ws_w, pilih_nama, role=curr_warga['Role']) 
                     
                     if idx_w:
                         ws_w.update_cell(idx_w, 1, nama_baru)
                         ws_w.update_cell(idx_w, 2, role_baru)
                         
-                        # --- FITUR OPSI 1: UPDATE BORONGAN ---
-                        st.info("Sedang mensinkronkan nama di semua database...")
+                        st.info("Sedang kerja bakti update nama di semua tab...")
                         
-                        # Update di Inventaris (Kolom Peminjam/Keterangan biasanya kolom 8)
-                        ws_inv = sh.worksheet("Inventaris")
-                        data_inv = ws_inv.get_all_values()
-                        for i, row in enumerate(data_inv):
-                            if len(row) >= 8 and row[7] == pilih_nama:
-                                ws_inv.update_cell(i+1, 8, nama_baru)
+                        # --- FITUR OPSI 1: UPDATE BORONGAN (SESUAI GAMBAR DATABASE LU) ---
                         
-                        # Update di Kas (Misal Nama ada di kolom 3)
-                        ws_kas = sh.worksheet("Kas")
-                        data_kas = ws_kas.get_all_values()
-                        for i, row in enumerate(data_kas):
-                            if len(row) >= 3 and row[2] == pilih_nama:
-                                ws_kas.update_cell(i+1, 3, nama_baru)
-                        
-                        st.success(f"Berhasil! Nama {pilih_nama} sudah diupdate jadi {nama_baru} di semua tabel.")
+                        # A. Update di Tab Pemasukan (Berdasarkan Gambar 6)
+                        try:
+                            ws_pem = sh.worksheet("Pemasukan") # Sesuai nama tab di gambar
+                            data_pem = ws_pem.get_all_values()
+                            for i, row in enumerate(data_pem):
+                                # Nama ada di Kolom B (Index 1)
+                                if len(row) >= 2 and row[1] == pilih_nama:
+                                    ws_pem.update_cell(i+1, 2, nama_baru)
+                        except: st.warning("Tab 'Pemasukan' bermasalah, dilewati.")
+
+                        # B. Update di Tab Inventaris (Berdasarkan Gambar 6)
+                        try:
+                            ws_inv = sh.worksheet("Inventaris")
+                            data_inv = ws_inv.get_all_values()
+                            for i, row in enumerate(data_inv):
+                                # Asumsi peminjam ada di kolom ke-8 (Index 7)
+                                if len(row) >= 8 and row[7] == pilih_nama:
+                                    ws_inv.update_cell(i+1, 8, nama_baru)
+                        except: st.warning("Tab 'Inventaris' bermasalah, dilewati.")
+
+                        # C. Update di Tab Event (Berdasarkan Gambar 6)
+                        try:
+                            ws_evt = sh.worksheet("Event")
+                            data_evt = ws_evt.get_all_values()
+                            for i, row in enumerate(data_evt):
+                                # Sesuaikan kolom nama di tab Event kalau ada
+                                if len(row) >= 2 and row[1] == pilih_nama:
+                                    ws_evt.update_cell(i+1, 2, nama_baru)
+                        except: pass
+
+                        st.success(f"Mantap! Nama '{pilih_nama}' sudah ganti jadi '{nama_baru}' di semua tab.")
                         st.cache_data.clear()
                         time.sleep(1)
                         st.rerun()
