@@ -391,47 +391,63 @@ elif menu == "📦 Inventaris":
                 st.warning("Hanya Admin yang bisa menghapus aset dari daftar permanen.")
 # --- 9. LOG KAS BULANAN & LAINNYA ---
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
-    st.subheader("📥 Input Pembayaran Iuran")
-    warga_options = [f"{n}" for n in list_warga_input] if not df_warga.empty else []
-    selected_display = st.selectbox("Pilih Nama Warga", warga_options)
-    w_pilih = selected_display.split(" (")[0]
-    mode = st.radio("Pilih Mode Alokasi Dana:", ["Paket Lengkap (50rb)", "Hanya Kas (15rb)", "Hanya Hadiah (35rb)", "Custom Nominal"], horizontal=True)
-    n_val = 50000 if "Paket Lengkap" in mode else 15000 if "Hanya Kas" in mode else 35000 if "Hanya Hadiah" in mode else 0
-    with st.form("f_kas", clear_on_submit=True):
-        c_nom, c_thn, c_bln = st.columns([2, 1, 1])
-        n = c_nom.number_input("Nominal Total yang Diterima (Rp)", value=n_val, step=5000)
-        t_input = c_thn.selectbox("Tahun Mulai", range(2022, 2031), index=4)
-        b_input = c_bln.selectbox("Bulan Mulai", bln_list)
-        if st.form_submit_button("🚀 Proses & Simpan Pembayaran"):
-            uang_sisa, bulan_idx, tahun_jalan, input_log = n, bln_list.index(b_input), t_input, []
-            role_warga = df_warga[df_warga['Nama'] == w_pilih]['Role'].values[0] if not df_warga[df_warga['Nama'] == w_pilih].empty else "Main Warga"
-            max_loop, loops = 60, 0
-            while uang_sisa > 0 and loops < max_loop:
-                loops += 1
-                curr_month = bln_list[bulan_idx]
-                df_curr = df_masuk[(df_masuk['Nama'] == w_pilih) & (df_masuk['Tahun'] == tahun_jalan) & (df_masuk['Bulan'] == curr_month)]
-                kas_terbayar, hadiah_terbayar = df_curr['Kas'].sum(), df_curr['Hadiah'].sum()
-                if mode == "Hanya Kas (15rb)": j_kas, j_hadiah = max(0, 15000 - kas_terbayar), 0
-                elif mode == "Hanya Hadiah (35rb)": j_kas, j_hadiah = 0, max(0, 35000 - hadiah_terbayar)
-                else: j_kas, j_hadiah = max(0, 15000 - kas_terbayar), max(0, 35000 - hadiah_terbayar)
-                if j_kas <= 0 and j_hadiah <= 0:
+    st.subheader("📥 Input Keuangan")
+    tipe_transaksi = st.radio("Pilih Tipe Input:", ["Iuran Rutin", "Hibah/Dana Tambahan"], horizontal=True)
+
+    if tipe_transaksi == "Iuran Rutin":
+        warga_options = [f"{n}" for n in list_warga_input] if not df_warga.empty else []
+        selected_display = st.selectbox("Pilih Nama Warga", warga_options)
+        w_pilih = selected_display.split(" (")[0]
+        mode = st.radio("Mode Alokasi:", ["Paket Lengkap (50rb)", "Hanya Kas (15rb)", "Hanya Hadiah (35rb)", "Custom"], horizontal=True)
+        
+        with st.form("f_kas_rutin", clear_on_submit=True):
+            c1, c2, c3 = st.columns(3)
+            n = c1.number_input("Nominal (Rp)", value=50000 if mode != "Custom" else 0, step=5000)
+            t_input = c2.selectbox("Tahun Mulai", range(2022, 2031), index=4)
+            b_input = c3.selectbox("Bulan Mulai", bln_list)
+            
+            if st.form_submit_button("🚀 Proses Iuran"):
+                uang_sisa, bulan_idx, tahun_jalan = n, bln_list.index(b_input), t_input
+                input_log = []
+                
+                # Loop untuk alokasi bulanan
+                while uang_sisa > 0 and tahun_jalan <= (datetime.now().year + 1):
+                    curr_month = bln_list[bulan_idx]
+                    df_curr = df_masuk[(df_masuk['Nama'] == w_pilih) & (df_masuk['Tahun'] == tahun_jalan) & (df_masuk['Bulan'] == curr_month)]
+                    kas_terbayar = df_curr['Kas'].sum()
+                    hadiah_terbayar = df_curr['Hadiah'].sum()
+                    
+                    # Target nominal
+                    target_k, target_h = (15000, 35000) if mode != "Hanya Kas (15rb)" and mode != "Hanya Hadiah (35rb)" else (15000 if mode == "Hanya Kas (15rb)" else 0, 35000 if mode == "Hanya Hadiah (35rb)" else 0)
+                    j_kas, j_hadiah = max(0, target_k - kas_terbayar), max(0, target_h - hadiah_terbayar)
+                    
+                    if j_kas == 0 and j_hadiah == 0:
+                        bulan_idx += 1
+                        if bulan_idx >= 12: bulan_idx = 0; tahun_jalan += 1
+                        continue
+                    
+                    pakai_kas = min(uang_sisa, j_kas); uang_sisa -= pakai_kas
+                    pakai_hadiah = min(uang_sisa, j_hadiah); uang_sisa -= pakai_hadiah
+                    
+                    if (pakai_kas + pakai_hadiah) > 0:
+                        sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), w_pilih, tahun_jalan, curr_month, int(pakai_kas + pakai_hadiah), int(pakai_kas), int(pakai_hadiah), "LUNAS", "Iuran"])
+                        input_log.append(f"{curr_month} {tahun_jalan}")
+                    
                     bulan_idx += 1
                     if bulan_idx >= 12: bulan_idx = 0; tahun_jalan += 1
-                    continue
-                pakai_kas = min(uang_sisa, j_kas); uang_sisa -= pakai_kas
-                pakai_hadiah = min(uang_sisa, j_hadiah); uang_sisa -= pakai_hadiah
-                total_baris = pakai_kas + pakai_hadiah
-                if total_baris > 0:
-                    tipe_db = mode.split(" (")[0]
-                    status_db = "PARTISIPASI" if role_warga == "Warga Support" else ("LUNAS" if (kas_terbayar + hadiah_terbayar + total_baris) >= 50000 else "BELUM LUNAS")
-                    sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), w_pilih, tahun_jalan, curr_month, int(total_baris), int(pakai_kas), int(pakai_hadiah), status_db, tipe_db])
-                    input_log.append(f"{curr_month} {tahun_jalan}")
-                bulan_idx += 1
-                if bulan_idx >= 12: bulan_idx = 0; tahun_jalan += 1
-            if input_log:
-                st.success(f"✅ Berhasil diinput ke: {', '.join(input_log)}")
-                st.cache_data.clear(); time.sleep(2); st.rerun()
+                
+                st.success(f"✅ Input sukses: {', '.join(input_log)}")
+                st.cache_data.clear(); time.sleep(1); st.rerun()
 
+    else: # Mode Hibah (Langsung ke Saldo)
+        with st.form("f_hibah", clear_on_submit=True):
+            nominal = st.number_input("Nominal Hibah (Rp)", step=5000)
+            keterangan = st.text_input("Keterangan (Contoh: Hibah dari Hamba Allah)")
+            if st.form_submit_button("💰 Simpan Hibah ke Saldo"):
+                # Input dengan nama 'HIBAH' agar tidak dianggap iuran bulanan
+                sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), "HIBAH", datetime.now().year, "-", int(nominal), int(nominal), 0, "HIBAH", keterangan])
+                st.success("Hibah berhasil ditambah ke saldo kas!")
+                st.cache_data.clear(); time.sleep(1); st.rerun()
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
@@ -444,103 +460,57 @@ elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
 elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
     st.markdown("### 👥 Manajemen Warga & Hak Akses")
     
-    # 1. Tampilkan Data Warga Saat Ini
+    # 1. Tampilkan Data Warga (termasuk kolom Status)
     st.dataframe(df_warga[['Nama', 'Role', 'Status']], hide_index=True, use_container_width=True)
     
     tab_update, tab_tambah = st.tabs(["🔄 Update / Hapus Warga", "➕ Tambah Warga Baru"])
     
     with tab_update:
         if not df_warga.empty:
-            nama_list = df_warga['Nama'].tolist()
-            pilih_nama = st.selectbox("Pilih Warga yang mau di-edit:", nama_list)
-            
-            # Ambil data warga yang dipilih
+            pilih_nama = st.selectbox("Pilih Warga yang mau di-edit:", df_warga['Nama'].tolist())
             curr_warga = df_warga[df_warga['Nama'] == pilih_nama].iloc[0]
             
             with st.form("f_edit_warga"):
                 nama_baru = st.text_input("Nama Warga", value=curr_warga['Nama'])
                 role_baru = st.selectbox("Role", ["Main Warga", "Warga Support"], 
-                                         index=0 if curr_warga['Role'] == "Main Warga" else 1)
-                list_status = ["Aktif", "Non-Warga", "Alumni"]
-                status_idx = list_status.index(curr_warga['Status']) if curr_warga['Status'] in list_status else 0
-                status_baru = st.selectbox("Status", list_status, index=status_idx)
+                                       index=0 if curr_warga['Role'] == "Main Warga" else 1)
+                
+                # Opsi Status (Pahmi bakal muncul di sini kalau kamu ganti ke 'Alumni')
+                opsi_status = ["Aktif", "Non-Warga", "Alumni"]
+                status_idx = opsi_status.index(curr_warga['Status']) if curr_warga['Status'] in opsi_status else 0
+                status_baru = st.selectbox("Status", opsi_status, index=status_idx)
                 
                 col1, col2 = st.columns(2)
-                simpan = col1.form_submit_button("💾 Simpan Perubahan")
-                hapus = col2.form_submit_button("🗑️ Hapus Warga")
-                
-                if simpan:
-                    # 1. Update di Tab Warga
+                if col1.form_submit_button("💾 Simpan Perubahan"):
                     ws_w = sh.worksheet("Warga")
-                    # Gunakan kriteria yang sesuai dengan fungsi get_row_index terbaru lu
-                    idx_w = get_row_index(ws_w, pilih_nama, role=curr_warga['Role']) 
+                    # Cari baris (Asumsi Nama kolom 1, Role kolom 2, Status kolom 3)
+                    idx_w = get_row_index(ws_w, pilih_nama, role=curr_warga['Role'])
                     
                     if idx_w:
                         ws_w.update_cell(idx_w, 1, nama_baru)
                         ws_w.update_cell(idx_w, 2, role_baru)
-                        ws_w.update_cell(idx_w, 3, status_baru) # Update kolom ke-3 (Status)
-                        
-                        st.info("Sedang kerja bakti update nama di semua tab...")
-                        
-                        # --- FITUR OPSI 1: UPDATE BORONGAN (SESUAI GAMBAR DATABASE LU) ---
-                        
-                        # A. Update di Tab Pemasukan (Berdasarkan Gambar 6)
-                        try:
-                            ws_pem = sh.worksheet("Pemasukan") # Sesuai nama tab di gambar
-                            data_pem = ws_pem.get_all_values()
-                            for i, row in enumerate(data_pem):
-                                # Nama ada di Kolom B (Index 1)
-                                if len(row) >= 2 and row[1] == pilih_nama:
-                                    ws_pem.update_cell(i+1, 2, nama_baru)
-                        except: st.warning("Tab 'Pemasukan' bermasalah, dilewati.")
-
-                        # B. Update di Tab Inventaris (Berdasarkan Gambar 6)
-                        try:
-                            ws_inv = sh.worksheet("Inventaris")
-                            data_inv = ws_inv.get_all_values()
-                            for i, row in enumerate(data_inv):
-                                # Asumsi peminjam ada di kolom ke-8 (Index 7)
-                                if len(row) >= 8 and row[7] == pilih_nama:
-                                    ws_inv.update_cell(i+1, 8, nama_baru)
-                        except: st.warning("Tab 'Inventaris' bermasalah, dilewati.")
-
-                        # C. Update di Tab Event (Berdasarkan Gambar 6)
-                        try:
-                            ws_evt = sh.worksheet("Event")
-                            data_evt = ws_evt.get_all_values()
-                            for i, row in enumerate(data_evt):
-                                # Sesuaikan kolom nama di tab Event kalau ada
-                                if len(row) >= 2 and row[1] == pilih_nama:
-                                    ws_evt.update_cell(i+1, 2, nama_baru)
-                        except: pass
-
-                        st.success(f"Mantap! Nama '{pilih_nama}' sudah ganti jadi '{nama_baru}' di semua tab.")
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
+                        ws_w.update_cell(idx_w, 3, status_baru)
+                        st.success(f"Berhasil update {nama_baru}!")
+                        st.cache_data.clear(); time.sleep(1); st.rerun()
                 
-                if hapus:
+                if col2.form_submit_button("🗑️ Hapus Warga"):
                     ws_w = sh.worksheet("Warga")
                     idx_w = get_row_index(ws_w, pilih_nama, role=curr_warga['Role'])
                     if idx_w:
                         ws_w.delete_rows(idx_w)
-                        st.warning(f"Warga {pilih_nama} telah dihapus.")
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
+                        st.warning(f"Warga {pilih_nama} dihapus.")
+                        st.cache_data.clear(); time.sleep(1); st.rerun()
 
     with tab_tambah:
         with st.form("t_w_baru"):
             nw = st.text_input("Nama Warga Baru")
-            nr = st.selectbox("Role Baru", ["Main Warga", "Warga Support"])
+            nr = st.selectbox("Role", ["Main Warga", "Warga Support"])
+            ns = st.selectbox("Status", ["Aktif", "Non-Warga", "Alumni"])
             if st.form_submit_button("Tambah Warga"):
                 if nw:
-                    sh.worksheet("Warga").append_row([nw, nr])
+                    sh.worksheet("Warga").append_row([nw, nr, ns])
                     st.success("Warga berhasil ditambahkan!")
-                    st.cache_data.clear()
-                    st.rerun()
-                else:
-                    st.error("Nama tidak boleh kosong!")
+                    st.cache_data.clear(); time.sleep(1); st.rerun()
 
 elif menu == "🎭 Event & Iuran" and st.session_state['role'] == "admin":
     with st.form("f_ev", clear_on_submit=True):
