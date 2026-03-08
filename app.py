@@ -445,7 +445,7 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
     st.markdown("### 👥 Manajemen Warga & Hak Akses")
     
     # 1. Tampilkan Data Warga Saat Ini
-    st.dataframe(df_warga[['Nama', 'Role']], hide_index=True, use_container_width=True)
+    st.dataframe(df_warga[['Nama', 'Role', 'Status']], hide_index=True, use_container_width=True)
     
     tab_update, tab_tambah = st.tabs(["🔄 Update / Hapus Warga", "➕ Tambah Warga Baru"])
     
@@ -461,6 +461,9 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
                 nama_baru = st.text_input("Nama Warga", value=curr_warga['Nama'])
                 role_baru = st.selectbox("Role", ["Main Warga", "Warga Support"], 
                                          index=0 if curr_warga['Role'] == "Main Warga" else 1)
+                list_status = ["Aktif", "Non-Warga", "Alumni"]
+                status_idx = list_status.index(curr_warga['Status']) if curr_warga['Status'] in list_status else 0
+                status_baru = st.selectbox("Status", list_status, index=status_idx)
                 
                 col1, col2 = st.columns(2)
                 simpan = col1.form_submit_button("💾 Simpan Perubahan")
@@ -475,6 +478,7 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
                     if idx_w:
                         ws_w.update_cell(idx_w, 1, nama_baru)
                         ws_w.update_cell(idx_w, 2, role_baru)
+                        ws_w.update_cell(idx_w, 3, status_baru) # Update kolom ke-3 (Status)
                         
                         st.info("Sedang kerja bakti update nama di semua tab...")
                         
