@@ -48,17 +48,31 @@ def load_data(sheet_name):
 
 df_masuk, df_keluar, df_warga, df_event = load_data("Pemasukan"), load_data("Pengeluaran"), load_data("Warga"), load_data("Event")
 df_inv, df_pus = load_data("Inventaris"), load_data("Pustaka")
+# --- UPDATE POSISI FILTER WARGA DI SINI ---
+# Kita buat list nama warga yang STATUS-nya 'Aktif' atau 'Non-Warga' saja
+# Biar Alumni (Pahmi) nggak muncul di pilihan input baru
+if not df_warga.empty:
+    # Cek dulu apakah kolom 'Status' ada di Google Sheets, kalau nggak ada kita default ke 'Aktif'
+    if 'Status' not in df_warga.columns:
+        df_warga['Status'] = 'Aktif'
+    
+    # List untuk dropdown input (Hanya yang Aktif & Non-Warga)
+    df_aktif = df_warga[df_warga['Status'].isin(['Aktif', 'Non-Warga'])]
+    list_warga_input = sorted(df_aktif['Nama'].tolist())
+else:
+    list_warga_input = []
 def get_row_index(worksheet, nama, kriteria_kedua=None, role=None):
     data = worksheet.get_all_values()
     for i, row in enumerate(data):
-        # Kalau lagi nyari warga (pake parameter role)
+        # Cari Warga (Nama di Kolom 1, Role di Kolom 2)
         if role is not None:
             if row[0] == nama and row[1] == role:
                 return i + 1
-        # Kalau lagi nyari barang inventaris (pake lokasi)
+        # Cari Inventaris (Nama di Kolom 1, Lokasi di Kolom 4)
         elif kriteria_kedua is not None:
-            if row[0] == nama and row[3] == kriteria_kedua:
-                return i + 1
+            if len(row) >= 4:
+                if row[0] == nama and row[3] == kriteria_kedua:
+                    return i + 1
     return None
 def gdrive_fix(url):
     file_id = ""
@@ -378,7 +392,7 @@ elif menu == "📦 Inventaris":
 # --- 9. LOG KAS BULANAN & LAINNYA ---
 elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     st.subheader("📥 Input Pembayaran Iuran")
-    warga_options = sorted([f"{row['Nama']} ({row['Role']})" for _, row in df_warga.iterrows()]) if not df_warga.empty else []
+    warga_options = [f"{n}" for n in list_warga_input] if not df_warga.empty else []
     selected_display = st.selectbox("Pilih Nama Warga", warga_options)
     w_pilih = selected_display.split(" (")[0]
     mode = st.radio("Pilih Mode Alokasi Dana:", ["Paket Lengkap (50rb)", "Hanya Kas (15rb)", "Hanya Hadiah (35rb)", "Custom Nominal"], horizontal=True)
