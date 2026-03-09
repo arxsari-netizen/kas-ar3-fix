@@ -239,7 +239,7 @@ if menu == "📚 Pustaka":
             st.subheader("📸 Galeri Kegiatan")
             
             # Ambil daftar kegiatan unik
-            list_kegiatan = ["Semua Kegiatan"] + galeri_df['Kegiatan'].unique().tolist()
+            list_kegiatan = ["--Pilih--"] + galeri_df['Kegiatan'].unique().tolist()
             
             # Selectbox sebagai navigasi utama galeri
             pilih_kegiatan = st.selectbox("Pilih Kegiatan", list_kegiatan)
