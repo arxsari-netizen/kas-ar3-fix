@@ -212,7 +212,7 @@ if menu == "📚 Pustaka":
         with st.expander("➕ Tambah Materi Baru"):
             with st.form("f_add_pus", clear_on_submit=True):
                 j_p, k_p = st.text_input("Judul Materi"), st.selectbox("Kategori", ["Kitab", "Rekaman Audio", "Video", "Foto Kegiatan", "Dokumen"])
-                l_p, t_p = st.text_input("Link G-Drive/URL"), st.selectbox("Tipe File", [""PDF", "Gambar", "Foto", "Video", "Audio", "Link""])
+                l_p, t_p = st.text_input("Link G-Drive/URL"), st.selectbox("Tipe File", ["PDF", "Gambar", "Foto", "Video", "Audio", "Link"])
                 d_p = st.text_area("Deskripsi Singkat")
                 if st.form_submit_button("Simpan"):
                     sh.worksheet("Pustaka").append_row([j_p, k_p, l_p, t_p, d_p])
