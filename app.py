@@ -221,6 +221,7 @@ elif menu == "📊 Laporan":
     with t1:
         thn = st.selectbox("Pilih Tahun Laporan", range(2022, 2031), index=4)
         df_y = df_masuk[df_masuk['Tahun'] == thn].copy()
+        
         if not df_y.empty and not df_warga.empty:
             df_y = df_y.merge(df_warga[['Nama', 'Role']], on='Nama', how='left')
             df_y['Bulan'] = pd.Categorical(df_y['Bulan'], categories=bln_list, ordered=True)
@@ -246,18 +247,20 @@ elif menu == "📊 Laporan":
             p_had = df_y.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum', observed=False).fillna(0).astype(int)
             st.dataframe(warna_iuran(p_had, 35000), use_container_width=True)
             st.info("💡 **Merah Bold:** Hanya berlaku untuk 'Main Warga' yang cicilannya belum mencapai target kewajiban.")
-            # Tambahkan di bagian paling bawah tab t1 (Rekap Bulanan)
+            
+            # --- BAGIAN HIBAH (SUDAH DIRAPIKAN) ---
             st.divider()
             st.write("#### 🧧 Rincian Dana Hibah / Tambahan")
             df_hibah_view = df_masuk[df_masuk['Nama'] == 'HIBAH']
+            
             if not df_hibah_view.empty:
                 st.dataframe(
                     df_hibah_view[['Tanggal', 'Tipe', 'Kas']], 
                     column_config={"Kas": "Nominal", "Tipe": "Keterangan"},
                     hide_index=True, 
                     use_container_width=True
-                 )
-                 st.info(f"Total Dana Hibah Terkumpul: Rp {int(df_hibah_view['Kas'].sum()):,}")
+                )
+                st.info(f"Total Dana Hibah Terkumpul: Rp {int(df_hibah_view['Kas'].sum()):,}")
             else:
                 st.caption("Belum ada dana hibah yang tercatat.")
     with t2:
