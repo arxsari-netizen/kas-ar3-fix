@@ -175,25 +175,20 @@ show_dashboard = (st.session_state['role'] == "admin" and menu not in ["📦 Inv
 if show_dashboard:
     m1, m2, m3, m4 = st.columns(4)
     
-    # 1. SALDO KAS (Buku)
-    m1.metric("💰 SALDO KAS (Buku)", f"Rp {int(in_k - out_k):,}")
-    
-    # 2. SALDO HADIAH
+    # 4. TAMPILKAN METRIK
+    # Kas dikurangi piutang agar jadi angka "jujur"
+    m1.metric("💰 SALDO KAS", f"Rp {int(in_k - out_k - total_piutang):,}")
     m2.metric("🎁 SALDO HADIAH", f"Rp {int(in_h - out_h):,}")
-    
-    # 3. SALDO EVENT
     m3.metric("🎭 SALDO EVENT", f"Rp {int(in_e - out_e):,}")
     
-    # 4. UANG FISIK (Yang beneran ada di dompet bendahara)
+    # Uang Fisik = Total (In - Out) - Piutang
     uang_fisik = (in_k + in_h + in_e) - (out_k + out_h + out_e) - total_piutang
     m4.metric("🏧 UANG FISIK (Di Tangan)", f"Rp {int(uang_fisik):,}")
     
-    # 5. Khusus Admin: Tampilkan Piutang sebagai pengingat
+    # 5. KHUSUS ADMIN
     if st.session_state['role'] == "admin":
         st.divider()
-        # Kita pakai 4 kolom, tapi cuma kolom pertama yang kita isi biar gak menuhin layar
-        c_admin = st.columns(4) 
-        # Cuma nampilin angka, gak ada tulisan apa-apa lagi di sampingnya
+        c_admin = st.columns(4)
         c_admin[0].metric("💸 PIUTANG AKTIF", f"Rp {int(total_piutang):,}")
     
     if menu == "📊 Laporan":
