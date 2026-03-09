@@ -234,29 +234,32 @@ if menu == "📚 Pustaka":
         galeri_df = df_view[df_view['Tipe'].isin(["Foto", "Video"])]
         pustaka_df = df_view[~df_view['Tipe'].isin(["Foto", "Video"])]
 
-        # 2. TAMPILKAN GALERI (Berbasis Expander per Kegiatan)
+        # 2. TAMPILKAN GALERI (Berbasis Selectbox Filter)
         if not galeri_df.empty:
             st.subheader("📸 Galeri Kegiatan")
             
-            # Ambil daftar kegiatan unik yang ada di data
-            list_kegiatan = galeri_df['Kegiatan'].unique()
+            # Ambil daftar kegiatan unik
+            list_kegiatan = ["Semua Kegiatan"] + galeri_df['Kegiatan'].unique().tolist()
             
-            for nama_kegiatan in list_kegiatan:
-                # Expander buat setiap kegiatan
-                with st.expander(f"📁 {nama_kegiatan}"):
-                    # Ambil hanya foto yang masuk kegiatan ini
-                    foto_kegiatan = galeri_df[galeri_df['Kegiatan'] == nama_kegiatan]
-                    
-                    # Grid 3 kolom di dalam expander
-                    cols = st.columns(3)
-                    for i, (_, row) in enumerate(foto_kegiatan.iterrows()):
-                        with cols[i % 3]:
-                            # Logika Thumbnail tetap sama
-                            url_g = row['Link']
-                            file_id = url_g.split('/d/')[1].split('/')[0] if '/d/' in url_g else (url_g.split('id=')[1].split('&')[0] if 'id=' in url_g else "")
-                            if file_id:
-                                st.image(f"https://drive.google.com/thumbnail?id={file_id}&sz=w600", use_container_width=True)
-                            st.caption(row['Judul'])
+            # Selectbox sebagai navigasi utama galeri
+            pilih_kegiatan = st.selectbox("Pilih Kegiatan", list_kegiatan)
+            
+            # Filter data berdasarkan pilihan
+            if pilih_kegiatan == "Semua Kegiatan":
+                tampilan_foto = galeri_df
+            else:
+                tampilan_foto = galeri_df[galeri_df['Kegiatan'] == pilih_kegiatan]
+            
+            # Tampilkan dalam grid 3 kolom
+            cols = st.columns(3)
+            for i, (_, row) in enumerate(tampilan_foto.iterrows()):
+                with cols[i % 3]:
+                    # Logika Thumbnail
+                    url_g = row['Link']
+                    file_id = url_g.split('/d/')[1].split('/')[0] if '/d/' in url_g else (url_g.split('id=')[1].split('&')[0] if 'id=' in url_g else "")
+                    if file_id:
+                        st.image(f"https://drive.google.com/thumbnail?id={file_id}&sz=w600", use_container_width=True)
+                    st.caption(row['Judul'])
             st.divider()
 
         # 3. TAMPILKAN PUSTAKA (List)
