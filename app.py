@@ -191,9 +191,8 @@ if show_dashboard:
     # 5. Khusus Admin: Tampilkan Piutang sebagai pengingat
     if st.session_state['role'] == "admin":
         st.divider()
-        c_admin1, c_admin2 = st.columns(2)
+        c_admin1 = st.columns(1)
         c_admin1.metric("💸 PIUTANG AKTIF", f"Rp {int(total_piutang):,}")
-        c_admin2.write("👉 Selisih antara [Buku] dan [Fisik] disebabkan oleh Piutang yang belum dibayar.")
     
     if menu == "📊 Laporan":
        with st.expander("📢 Bagikan Laporan ke Grup"):
