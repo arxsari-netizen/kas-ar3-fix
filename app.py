@@ -34,20 +34,19 @@ creds = Credentials.from_service_account_info(st.secrets["gspread_credentials"],
 client = gspread.authorize(creds)
 sh = client.open_by_key("1i3OqFAeFYJ7aXy0QSS0IUF9r_yp3pwqNb7tJ8-CEXQE")
 
-@st.cache_data(ttl=30)
-def load_data(sheet_name):
-    try:
-        ws = sh.worksheet(sheet_name)
-        df = pd.DataFrame(ws.get_all_records())
-        cols = ['Total', 'Kas', 'Hadiah', 'Jumlah', 'Tahun']
-        for col in cols:
-            if col in df.columns: df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
-        return df
-    except:
-        return pd.DataFrame()
+@st.cache_data(ttl=600)
+def load_all_data():
+    df_m = pd.DataFrame(sh.worksheet("Masuk").get_all_records())
+    df_k = pd.DataFrame(sh.worksheet("Keluar").get_all_records())
+    df_w = pd.DataFrame(sh.worksheet("Warga").get_all_records())
+    df_t = pd.DataFrame(sh.worksheet("Talangan").get_all_records()) # Tambahkan baris ini
+    return df_m, df_k, df_w, df_t # Pastikan ada df_t di sini
 
 df_masuk, df_keluar, df_warga, df_event = load_data("Pemasukan"), load_data("Pengeluaran"), load_data("Warga"), load_data("Event")
 df_inv, df_pus = load_data("Inventaris"), load_data("Pustaka")
+# Tambahkan ini di bagian atas kode (tempat narik data)
+sh_talangan = sh.worksheet("Talangan")
+df_talangan = pd.DataFrame(sh_talangan.get_all_records())
 # --- UPDATE POSISI FILTER WARGA DI SINI ---
 # Kita buat list nama warga yang STATUS-nya 'Aktif' atau 'Non-Warga' saja
 # Biar Alumni (Pahmi) nggak muncul di pilihan input baru
@@ -82,7 +81,21 @@ def gdrive_fix(url):
         if file_id: return f"https://drive.google.com/uc?export=open&id={file_id}"
         return url
     except: return url
-
+def get_sisa_piutang():
+    try:
+        data = pd.DataFrame(sh.worksheet("Talangan").get_all_records())
+        if data.empty:
+            return pd.DataFrame(columns=['Nama', 'Sisa Utang'])
+        
+        # Logika: PINJAM itu positif (+), BAYAR itu negatif (-)
+        data['Amount'] = data.apply(lambda x: x['Nominal'] if x['Tipe'] == 'PINJAM' else -x['Nominal'], axis=1)
+        summary = data.groupby('Nama')['Amount'].sum().reset_index()
+        summary.columns = ['Nama', 'Sisa Utang']
+        
+        # Ambil yang sisanya masih di atas 0
+        return summary[summary['Sisa Utang'] > 0]
+    except:
+        return pd.DataFrame(columns=['Nama', 'Sisa Utang'])
 # --- 4. SIDEBAR ---
 with st.sidebar:
     st.markdown(f"""
@@ -131,9 +144,23 @@ with st.sidebar:
                         st.rerun()
                     else:
                         st.error("Akses Ditolak!")
-
+def get_sisa_piutang():
+    # Ambil data terbaru
+    data = pd.DataFrame(sh.worksheet("Talangan").get_all_records())
+    if data.empty:
+        return pd.DataFrame(columns=['Nama', 'Sisa Utang'])
+    
+    # Kelompokkan berdasarkan Nama
+    # Nominal saat 'PINJAM' tetap positif, saat 'BAYAR' kita jadikan negatif
+    data['Amount'] = data.apply(lambda x: x['Nominal'] if x['Tipe'] == 'PINJAM' else -x['Nominal'], axis=1)
+    
+    summary = data.groupby('Nama')['Amount'].sum().reset_index()
+    summary.columns = ['Nama', 'Sisa Utang']
+    
+    # Ambil yang sisanya masih lebih dari 0 (masih punya utang)
+    return summary[summary['Sisa Utang'] > 0]
     if st.session_state['role'] == "admin":
-        list_menu = ["📊 Laporan", "📚 Pustaka", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "📜 Log"]
+        list_menu = ["📊 Laporan", "📚 Pustaka", "📥 Kas Bulanan", "🎭 Event & Iuran","💸 Dana Talangan", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "📜 Log"]
     else:
         list_menu = ["📊 Laporan", "📚 Pustaka", "📦 Inventaris", "📜 Log"]
     
@@ -536,6 +563,41 @@ elif menu == "🎭 Event & Iuran" and st.session_state['role'] == "admin":
         if st.form_submit_button("Simpan"):
             sh.worksheet("Event").append_row([datetime.now().strftime("%d/%m/%Y"), w_e, ev_n, int(j_e)])
             st.success("OK!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+elif menu == "💸 Dana Talangan" and st.session_state['role'] == "admin":
+    st.subheader("💸 Manajemen Talangan & Piutang")
+    
+    t1, t2 = st.tabs(["📝 Input Transaksi", "📋 Daftar Piutang"])
+    
+    with t1:
+        with st.form("form_talangan", clear_on_submit=True):
+            nama_t = st.selectbox("Pilih Nama", df_warga['Nama'].tolist())
+            aksi_t = st.radio("Aksi", ["PINJAM", "BAYAR (Cicil)"], horizontal=True)
+            nominal_t = st.number_input("Nominal (Rp)", step=5000)
+            ket_t = st.text_input("Keterangan (Contoh: Talangan konsumsi / Cicilan ke-1)")
+            
+            if st.form_submit_button("Simpan Data"):
+                tipe_fix = "PINJAM" if aksi_t == "PINJAM" else "BAYAR"
+                # Simpan ke Google Sheets
+                sh.worksheet("Talangan").append_row([
+                    datetime.now().strftime("%d/%m/%Y"), 
+                    nama_t, 
+                    tipe_fix, 
+                    int(nominal_t), 
+                    ket_t
+                ])
+                st.success(f"Berhasil mencatat {tipe_fix} untuk {nama_t}")
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
 
+    with t2:
+        st.write("#### Daftar Jamaah yang Masih Memiliki Talangan")
+        df_piutang = get_sisa_piutang() # Pastikan namanya sama dengan fungsi di atas
+        if not df_piutang.empty:
+            st.table(df_piutang) 
+            total_semua_piutang = df_piutang['Sisa Utang'].sum()
+            st.warning(f"Total Piutang yang belum kembali: **Rp {total_semua_piutang:,}**")
+        else:
+            st.info("Semua talangan sudah lunas, tidak ada piutang.")
 elif menu == "📜 Log":
     st.dataframe(df_masuk.tail(20), hide_index=True, use_container_width=True)
