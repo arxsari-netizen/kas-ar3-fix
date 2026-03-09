@@ -158,7 +158,7 @@ with st.sidebar:
     if st.session_state['role'] == "admin":
         list_menu = ["📊 Laporan", "📚 Pustaka", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "💸 Dana Talangan", "📜 Log"]
     elif st.session_state['role'] == "event_manager":
-        list_menu = ["📊 Laporan", "🎭 Event"]
+        list_menu = ["📊 Laporan", "🎭 Event & Iuran"]
     else:
         list_menu = ["📊 Laporan", "📚 Pustaka", "📦 Inventaris", "📜 Log"]
     
