@@ -159,12 +159,13 @@ def get_sisa_piutang():
     # Ambil yang sisanya masih lebih dari 0 (masih punya utang)
     return summary[summary['Sisa Utang'] > 0]
     
-   if st.session_state['role'] == "admin":
+   # Pastikan baris IF ini sejajar dengan kode di atasnya (biasanya menjorok 4 spasi dari pinggir)
+    if st.session_state['role'] == "admin":
         list_menu = ["📊 Laporan", "📚 Pustaka", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "💸 Dana Talangan","📜 Log"]
     else:
         list_menu = ["📊 Laporan", "📚 Pustaka", "📦 Inventaris", "📜 Log"]
     
-    # SEJAJARIN menu INI KE KIRI (keluarkan dari blok else)
+    # Baris menu ini HARUS sejajar dengan huruf 'i' pada 'if' di atas
     menu = st.radio("NAVIGASI", list_menu)
 
 # --- 5. LOGIKA DISPLAY ---
