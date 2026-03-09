@@ -84,20 +84,25 @@ def gdrive_fix(url):
     except: return url
 def get_sisa_piutang():
     try:
-        # Kita panggil data dari sheet Talangan
         df_t = load_data("Talangan")
         if df_t.empty:
-            return pd.DataFrame(columns=['Nama', 'Sisa Utang'])
+            return pd.DataFrame(columns=['Nama', 'Sisa Utang', 'Keterangan Terakhir'])
         
-        # Logika: PINJAM (+) dan BAYAR (-)
+        # Hitung Amount
         df_t['Amount'] = df_t.apply(lambda x: x['Nominal'] if x['Tipe'] == 'PINJAM' else -x['Nominal'], axis=1)
-        summary = df_t.groupby('Nama')['Amount'].sum().reset_index()
-        summary.columns = ['Nama', 'Sisa Utang']
         
-        # Ambil yang sisa utangnya di atas 0
+        # Kelompokkan berdasarkan Nama
+        summary = df_t.groupby('Nama').agg({
+            'Amount': 'sum',
+            'Keterangan': 'last' # Ambil keterangan dari transaksi terakhir
+        }).reset_index()
+        
+        summary.columns = ['Nama', 'Sisa Utang', 'Keterangan Terakhir']
+        
+        # Filter yang utangnya masih > 0
         return summary[summary['Sisa Utang'] > 0]
     except:
-        return pd.DataFrame(columns=['Nama', 'Sisa Utang'])
+        return pd.DataFrame(columns=['Nama', 'Sisa Utang', 'Keterangan Terakhir'])
 # --- 4. SIDEBAR ---
 with st.sidebar:
     st.markdown(f"""
