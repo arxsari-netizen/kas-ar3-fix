@@ -174,7 +174,7 @@ out_e = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
 # Tambahkan ini setelah perhitungan out_e
 df_p = get_sisa_piutang()
 total_piutang = df_p['Sisa Utang'].sum() if not df_p.empty else 0
-show_dashboard = (st.session_state['role'] == ["admin", "event_manager"] and menu not in ["📦 Inventaris", "📚 Pustaka"]) or \
+show_dashboard = (st.session_state['role'] in ["admin", "event_manager"] and menu not in ["📦 Inventaris", "📚 Pustaka"]) or \
                  (st.session_state['role'] == "user" and menu == "📊 Laporan")
 
 if show_dashboard:
@@ -566,7 +566,7 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
                     st.success("Warga berhasil ditambahkan!")
                     st.cache_data.clear(); time.sleep(1); st.rerun()
 
-elif menu == "🎭 Event & Iuran" and st.session_state['role'] == ["admin", "event_manager"]:
+elif menu == "🎭 Event & Iuran" and st.session_state['role'] in ["admin", "event_manager"]:
     with st.form("f_ev", clear_on_submit=True):
         ev_p = st.selectbox("Event", ["-- Baru --"] + (df_event['Nama Event'].unique().tolist() if not df_event.empty else []))
         ev_n = st.text_input("Nama Event Baru") if ev_p == "-- Baru --" else ev_p
