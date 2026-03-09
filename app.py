@@ -246,7 +246,20 @@ elif menu == "📊 Laporan":
             p_had = df_y.pivot_table(index='Nama', columns='Bulan', values='Hadiah', aggfunc='sum', observed=False).fillna(0).astype(int)
             st.dataframe(warna_iuran(p_had, 35000), use_container_width=True)
             st.info("💡 **Merah Bold:** Hanya berlaku untuk 'Main Warga' yang cicilannya belum mencapai target kewajiban.")
-
+            # Tambahkan di bagian paling bawah tab t1 (Rekap Bulanan)
+            st.divider()
+            st.write("#### 🧧 Rincian Dana Hibah / Tambahan")
+            df_hibah_view = df_masuk[df_masuk['Nama'] == 'HIBAH']
+            if not df_hibah_view.empty:
+                st.dataframe(
+                    df_hibah_view[['Tanggal', 'Tipe', 'Kas']], 
+                    column_config={"Kas": "Nominal", "Tipe": "Keterangan"},
+                    hide_index=True, 
+                    use_container_width=True
+                 )
+                 st.info(f"Total Dana Hibah Terkumpul: Rp {int(df_hibah_view['Kas'].sum()):,}")
+            else:
+                st.caption("Belum ada dana hibah yang tercatat.")
     with t2:
         if not df_event.empty:
             ev_sel = st.selectbox("Pilih Event", df_event['Nama Event'].unique())
