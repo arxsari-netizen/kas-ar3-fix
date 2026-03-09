@@ -143,29 +143,13 @@ with st.sidebar:
                         st.rerun()
                     else:
                         st.error("Akses Ditolak!")
-def get_sisa_piutang():
-    # Ambil data terbaru
-    data = pd.DataFrame(sh.worksheet("Talangan").get_all_records())
-    if data.empty:
-        return pd.DataFrame(columns=['Nama', 'Sisa Utang'])
-    
-    # Kelompokkan berdasarkan Nama
-    # Nominal saat 'PINJAM' tetap positif, saat 'BAYAR' kita jadikan negatif
-    data['Amount'] = data.apply(lambda x: x['Nominal'] if x['Tipe'] == 'PINJAM' else -x['Nominal'], axis=1)
-    
-    summary = data.groupby('Nama')['Amount'].sum().reset_index()
-    summary.columns = ['Nama', 'Sisa Utang']
-    
-    # Ambil yang sisanya masih lebih dari 0 (masih punya utang)
-    return summary[summary['Sisa Utang'] > 0]
-    
-   # Pastikan baris IF ini sejajar dengan kode di atasnya (biasanya menjorok 4 spasi dari pinggir)
+
+    # PINDAHKAN LOGIKA MENU KE DALAM SIDEBAR (SEJAJAR DENGAN IF LOGGED_IN)
     if st.session_state['role'] == "admin":
         list_menu = ["📊 Laporan", "📚 Pustaka", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "💸 Dana Talangan","📜 Log"]
     else:
         list_menu = ["📊 Laporan", "📚 Pustaka", "📦 Inventaris", "📜 Log"]
     
-    # Baris menu ini HARUS sejajar dengan huruf 'i' pada 'if' di atas
     menu = st.radio("NAVIGASI", list_menu)
 
 # --- 5. LOGIKA DISPLAY ---
