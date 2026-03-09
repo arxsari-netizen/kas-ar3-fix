@@ -189,7 +189,7 @@ if show_dashboard:
     m4.metric("🏧 UANG FISIK (Di Tangan)", f"Rp {int(uang_fisik):,}")
     
     # 5. Khusus Admin: Tampilkan Piutang sebagai pengingat
-   if st.session_state['role'] == "admin":
+    if st.session_state['role'] == "admin":
         st.divider()
         # Kita pakai 4 kolom, tapi cuma kolom pertama yang kita isi biar gak menuhin layar
         c_admin = st.columns(4) 
