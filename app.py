@@ -212,7 +212,7 @@ if menu == "📚 Pustaka":
         with st.expander("➕ Tambah Materi Baru"):
             with st.form("f_add_pus", clear_on_submit=True):
                 j_p, k_p = st.text_input("Judul Materi"), st.selectbox("Kategori", ["Kitab", "Rekaman Audio", "Video", "Foto Kegiatan", "Dokumen"])
-                l_p, t_p = st.text_input("Link G-Drive/URL"), st.selectbox("Tipe File", ["PDF", "Gambar", "Audio", "Link/Video"])
+                l_p, t_p = st.text_input("Link G-Drive/URL"), st.selectbox("Tipe File", [""PDF", "Gambar", "Foto", "Video", "Audio", "Link""])
                 d_p = st.text_area("Deskripsi Singkat")
                 if st.form_submit_button("Simpan"):
                     sh.worksheet("Pustaka").append_row([j_p, k_p, l_p, t_p, d_p])
@@ -230,8 +230,9 @@ if menu == "📚 Pustaka":
         
         st.divider()
         # 1. PISAH DATA: Galeri (Foto/Video) vs Pustaka (PDF/Audio/Lainnya)
-        galeri_df = df_view[df_view['Kategori'].isin(["Foto Kegiatan", "Video Kegiatan"])]
-        pustaka_df = df_view[~df_view['Kategori'].isin(["Foto Kegiatan", "Video Kegiatan"])]
+        # Sekarang Galeri fokus ke Tipe "Foto" atau "Video"
+        galeri_df = df_view[df_view['Tipe'].isin(["Foto", "Video"])]
+        pustaka_df = df_view[~df_view['Tipe'].isin(["Foto", "Video"])]
 
         # 2. TAMPILKAN GALERI (Grid 3 Kolom)
         if not galeri_df.empty:
@@ -239,23 +240,24 @@ if menu == "📚 Pustaka":
             cols = st.columns(3)
             for i, (_, row) in enumerate(galeri_df.iterrows()):
                 with cols[i % 3]:
-                    if row['Tipe'] == "Gambar":
-                        # Ambil ID G-Drive untuk thumbnail
+                    if row['Tipe'] == "Foto":
+                        # Logika ambil ID G-Drive untuk foto
                         url_g = row['Link']
                         file_id = url_g.split('/d/')[1].split('/')[0] if '/d/' in url_g else (url_g.split('id=')[1].split('&')[0] if 'id=' in url_g else "")
                         if file_id:
                             st.image(f"https://drive.google.com/thumbnail?id={file_id}&sz=w600", use_container_width=True)
                     else:
-                        st.video(row['Link']) # Ini support YouTube (Unlisted/Public)
+                        st.video(row['Link'])
                     st.caption(f"**{row['Judul']}**")
             st.divider()
 
-        # 3. TAMPILKAN PUSTAKA (List/Container - Kode asli lo)
+        # 3. TAMPILKAN PUSTAKA (List)
         if not pustaka_df.empty:
             st.subheader("📚 Pustaka Digital")
             for _, row in pustaka_df.iterrows():
                 with st.container():
                     col1, col2 = st.columns([1, 4])
+                    # Icon sesuai Tipe
                     icon = "📄" if row['Tipe'] == "PDF" else "🖼️" if row['Tipe'] == "Gambar" else "🔊" if row['Tipe'] == "Audio" else "🔗"
                     col1.markdown(f"<h1 style='text-align: center;'>{icon}</h1>", unsafe_allow_html=True)
                     col2.write(f"### {row['Judul']}")
