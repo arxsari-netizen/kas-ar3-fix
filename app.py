@@ -189,10 +189,12 @@ if show_dashboard:
     m4.metric("🏧 UANG FISIK (Di Tangan)", f"Rp {int(uang_fisik):,}")
     
     # 5. Khusus Admin: Tampilkan Piutang sebagai pengingat
-    if st.session_state['role'] == "admin":
+   if st.session_state['role'] == "admin":
         st.divider()
-        c_admin1 = st.columns(1)
-        c_admin1.metric("💸 PIUTANG AKTIF", f"Rp {int(total_piutang):,}")
+        # Kita pakai 4 kolom, tapi cuma kolom pertama yang kita isi biar gak menuhin layar
+        c_admin = st.columns(4) 
+        # Cuma nampilin angka, gak ada tulisan apa-apa lagi di sampingnya
+        c_admin[0].metric("💸 PIUTANG AKTIF", f"Rp {int(total_piutang):,}")
     
     if menu == "📊 Laporan":
        with st.expander("📢 Bagikan Laporan ke Grup"):
