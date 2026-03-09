@@ -158,7 +158,7 @@ with st.sidebar:
     if st.session_state['role'] == "admin":
         list_menu = ["📊 Laporan", "📚 Pustaka", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "💸 Dana Talangan", "📜 Log"]
     elif st.session_state['role'] == "event_manager":
-        list_menu = ["📊 Laporan", "🎭 Event & Iuran"]
+        list_menu = ["📊 Laporan", "🎭 Event & Iuran", "📤 Pengeluaran"]
     else:
         list_menu = ["📊 Laporan", "📚 Pustaka", "📦 Inventaris", "📜 Log"]
     
@@ -502,14 +502,40 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
                 sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), "HIBAH", datetime.now().year, "-", int(nominal), int(nominal), 0, "HIBAH", keterangan])
                 st.success("Hibah berhasil ditambah ke saldo kas!")
                 st.cache_data.clear(); time.sleep(1); st.rerun()
-elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
-    kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
+elif menu == "📤 Pengeluaran" and st.session_state['role'] in ["admin", "event_manager"]:
+    
+    # Logika Penentuan Kategori
+    if st.session_state['role'] == "admin":
+        kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
+    else:
+        st.write("Mode Input: **Pengeluaran Event**")
+        kat_pilih = "Event"
+
     with st.form("f_out", clear_on_submit=True):
-        ev_ref = st.selectbox("Event:", ["N/A"] + (df_event['Nama Event'].unique().tolist() if not df_event.empty else [])) if kat_pilih == "Event" else "N/A"
+        # Dropdown event hanya muncul jika kategori adalah "Event"
+        if kat_pilih == "Event":
+            options = ["N/A"] + (df_event['Nama Event'].unique().tolist() if not df_event.empty else [])
+            ev_ref = st.selectbox("Event:", options)
+        else:
+            ev_ref = "N/A"
+            
         nom, ket = st.number_input("Nominal", min_value=0), st.text_input("Keterangan")
+        
         if st.form_submit_button("Simpan"):
-            sh.worksheet("Pengeluaran").append_row([datetime.now().strftime("%d/%m/%Y"), kat_pilih, int(nom), f"[{ev_ref}] {ket}" if kat_pilih == "Event" else ket])
-            st.success("Tercatat!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+            # Validasi nominal biar gak 0
+            if nom > 0:
+                sh.worksheet("Pengeluaran").append_row([
+                    datetime.now().strftime("%d/%m/%Y"), 
+                    kat_pilih, 
+                    int(nom), 
+                    f"[{ev_ref}] {ket}" if kat_pilih == "Event" else ket
+                ])
+                st.success("Tercatat!")
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("Nominal harus lebih dari 0!")
 
 elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
     st.markdown("### 👥 Manajemen Warga & Hak Akses")
