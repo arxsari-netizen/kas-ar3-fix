@@ -572,8 +572,19 @@ elif menu == "🎭 Event & Iuran" and st.session_state['role'] in ["admin", "eve
         ev_n = st.text_input("Nama Event Baru") if ev_p == "-- Baru --" else ev_p
         w_e, j_e = st.selectbox("Warga", sorted(df_warga['Nama'].tolist())), st.number_input("Jumlah", step=5000)
         if st.form_submit_button("Simpan"):
-            sh.worksheet("Event").append_row([datetime.now().strftime("%d/%m/%Y"), w_e, ev_n, int(j_e)])
-            st.success("OK!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+            # Validasi tambahan
+            event_name = ev_n.strip() # Hilangkan spasi di depan/belakang
+            if not event_name:
+                st.error("Nama Event tidak boleh kosong!")
+            elif j_e <= 0:
+                st.error("Jumlah harus lebih dari 0!")
+            else:
+                # Baru eksekusi kalau valid
+                sh.worksheet("Event").append_row([datetime.now().strftime("%d/%m/%Y"), w_e, event_name, int(j_e)])
+                st.success("Data berhasil disimpan!")
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
 elif menu == "💸 Dana Talangan" and st.session_state['role'] == "admin":
     st.subheader("💸 Manajemen Talangan & Piutang")
     t1, t2 = st.tabs(["📝 Input Transaksi", "📋 Daftar Piutang"])
