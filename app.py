@@ -175,21 +175,25 @@ show_dashboard = (st.session_state['role'] == "admin" and menu not in ["📦 Inv
 if show_dashboard:
     m1, m2, m3, m4 = st.columns(4)
     
-    # Saldo Kas dikurangi total piutang
-    m1.metric("💰 SALDO KAS", f"Rp {int(in_k - out_k - total_piutang):,}")
+    # 1. SALDO KAS (Buku)
+    m1.metric("💰 SALDO KAS (Buku)", f"Rp {int(in_k - out_k):,}")
     
+    # 2. SALDO HADIAH
     m2.metric("🎁 SALDO HADIAH", f"Rp {int(in_h - out_h):,}")
+    
+    # 3. SALDO EVENT
     m3.metric("🎭 SALDO EVENT", f"Rp {int(in_e - out_e):,}")
     
-    # Saldo Total dikurangi piutang juga supaya balance
-    total_tunai = (in_k + in_h + in_e) - (out_k + out_h + out_e) - total_piutang
-    m4.metric("🏧 TOTAL TUNAI", f"Rp {int(total_tunai):,}")
+    # 4. UANG FISIK (Yang beneran ada di dompet bendahara)
+    uang_fisik = (in_k + in_h + in_e) - (out_k + out_h + out_e) - total_piutang
+    m4.metric("🏧 UANG FISIK (Di Tangan)", f"Rp {int(uang_fisik):,}")
     
-    # Tambahin satu kolom baru buat nampilin piutang supaya transparan
-    m_piutang = st.columns(4)
-    m_piutang[0].metric("💸 PIUTANG AKTIF", f"Rp {int(total_piutang):,}")
-    
-    st.divider()
+    # 5. Khusus Admin: Tampilkan Piutang sebagai pengingat
+    if st.session_state['role'] == "admin":
+        st.divider()
+        c_admin1, c_admin2 = st.columns(2)
+        c_admin1.metric("💸 PIUTANG AKTIF", f"Rp {int(total_piutang):,}")
+        c_admin2.write("👉 Selisih antara [Buku] dan [Fisik] disebabkan oleh Piutang yang belum dibayar.")
     
     if menu == "📊 Laporan":
        with st.expander("📢 Bagikan Laporan ke Grup"):
