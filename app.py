@@ -566,7 +566,9 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
                     st.success("Warga berhasil ditambahkan!")
                     st.cache_data.clear(); time.sleep(1); st.rerun()
 
-elif menu == "🎭 Event & Iuran" and st.session_state['role'] in ["admin", "event_manager"]:
+elif menu == "🎭 Event & Iuran":
+    # Pastikan kedua role ini bisa akses form input
+    if st.session_state['role'] in ["admin", "event_manager"]:
     with st.form("f_ev", clear_on_submit=True):
         ev_p = st.selectbox("Event", ["-- Baru --"] + (df_event['Nama Event'].unique().tolist() if not df_event.empty else []))
         ev_n = st.text_input("Nama Event Baru") if ev_p == "-- Baru --" else ev_p
