@@ -155,7 +155,7 @@ with st.sidebar:
 # --- 5. LOGIKA DISPLAY ---
 st.title(f"{menu}")
 
-in_k, in_h, in_e = asuk['Kas'].sum(), asuk['Hadiah'].sum(), df_e['Jumlah'].sum()
+in_k, in_h, in_e = df_m['Kas'].sum(), df_m['Hadiah'].sum(), df_e['Jumlah'].sum()
 out_k = df_k[df_k['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_k[df_k['Kategori'] == 'Hadiah']['Jumlah'].sum()
 out_e = df_k[df_k['Kategori'] == 'Event']['Jumlah'].sum()
