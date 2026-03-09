@@ -35,28 +35,27 @@ client = gspread.authorize(creds)
 sh = client.open_by_key("1i3OqFAeFYJ7aXy0QSS0IUF9r_yp3pwqNb7tJ8-CEXQE")
 
 @st.cache_data(ttl=600)
-def load_all_data():
-    df_m = pd.DataFrame(sh.worksheet("Masuk").get_all_records())
-    df_k = pd.DataFrame(sh.worksheet("Keluar").get_all_records())
+def load_all_data(): # Pastikan namanya ini
+    df_m = pd.DataFrame(sh.worksheet("Pemasukan").get_all_records())
+    df_k = pd.DataFrame(sh.worksheet("Pengeluaran").get_all_records())
     df_w = pd.DataFrame(sh.worksheet("Warga").get_all_records())
-    df_t = pd.DataFrame(sh.worksheet("Talangan").get_all_records()) # Tambahkan baris ini
-    return df_m, df_k, df_w, df_t # Pastikan ada df_t di sini
+    df_t = pd.DataFrame(sh.worksheet("Talangan").get_all_records())
+    df_e = pd.DataFrame(sh.worksheet("Event").get_all_records())
+    df_i = pd.DataFrame(sh.worksheet("Inventaris").get_all_records())
+    df_p = pd.DataFrame(sh.worksheet("Pustaka").get_all_records())
+    return df_m, df_k, df_w, df_t, df_e, df_i, df_p
 
-df_masuk, df_keluar, df_warga, df_event = load_data("Pemasukan"), load_data("Pengeluaran"), load_data("Warga"), load_data("Event")
-df_inv, df_pus = load_data("Inventaris"), load_data("Pustaka")
-# Tambahkan ini di bagian atas kode (tempat narik data)
-sh_talangan = sh.worksheet("Talangan")
-df_talangan = pd.DataFrame(sh_talangan.get_all_records())
+df_m, df_k, df_w, df_e, df_t, df_i, df_p = load_all_data()
 # --- UPDATE POSISI FILTER WARGA DI SINI ---
 # Kita buat list nama warga yang STATUS-nya 'Aktif' atau 'Non-Warga' saja
 # Biar Alumni (Pahmi) nggak muncul di pilihan input baru
-if not df_warga.empty:
+if not df_w.empty:
     # Cek dulu apakah kolom 'Status' ada di Google Sheets, kalau nggak ada kita default ke 'Aktif'
-    if 'Status' not in df_warga.columns:
-        df_warga['Status'] = 'Aktif'
+    if 'Status' not in df_w.columns:
+        df_w['Status'] = 'Aktif'
     
     # List untuk dropdown input (Hanya yang Aktif & Non-Warga)
-    df_aktif = df_warga[df_warga['Status'].isin(['Aktif', 'Non-Warga'])]
+    df_aktif = df_w[df_w['Status'].isin(['Aktif', 'Non-Warga'])]
     list_warga_input = sorted(df_aktif['Nama'].tolist())
 else:
     list_warga_input = []
@@ -169,10 +168,10 @@ def get_sisa_piutang():
 # --- 5. LOGIKA DISPLAY ---
 st.title(f"{menu}")
 
-in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Jumlah'].sum()
-out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
-out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
-out_e = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
+in_k, in_h, in_e = asuk['Kas'].sum(), asuk['Hadiah'].sum(), df_e['Jumlah'].sum()
+out_k = df_k[df_k['Kategori'] == 'Kas']['Jumlah'].sum()
+out_h = df_k[df_k['Kategori'] == 'Hadiah']['Jumlah'].sum()
+out_e = df_k[df_k['Kategori'] == 'Event']['Jumlah'].sum()
 
 show_dashboard = (st.session_state['role'] == "admin" and menu not in ["📦 Inventaris", "📚 Pustaka"]) or \
                  (st.session_state['role'] == "user" and menu == "📊 Laporan")
@@ -207,11 +206,11 @@ if menu == "📚 Pustaka":
                     sh.worksheet("Pustaka").append_row([j_p, k_p, l_p, t_p, d_p])
                     st.success("Materi Terunggah!"); st.cache_data.clear(); time.sleep(1); st.rerun()
 
-    if not df_pus.empty:
+    if not df_p.empty:
         c_search, c_filter = st.columns([2, 1])
         cari = c_search.text_input("🔍 Cari Materi", placeholder="Contoh: doa mandi")
-        sel_k = c_filter.selectbox("📂 Filter Kategori", ["Semua"] + df_pus['Kategori'].unique().tolist())
-        df_view = df_pus.copy()
+        sel_k = c_filter.selectbox("📂 Filter Kategori", ["Semua"] + df_p['Kategori'].unique().tolist())
+        df_view = df_p.copy()
         if sel_k != "Semua": df_view = df_view[df_view['Kategori'] == sel_k]
         if cari:
             mask = df_view.apply(lambda row: cari.lower() in row['Judul'].lower() or cari.lower() in row['Deskripsi'].lower(), axis=1)
@@ -247,16 +246,16 @@ elif menu == "📊 Laporan":
     t1, t2, t3 = st.tabs(["💰 Rekap Bulanan", "🎭 Detail Event", "📤 Riwayat Pengeluaran"])
     with t1:
         thn = st.selectbox("Pilih Tahun Laporan", range(2022, 2031), index=4)
-        df_y = df_masuk[df_masuk['Tahun'] == thn].copy()
+        df_y = df_m[df_m['Tahun'] == thn].copy()
         
-        if not df_y.empty and not df_warga.empty:
-            df_y = df_y.merge(df_warga[['Nama', 'Role']], on='Nama', how='left')
+        if not df_y.empty and not df_w.empty:
+            df_y = df_y.merge(df_w[['Nama', 'Role']], on='Nama', how='left')
             df_y['Bulan'] = pd.Categorical(df_y['Bulan'], categories=bln_list, ordered=True)
 
             def warna_iuran(df_pivot, target_nominal):
                 def terapkan_style(row):
                     nama_idx = row.name
-                    role = df_warga[df_warga['Nama'] == nama_idx]['Role'].values[0] if nama_idx in df_warga['Nama'].values else "Main Warga"
+                    role = df_w[df_w['Nama'] == nama_idx]['Role'].values[0] if nama_idx in df_w['Nama'].values else "Main Warga"
                     styles = []
                     for nilai in row:
                         if role == "Main Warga" and 0 < nilai < target_nominal:
@@ -278,7 +277,7 @@ elif menu == "📊 Laporan":
             # --- BAGIAN HIBAH (SUDAH DIRAPIKAN) ---
             st.divider()
             st.write("#### 🧧 Rincian Dana Hibah / Tambahan")
-            df_hibah_view = df_masuk[df_masuk['Nama'] == 'HIBAH']
+            df_hibah_view = df_m[df_m['Nama'] == 'HIBAH']
             
             if not df_hibah_view.empty:
                 st.dataframe(
@@ -291,10 +290,10 @@ elif menu == "📊 Laporan":
             else:
                 st.caption("Belum ada dana hibah yang tercatat.")
     with t2:
-        if not df_event.empty:
-            ev_sel = st.selectbox("Pilih Event", df_event['Nama Event'].unique())
-            df_ev_masuk = df_event[df_event['Nama Event'] == ev_sel]
-            df_ev_keluar = df_keluar[(df_keluar['Kategori'] == 'Event') & (df_keluar['Keterangan'].str.contains(re.escape(ev_sel), na=False))]
+        if not df_e.empty:
+            ev_sel = st.selectbox("Pilih Event", df_e['Nama Event'].unique())
+            df_ev_masuk = df_e[df_e['Nama Event'] == ev_sel]
+            df_ev_keluar = df_k[(df_k['Kategori'] == 'Event') & (df_k['Keterangan'].str.contains(re.escape(ev_sel), na=False))]
             e_in, e_out = df_ev_masuk['Jumlah'].sum(), df_ev_keluar['Jumlah'].sum()
             c1, c2, c3 = st.columns(3)
             c1.metric("Total Iuran", f"Rp {int(e_in):,}"); c2.metric("Total Belanja", f"Rp {int(e_out):,}"); c3.metric("Sisa Saldo", f"Rp {int(e_in - e_out):,}")
@@ -304,8 +303,8 @@ elif menu == "📊 Laporan":
             col_out.write("#### 📤 Pengeluaran"); col_out.dataframe(df_ev_keluar[['Tanggal', 'Keterangan', 'Jumlah']], hide_index=True)
     with t3:
         ck, ch = st.columns(2)
-        ck.write("#### 📤 Pengeluaran KAS"); ck.dataframe(df_keluar[df_keluar['Kategori'] == 'Kas'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
-        ch.write("#### 📤 Pengeluaran HADIAH"); ch.dataframe(df_keluar[df_keluar['Kategori'] == 'Hadiah'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
+        ck.write("#### 📤 Pengeluaran KAS"); ck.dataframe(df_k[df_k['Kategori'] == 'Kas'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
+        ch.write("#### 📤 Pengeluaran HADIAH"); ch.dataframe(df_k[df_k['Kategori'] == 'Hadiah'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
 
 
 # --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
@@ -314,11 +313,11 @@ elif menu == "📦 Inventaris":
     ws_inv = sh.worksheet("Inventaris")
 
     with tab_view:
-        if not df_inv.empty:
+        if not df_i.empty:
             # Kalkulasi stok tersedia di memori (biar cepet)
-            df_inv['Tersedia'] = df_inv['Jumlah'] - df_inv['Dipinjam']
+            df_i['Tersedia'] = df_i['Jumlah'] - df_i['Dipinjam']
             st.dataframe(
-                df_inv[['Nama Barang', 'Spesifikasi', 'Jumlah', 'Dipinjam', 'Tersedia', 'Lokasi', 'Kondisi', 'Keterangan']], 
+                df_i[['Nama Barang', 'Spesifikasi', 'Jumlah', 'Dipinjam', 'Tersedia', 'Lokasi', 'Kondisi', 'Keterangan']], 
                 hide_index=True, 
                 use_container_width=True
             )
@@ -340,25 +339,25 @@ elif menu == "📦 Inventaris":
 
     with tab_edit:
         # Pindahkan pengecekan role ke dalam fitur spesifik
-        if not df_inv.empty:
+        if not df_i.empty:
             # 0. DEFINISI LIST LOKASI (Ini yang tadi kurang)
-            list_lokasi = sorted(df_inv['Lokasi'].dropna().unique().tolist())
+            list_lokasi = sorted(df_i['Lokasi'].dropna().unique().tolist())
             
             # 1. Bikin Label yang Informatif
-            df_inv['label_edit'] = (
-                df_inv['Nama Barang'] + " [" + 
-                df_inv['Lokasi'].astype(str) + "] - (" + 
-                df_inv['Kondisi'] + ")"
+            df_i['label_edit'] = (
+                df_i['Nama Barang'] + " [" + 
+                df_i['Lokasi'].astype(str) + "] - (" + 
+                df_i['Kondisi'] + ")"
             )
 
             st.markdown("### 🔄 Update Status & Peminjaman")
             
             # Selectbox di luar form biar reaktif
-            pilihan = df_inv['label_edit'].tolist()
+            pilihan = df_i['label_edit'].tolist()
             pilih_barang = st.selectbox("Pilih Barang:", pilihan)
             
             # Filter ulang berdasarkan pilihan agar 'curr' tidak ambil index yang salah
-            df_filtered = df_inv[df_inv['label_edit'] == pilih_barang]
+            df_filtered = df_i[df_i['label_edit'] == pilih_barang]
             if not df_filtered.empty:
                 curr = df_filtered.iloc[0]
 
@@ -438,7 +437,7 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
     tipe_transaksi = st.radio("Pilih Tipe Input:", ["Iuran Rutin", "Hibah/Dana Tambahan"], horizontal=True)
 
     if tipe_transaksi == "Iuran Rutin":
-        warga_options = [f"{n}" for n in list_warga_input] if not df_warga.empty else []
+        warga_options = [f"{n}" for n in list_warga_input] if not df_w.empty else []
         selected_display = st.selectbox("Pilih Nama Warga", warga_options)
         w_pilih = selected_display.split(" (")[0]
         mode = st.radio("Mode Alokasi:", ["Paket Lengkap (50rb)", "Hanya Kas (15rb)", "Hanya Hadiah (35rb)", "Custom"], horizontal=True)
@@ -456,7 +455,7 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
                 # Loop untuk alokasi bulanan
                 while uang_sisa > 0 and tahun_jalan <= (datetime.now().year + 1):
                     curr_month = bln_list[bulan_idx]
-                    df_curr = df_masuk[(df_masuk['Nama'] == w_pilih) & (df_masuk['Tahun'] == tahun_jalan) & (df_masuk['Bulan'] == curr_month)]
+                    df_curr = df_m[(df_m['Nama'] == w_pilih) & (df_m['Tahun'] == tahun_jalan) & (df_m['Bulan'] == curr_month)]
                     kas_terbayar = df_curr['Kas'].sum()
                     hadiah_terbayar = df_curr['Hadiah'].sum()
                     
@@ -494,7 +493,7 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
 elif menu == "📤 Pengeluaran" and st.session_state['role'] == "admin":
     kat_pilih = st.radio("Sumber Dana:", ["Kas", "Hadiah", "Event"], horizontal=True)
     with st.form("f_out", clear_on_submit=True):
-        ev_ref = st.selectbox("Event:", ["N/A"] + (df_event['Nama Event'].unique().tolist() if not df_event.empty else [])) if kat_pilih == "Event" else "N/A"
+        ev_ref = st.selectbox("Event:", ["N/A"] + (df_e['Nama Event'].unique().tolist() if not df_e.empty else [])) if kat_pilih == "Event" else "N/A"
         nom, ket = st.number_input("Nominal", min_value=0), st.text_input("Keterangan")
         if st.form_submit_button("Simpan"):
             sh.worksheet("Pengeluaran").append_row([datetime.now().strftime("%d/%m/%Y"), kat_pilih, int(nom), f"[{ev_ref}] {ket}" if kat_pilih == "Event" else ket])
@@ -504,14 +503,14 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
     st.markdown("### 👥 Manajemen Warga & Hak Akses")
     
     # 1. Tampilkan Data Warga (termasuk kolom Status)
-    st.dataframe(df_warga[['Nama', 'Role', 'Status']], hide_index=True, use_container_width=True)
+    st.dataframe(df_w[['Nama', 'Role', 'Status']], hide_index=True, use_container_width=True)
     
     tab_update, tab_tambah = st.tabs(["🔄 Update / Hapus Warga", "➕ Tambah Warga Baru"])
     
     with tab_update:
-        if not df_warga.empty:
-            pilih_nama = st.selectbox("Pilih Warga yang mau di-edit:", df_warga['Nama'].tolist())
-            curr_warga = df_warga[df_warga['Nama'] == pilih_nama].iloc[0]
+        if not df_w.empty:
+            pilih_nama = st.selectbox("Pilih Warga yang mau di-edit:", df_w['Nama'].tolist())
+            curr_warga = df_w[df_w['Nama'] == pilih_nama].iloc[0]
             
             with st.form("f_edit_warga"):
                 nama_baru = st.text_input("Nama Warga", value=curr_warga['Nama'])
@@ -557,9 +556,9 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
 
 elif menu == "🎭 Event & Iuran" and st.session_state['role'] == "admin":
     with st.form("f_ev", clear_on_submit=True):
-        ev_p = st.selectbox("Event", ["-- Baru --"] + (df_event['Nama Event'].unique().tolist() if not df_event.empty else []))
+        ev_p = st.selectbox("Event", ["-- Baru --"] + (df_e['Nama Event'].unique().tolist() if not df_e.empty else []))
         ev_n = st.text_input("Nama Event Baru") if ev_p == "-- Baru --" else ev_p
-        w_e, j_e = st.selectbox("Warga", sorted(df_warga['Nama'].tolist())), st.number_input("Jumlah", step=5000)
+        w_e, j_e = st.selectbox("Warga", sorted(df_w['Nama'].tolist())), st.number_input("Jumlah", step=5000)
         if st.form_submit_button("Simpan"):
             sh.worksheet("Event").append_row([datetime.now().strftime("%d/%m/%Y"), w_e, ev_n, int(j_e)])
             st.success("OK!"); st.cache_data.clear(); time.sleep(1); st.rerun()
@@ -570,7 +569,7 @@ elif menu == "💸 Dana Talangan" and st.session_state['role'] == "admin":
     
     with t1:
         with st.form("form_talangan", clear_on_submit=True):
-            nama_t = st.selectbox("Pilih Nama", df_warga['Nama'].tolist())
+            nama_t = st.selectbox("Pilih Nama", df_w['Nama'].tolist())
             aksi_t = st.radio("Aksi", ["PINJAM", "BAYAR (Cicil)"], horizontal=True)
             nominal_t = st.number_input("Nominal (Rp)", step=5000)
             ket_t = st.text_input("Keterangan (Contoh: Talangan konsumsi / Cicilan ke-1)")
@@ -600,4 +599,4 @@ elif menu == "💸 Dana Talangan" and st.session_state['role'] == "admin":
         else:
             st.info("Semua talangan sudah lunas, tidak ada piutang.")
 elif menu == "📜 Log":
-    st.dataframe(df_masuk.tail(20), hide_index=True, use_container_width=True)
+    st.dataframe(df_m.tail(20), hide_index=True, use_container_width=True)
