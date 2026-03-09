@@ -82,7 +82,22 @@ def gdrive_fix(url):
         if file_id: return f"https://drive.google.com/uc?export=open&id={file_id}"
         return url
     except: return url
-
+def get_sisa_piutang():
+    try:
+        # Kita panggil data dari sheet Talangan
+        df_t = load_data("Talangan")
+        if df_t.empty:
+            return pd.DataFrame(columns=['Nama', 'Sisa Utang'])
+        
+        # Logika: PINJAM (+) dan BAYAR (-)
+        df_t['Amount'] = df_t.apply(lambda x: x['Nominal'] if x['Tipe'] == 'PINJAM' else -x['Nominal'], axis=1)
+        summary = df_t.groupby('Nama')['Amount'].sum().reset_index()
+        summary.columns = ['Nama', 'Sisa Utang']
+        
+        # Ambil yang sisa utangnya di atas 0
+        return summary[summary['Sisa Utang'] > 0]
+    except:
+        return pd.DataFrame(columns=['Nama', 'Sisa Utang'])
 # --- 4. SIDEBAR ---
 with st.sidebar:
     st.markdown(f"""
@@ -133,7 +148,7 @@ with st.sidebar:
                         st.error("Akses Ditolak!")
 
     if st.session_state['role'] == "admin":
-        list_menu = ["📊 Laporan", "📚 Pustaka", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "📜 Log"]
+        list_menu = ["📊 Laporan", "📚 Pustaka", "📥 Kas Bulanan", "🎭 Event & Iuran", "📤 Pengeluaran", "👥 Kelola Warga", "📦 Inventaris", "💸 Dana Talangan", "📜 Log"]
     else:
         list_menu = ["📊 Laporan", "📚 Pustaka", "📦 Inventaris", "📜 Log"]
     
@@ -536,6 +551,33 @@ elif menu == "🎭 Event & Iuran" and st.session_state['role'] == "admin":
         if st.form_submit_button("Simpan"):
             sh.worksheet("Event").append_row([datetime.now().strftime("%d/%m/%Y"), w_e, ev_n, int(j_e)])
             st.success("OK!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+elif menu == "💸 Dana Talangan" and st.session_state['role'] == "admin":
+    st.subheader("💸 Manajemen Talangan & Piutang")
+    t1, t2 = st.tabs(["📝 Input Transaksi", "📋 Daftar Piutang"])
+    
+    with t1:
+        with st.form("form_talangan", clear_on_submit=True):
+            # Di file lo variabelnya df_warga
+            nama_t = st.selectbox("Pilih Nama", sorted(df_warga['Nama'].tolist()))
+            aksi_t = st.radio("Aksi", ["PINJAM", "BAYAR (Cicil)"], horizontal=True)
+            nominal_t = st.number_input("Nominal (Rp)", step=5000)
+            ket_t = st.text_input("Keterangan")
+            
+            if st.form_submit_button("Simpan Data"):
+                tipe_fix = "PINJAM" if aksi_t == "PINJAM" else "BAYAR"
+                sh.worksheet("Talangan").append_row([
+                    datetime.now().strftime("%d/%m/%Y"), 
+                    nama_t, tipe_fix, int(nominal_t), ket_t
+                ])
+                st.success("Data Berhasil Disimpan!")
+                st.cache_data.clear(); time.sleep(1); st.rerun()
 
+    with t2:
+        df_p = get_sisa_piutang()
+        if not df_p.empty:
+            st.table(df_p)
+            st.warning(f"Total Piutang: **Rp {df_p['Sisa Utang'].sum():,}**")
+        else:
+            st.info("Tidak ada piutang aktif.")
 elif menu == "📜 Log":
     st.dataframe(df_masuk.tail(20), hide_index=True, use_container_width=True)
