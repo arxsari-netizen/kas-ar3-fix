@@ -229,30 +229,47 @@ if menu == "📚 Pustaka":
             df_view = df_view[mask]
         
         st.divider()
-        for _, row in df_view.iterrows():
-            with st.container():
-                col1, col2 = st.columns([1, 4])
-                icon = "📄" if row['Tipe'] == "PDF" else "🖼️" if row['Tipe'] == "Gambar" else "🔊" if row['Tipe'] == "Audio" else "🔗"
-                col1.markdown(f"<h1 style='text-align: center;'>{icon}</h1>", unsafe_allow_html=True)
-                col2.write(f"### {row['Judul']}")
-                col2.caption(f"Kategori: {row['Kategori']} | Tipe: {row['Tipe']}")
-                col2.write(row['Deskripsi'])
-                with col2.expander("Lihat / Putar Materi"):
-                    if row['Tipe'] == "Audio":
-                        p_url = row['Link'].replace('/view', '/preview') if '/view' in row['Link'] else row['Link']
-                        st.markdown(f'<iframe src="{p_url}" width="100%" height="150" style="border:none; border-radius:10px;"></iframe>', unsafe_allow_html=True)
-                        st.link_button("🚀 Putar di G-Drive", row['Link'])
-                    elif row['Tipe'] == "PDF":
-                        st.markdown(f'<iframe src="{gdrive_fix(row["Link"])}" width="100%" height="500px"></iframe>', unsafe_allow_html=True)
-                    elif row['Tipe'] == "Gambar":
-                        file_id = ""
-                        url_g = row['Link']
-                        if '/d/' in url_g: file_id = url_g.split('/d/')[1].split('/')[0]
-                        elif 'id=' in url_g: file_id = url_g.split('id=')[1].split('&')[0]
-                        if file_id:
-                            st.image(f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000", use_container_width=True)
-                        st.link_button("📂 Buka Gambar Asli", row['Link'])
+        # 1. Pisahkan data berdasarkan Kategori
+        galeri_data = df_view[df_view['Kategori'] == "Foto Kegiatan"]
+        materi_data = df_view[df_view['Kategori'] != "Foto Kegiatan"]
+
+        # 2. Tampilkan Galeri (Mode Grid)
+        if not galeri_data.empty:
+            st.subheader("📸 Galeri Foto Kegiatan")
+            # Kita buat 3 kolom agar rapi di HP/Desktop
+            cols = st.columns(3)
+            for i, (_, row) in enumerate(galeri_data.iterrows()):
+                with cols[i % 3]:
+                    # Ekstrak file_id untuk thumbnail
+                    file_id = ""
+                    url_g = row['Link']
+                    if '/d/' in url_g: file_id = url_g.split('/d/')[1].split('/')[0]
+                    elif 'id=' in url_g: file_id = url_g.split('id=')[1].split('&')[0]
+                    
+                    if file_id:
+                        st.image(f"https://drive.google.com/thumbnail?id={file_id}&sz=w600", use_container_width=True)
+                    st.caption(f"**{row['Judul']}**")
+                    # Opsional: Bisa dikasih tombol kalau mau lihat detail atau link asli
             st.divider()
+
+        # 3. Tampilkan Pustaka Digital (Mode List - yang sudah jalan)
+        if not materi_data.empty:
+            for _, row in materi_data.iterrows():
+                with st.container():
+                    col1, col2 = st.columns([1, 4])
+                    icon = "📄" if row['Tipe'] == "PDF" else "🔊" if row['Tipe'] == "Audio" else "🔗"
+                    col1.markdown(f"<h1 style='text-align: center;'>{icon}</h1>", unsafe_allow_html=True)
+                    col2.write(f"### {row['Judul']}")
+                    col2.caption(f"Kategori: {row['Kategori']} | Tipe: {row['Tipe']}")
+                    col2.write(row['Deskripsi'])
+                    with col2.expander("Lihat / Putar Materi"):
+                        if row['Tipe'] == "Audio":
+                            p_url = row['Link'].replace('/view', '/preview') if '/view' in row['Link'] else row['Link']
+                            st.markdown(f'<iframe src="{p_url}" width="100%" height="150" style="border:none; border-radius:10px;"></iframe>', unsafe_allow_html=True)
+                            st.link_button("🚀 Putar di G-Drive", row['Link'])
+                        elif row['Tipe'] == "PDF":
+                            st.markdown(f'<iframe src="{gdrive_fix(row["Link"])}" width="100%" height="500px"></iframe>', unsafe_allow_html=True)
+                st.divider()
 
 elif menu == "📊 Laporan":
     t1, t2, t3 = st.tabs(["💰 Rekap Bulanan", "🎭 Detail Event", "📤 Riwayat Pengeluaran"])
