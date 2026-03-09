@@ -161,16 +161,29 @@ in_k, in_h, in_e = df_masuk['Kas'].sum(), df_masuk['Hadiah'].sum(), df_event['Ju
 out_k = df_keluar[df_keluar['Kategori'] == 'Kas']['Jumlah'].sum()
 out_h = df_keluar[df_keluar['Kategori'] == 'Hadiah']['Jumlah'].sum()
 out_e = df_keluar[df_keluar['Kategori'] == 'Event']['Jumlah'].sum()
-
+# Tambahkan ini setelah perhitungan out_e
+df_p = get_sisa_piutang()
+total_piutang = df_p['Sisa Utang'].sum() if not df_p.empty else 0
 show_dashboard = (st.session_state['role'] == "admin" and menu not in ["📦 Inventaris", "📚 Pustaka"]) or \
                  (st.session_state['role'] == "user" and menu == "📊 Laporan")
 
 if show_dashboard:
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("💰 SALDO KAS", f"Rp {int(in_k - out_k):,}")
+    
+    # Saldo Kas dikurangi total piutang
+    m1.metric("💰 SALDO KAS", f"Rp {int(in_k - out_k - total_piutang):,}")
+    
     m2.metric("🎁 SALDO HADIAH", f"Rp {int(in_h - out_h):,}")
     m3.metric("🎭 SALDO EVENT", f"Rp {int(in_e - out_e):,}")
-    m4.metric("🏧 TOTAL TUNAI", f"Rp {int((in_k+in_h+in_e)-(out_k+out_h+out_e)):,}")
+    
+    # Saldo Total dikurangi piutang juga supaya balance
+    total_tunai = (in_k + in_h + in_e) - (out_k + out_h + out_e) - total_piutang
+    m4.metric("🏧 TOTAL TUNAI", f"Rp {int(total_tunai):,}")
+    
+    # Tambahin satu kolom baru buat nampilin piutang supaya transparan
+    m_piutang = st.columns(4)
+    m_piutang[0].metric("💸 PIUTANG AKTIF", f"Rp {int(total_piutang):,}")
+    
     st.divider()
     
     if menu == "📊 Laporan":
