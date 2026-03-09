@@ -245,10 +245,7 @@ if menu == "📚 Pustaka":
             pilih_kegiatan = st.selectbox("Pilih Kegiatan", list_kegiatan)
             
             # Filter data berdasarkan pilihan
-            if pilih_kegiatan == "Semua Kegiatan":
-                tampilan_foto = galeri_df
-            else:
-                tampilan_foto = galeri_df[galeri_df['Kegiatan'] == pilih_kegiatan]
+            tampilan_foto = galeri_df[galeri_df['Kegiatan'] == pilih_kegiatan]
             
             # Tampilkan dalam grid 3 kolom
             cols = st.columns(3)
