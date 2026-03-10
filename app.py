@@ -207,7 +207,8 @@ if show_dashboard:
 bln_list = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 
 if menu == "📚 Pustaka":
-    st.subheader("📚 Pustaka Digital & Materi Kajian")
+    st.subheader("Selamat datang di Pustaka")
+    st.markdown("Tempat Mencari serpihan ilmu dan kenangan")
     if st.session_state['role'] == "admin":
         with st.expander("➕ Tambah Materi Baru"):
             with st.form("f_add_pus", clear_on_submit=True):
