@@ -359,28 +359,66 @@ elif menu == "📦 Inventaris":
 
     with tab_view:
         if not df_inv.empty:
-            # Kalkulasi stok tersedia di memori (biar cepet)
-            df_inv['Tersedia'] = df_inv['Jumlah'] - df_inv['Dipinjam']
-            st.dataframe(
-                df_inv[['Nama Barang', 'Spesifikasi', 'Jumlah', 'Dipinjam', 'Tersedia', 'Lokasi', 'Kondisi', 'Keterangan']], 
-                hide_index=True, 
-                use_container_width=True
-            )
+            # Filter pencarian
+            cari_inv = st.text_input("🔍 Cari Aset...", placeholder="Ketik nama barang...")
+            df_display = df_inv.copy()
+            if cari_inv:
+                df_display = df_display[df_display['Nama Barang'].str.contains(cari_inv, case=False)]
+
+            # Tampilan Grid 3 Kolom dengan Gambar
+            cols_inv = st.columns(3)
+            for i, (_, row) in enumerate(df_display.iterrows()):
+                with cols_inv[i % 3]:
+                    # Tampilkan Foto jika ada link-nya
+                    if 'Link Foto' in row and row['Link Foto']:
+                        f_id = ""
+                        url_f = row['Link Foto']
+                        if '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
+                        elif 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
+                        
+                        if f_id:
+                            st.image(f"https://drive.google.com/thumbnail?id={f_id}&sz=w400", use_container_width=True)
+                    else:
+                        st.info("📷 No Image") # Placeholder kalau nggak ada foto
+                    
+                    st.markdown(f"**{row['Nama Barang']}**")
+                    st.caption(f"📍 {row['Lokasi']} | ✅ {int(row['Jumlah'])-int(row['Dipinjam'])} Tersedia")
+                    with st.expander("Detail"):
+                        st.write(f"Spec: {row['Spesifikasi']}")
+                        st.write(f"Kondisi: {row['Kondisi']}")
+            st.divider()
     with tab_add:
         if st.session_state['role'] == "admin":
-            with st.form("f_inv_add", clear_on_submit=True):
-                st.markdown("### ➕ Tambah Aset Baru")
+            st.markdown("### ➕ Tambah Aset Baru")
+            
+            # 1. Standarisasi Nama Barang
+            list_barang_ada = sorted(df_inv['Nama Barang'].unique().tolist()) if not df_inv.empty else []
+            opsi_nama = ["-- Tambah Nama Baru --"] + list_barang_ada
+            pilih_nama_inv = st.selectbox("Pilih Nama Barang (Standar):", opsi_nama)
+            
+            if pilih_nama_inv == "-- Tambah Nama Baru --":
+                nb = st.text_input("Ketik Nama Barang Baru (Contoh: Lampu LED 30W)")
+            else:
+                nb = pilih_nama_inv
+            
+            # 2. Lokasi dari Data Warga
+            list_warga = sorted(df_warga['Nama'].tolist()) if not df_warga.empty else []
+            lok_warga = st.selectbox("Lokasi Awal (Nama Warga):", ["Pilih Warga/Lokasi"] + list_warga)
+            
+            with st.form("f_inv_add_new", clear_on_submit=True):
                 c1, c2 = st.columns(2)
-                nb = c1.text_input("Nama Barang (Contoh: Lampu 30W)")
-                sp = c2.text_input("Spesifikasi (Contoh: Philips LED)")
-                jml = c1.number_input("Total Unit", min_value=1, value=1)
-                lok = c2.text_input("Lokasi Awal")
+                sp = c1.text_input("Spesifikasi (Contoh: Philips)")
+                jml = c2.number_input("Total Unit", min_value=1, value=1)
+                img_link = st.text_input("Link Foto Barang (G-Drive)") # Input Link Foto
+                
                 if st.form_submit_button("Simpan Barang"):
-                    if nb and lok:
-                        ws_inv.append_row([nb, sp, int(jml), lok, "Baik", "Tersedia", 0, "-"])
+                    if nb and lok_warga != "Pilih Warga/Lokasi":
+                        # Tambahkan kolom Link Foto di baris ke-9 Google Sheets
+                        sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok_warga, "Baik", "Tersedia", 0, "-", img_link])
                         st.success("Barang berhasil ditambah!"); st.cache_data.clear(); time.sleep(1); st.rerun()
-                    else: st.error("Nama & Lokasi wajib diisi!")
-        else: st.warning("Menu ini hanya untuk Admin.")
+                    else: st.error("Nama Barang & Lokasi wajib diisi!")
+        else: 
+            st.warning("Menu ini hanya untuk Admin.")
 
     with tab_edit:
         # Pindahkan pengecekan role ke dalam fitur spesifik
