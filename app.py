@@ -433,7 +433,15 @@ elif menu == "📦 Inventaris":
                 st.code(teks_laporan, language=None)
                 
                 if st.button("🗑️ Kosongkan Keranjang"):
+                    # 1. Hapus isi keranjang
                     st.session_state['cart'] = {}
+                    
+                    # 2. Hapus memori semua number_input Qty
+                    # Kita cari semua key yang depannya 'qty_' di session_state terus kita hapus
+                    for key in list(st.session_state.keys()):
+                        if key.startswith("qty_"):
+                            st.session_state[key] = 0 # Reset angkanya jadi 0
+                            
                     st.rerun()
     with tab_add:
         if st.session_state['role'] == "admin":
