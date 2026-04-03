@@ -433,15 +433,15 @@ elif menu == "📦 Inventaris":
                 st.code(teks_laporan, language=None)
                 
                 if st.button("🗑️ Kosongkan Keranjang"):
-                    # 1. Hapus isi keranjang
+                    # 1. Hapus data keranjang
                     st.session_state['cart'] = {}
                     
-                    # 2. Hapus memori semua number_input Qty
-                    # Kita cari semua key yang depannya 'qty_' di session_state terus kita hapus
+                    # 2. Trik Reset Widget: Ubah 'form_id' atau paksa rerun tanpa state widget
+                    # Cara paling simpel: bersihkan session_state yang spesifik ke qty
                     for key in list(st.session_state.keys()):
                         if key.startswith("qty_"):
-                            st.session_state[key] = 0 # Reset angkanya jadi 0
-                            
+                            del st.session_state[key] 
+                    
                     st.rerun()
     with tab_add:
         if st.session_state['role'] == "admin":
