@@ -490,8 +490,9 @@ elif menu == "📦 Inventaris":
     with tab_edit:
         # Pindahkan pengecekan role ke dalam fitur spesifik
         if not df_inv.empty:
-            # 0. DEFINISI LIST LOKASI (Ini yang tadi kurang)
-            list_lokasi = sorted(df_inv['Lokasi'].dropna().unique().tolist())
+            # --- UPDATE: AMBIL LOKASI DARI DATA WARGA (BIAR ADA NAMA AUL DLL) ---
+            list_warga = sorted(df_warga['Nama'].tolist()) if not df_warga.empty else []
+            list_lokasi = ["Pilih Lokasi"] + list_warga
             
             # 1. Bikin Label yang Informatif
             df_inv['label_edit'] = (
@@ -519,33 +520,38 @@ elif menu == "📦 Inventaris":
                 idx_k = list_k.index(curr['Kondisi']) if curr['Kondisi'] in list_k else 0
                 n_kondisi = c2.selectbox("Kondisi Barang", list_k, index=idx_k)
                 
-                # --- INI BAGIAN SELECTBOX LOKASI YANG UDAH FIX ---
-                idx_l = list_lokasi.index(curr['Lokasi']) if curr['Lokasi'] in list_lokasi else 0
-                n_lokasi = st.selectbox("Update Lokasi", options=list_lokasi, index=idx_l)
-                # -----------------------------------
+                # --- UPDATE: CARI INDEX LOKASI LAMA DI LIST WARGA ---
+                try:
+                    idx_l = list_lokasi.index(curr['Lokasi'])
+                except:
+                    idx_l = 0 # Balik ke "Pilih Lokasi" kalau gak ketemu
+                
+                n_lokasi = st.selectbox("Update Lokasi (Pindah ke Warga)", options=list_lokasi, index=idx_l)
                 
                 n_peminjam = st.text_input("Nama Peminjam / Keperluan", value=curr['Keterangan'])
-                
                 if st.form_submit_button("💾 Simpan Perubahan"):
+                    if n_lokasi != "Pilih Lokasi":
                     # Kunci pencarian: Pake data ASLI dari database (curr)
                     idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
                     
                     if idx:
-                        status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
-                        
-                        # Update baris tersebut dengan data baru
-                        ws_inv.update_cell(idx, 4, n_lokasi)       # Lokasi baru
-                        ws_inv.update_cell(idx, 5, n_kondisi)      # Kondisi baru
-                        ws_inv.update_cell(idx, 6, status_txt)     # Status baru
-                        ws_inv.update_cell(idx, 7, int(n_dipinjam))
-                        ws_inv.update_cell(idx, 8, n_peminjam)
-                        
-                        st.success("Data berhasil diupdate!")
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
+                            status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
+                            
+                            # Update baris tersebut dengan data baru
+                            ws_inv.update_cell(idx, 4, n_lokasi)       # Lokasi baru (Warga pilihan)
+                            ws_inv.update_cell(idx, 5, n_kondisi)      # Kondisi baru
+                            ws_inv.update_cell(idx, 6, status_txt)     # Status baru
+                            ws_inv.update_cell(idx, 7, int(n_dipinjam))
+                            ws_inv.update_cell(idx, 8, n_peminjam)
+                            
+                            st.success(f"Data {curr['Nama Barang']} berhasil diupdate ke {n_lokasi}!")
+                            st.cache_data.clear()
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error(f"Gagal cari baris: {curr['Nama Barang']}")
                     else:
-                        st.error(f"Gagal cari baris: {curr['Nama Barang']} di {curr['Lokasi']}")
+                        st.error("Pilih lokasi warga dulu bray!")
             st.divider()
 
             # 2. Fitur Pecah Stok (Terbuka untuk Umum)
