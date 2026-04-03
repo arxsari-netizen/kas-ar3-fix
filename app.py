@@ -359,56 +359,60 @@ elif menu == "📦 Inventaris":
 
     with tab_view:
         if not df_inv.empty:
-            st.markdown("### 📋 Pilih Barang untuk Laporan")
+            st.markdown("### 📋 Pilih & Atur Jumlah Barang")
             
-            # --- FITUR CEKLIS & EDIT JUMLAH ---
-            # Kita bikin df sementara untuk diedit (pilih & tentukan jumlah)
+            # 1. Penyiapan Data untuk Editor
             df_edit = df_inv.copy()
-            df_edit.insert(0, "Pilih", False) # Tambah kolom ceklis di awal
-            df_edit["Ambil_Jumlah"] = 0 # Tambah kolom jumlah yang mau diambil
+            df_edit.insert(0, "Pilih", False)
+            df_edit["Ambil_Jumlah"] = 0
             
-            # Tampilkan editor (User bisa ceklis dan ketik jumlah)
+            # 2. Data Editor (Tabel Ceklis)
+            # Link Foto kita sembunyikan dari tabel biar gak menuh-menuhin, tapi tetep kita ambil datanya
             edited_df = st.data_editor(
                 df_edit[["Pilih", "Nama Barang", "Lokasi", "Jumlah", "Ambil_Jumlah", "Spesifikasi", "Link Foto"]],
                 hide_index=True,
                 column_config={
                     "Pilih": st.column_config.CheckboxColumn("Pilih", default=False),
-                    "Ambil_Jumlah": st.column_config.NumberColumn("Qty Ambil", min_value=0, step=1),
-                    "Link Foto": st.column_config.ImageColumn("Preview", help="Gambar Barang"), # Gambar jadi kecil di dlm tabel!
-                    "Jumlah": st.column_config.NumberColumn("Stok", disabled=True)
+                    "Ambil_Jumlah": st.column_config.NumberColumn("Qty", min_value=0, step=1),
+                    "Jumlah": st.column_config.NumberColumn("Stok", disabled=True),
+                    "Link Foto": None # Sembunyikan kolom link di tabel agar rapi
                 },
                 use_container_width=True
             )
 
-            # --- LOGIKA EXPORT LAPORAN ---
+            # 3. Ambil data yang dicentang
             item_terpilih = edited_df[edited_df["Pilih"] == True]
-            
+
             if not item_terpilih.empty:
                 st.divider()
-                st.markdown("### 📄 Draft Laporan Pengambilan")
-                
-                # Cek apakah jumlah yang diambil valid (nggak nol)
+                # --- PREVIEW GAMBAR BARANG TERPILIH ---
+                st.markdown("### 🖼️ Preview Barang Terpilih")
+                p_cols = st.columns(4) # Bikin preview kecil-kecil kesamping
+                for idx, (_, r) in enumerate(item_terpilih.iterrows()):
+                    with p_cols[idx % 4]:
+                        url_f = r['Link Foto']
+                        f_id = ""
+                        if url_f and '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
+                        elif url_f and 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
+                        
+                        if f_id:
+                            st.image(f"https://drive.google.com/thumbnail?id={f_id}&sz=w300", caption=r['Nama Barang'], use_container_width=True)
+                        else:
+                            st.caption(f"🚫 No Image: {r['Nama Barang']}")
+
+                # --- LAPORAN TEKS ---
+                st.markdown("### 📄 Draft Laporan")
                 if (item_terpilih["Ambil_Jumlah"] <= 0).any():
-                    st.warning("⚠️ Ada barang terpilih tapi jumlah ambil masih 0. Tolong isi jumlahnya!")
+                    st.warning("⚠️ Isi kolom 'Qty' untuk barang yang dicentang!")
                 else:
-                    # Bikin teks laporan buat di-copy atau di-print
                     teks_laporan = f"📝 **LAPORAN PENGAMBILAN BARANG**\n"
-                    teks_laporan += f"📅 Tanggal: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+                    teks_laporan += f"📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
                     teks_laporan += "-------------------------------------------\n"
-                    
                     for _, r in item_terpilih.iterrows():
-                        teks_laporan += f"• **{r['Nama Barang']}** ({r['Ambil_Jumlah']} Unit)\n"
-                        teks_laporan += f"  📍 Lokasi: {r['Lokasi']}\n"
+                        teks_laporan += f"• {r['Nama Barang']} ({r['Ambil_Jumlah']} Unit)\n  📍 Lokasi: {r['Lokasi']}\n"
                     
-                    st.info(teks_laporan)
-                    
-                    # Tombol buat download jadi text file simpel
-                    st.download_button(
-                        label="📥 Download Laporan (TXT)",
-                        data=teks_laporan,
-                        file_name=f"laporan_barang_{datetime.now().strftime('%Y%m%d')}.txt",
-                        mime="text/plain"
-                    )
+                    st.code(teks_laporan, language=None) # Pake st.code biar gampang di-copy
+                    st.download_button("📥 Download TXT", teks_laporan, f"laporan_{datetime.now().strftime('%Y%m%d')}.txt")
         else:
             st.info("Belum ada data aset.")
     with tab_add:
