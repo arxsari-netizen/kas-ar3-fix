@@ -359,90 +359,80 @@ elif menu == "📦 Inventaris":
 
     with tab_view:
         if not df_inv.empty:
-            # --- 1. INISIALISASI KERANJANG LAPORAN ---
+            # --- 1. INISIALISASI STATE BARU ---
             if 'cart' not in st.session_state:
-                st.session_state['cart'] = {} # Format: {index: jumlah}
+                st.session_state['cart'] = {}
+            if 'reset_cnt' not in st.session_state:
+                st.session_state['reset_cnt'] = 0
 
             st.markdown("### 📋 Pilih Barang untuk Laporan")
             
-            # Filter pencarian
             cari_inv = st.text_input("🔍 Cari Barang...", placeholder="Ketik nama barang...")
             df_display = df_inv.copy()
             if cari_inv:
                 df_display = df_display[df_display['Nama Barang'].str.contains(cari_inv, case=False)]
 
-            # --- 2. TAMPILKAN GRID BARANG (KARTU KECIL) ---
-            # Kita pake 4 kolom kesamping biar gambarnya jadi kecil-kecil
+            # --- 2. TAMPILKAN GRID BARANG ---
             cols_inv = st.columns(4) 
             
             for i, row in df_display.iterrows():
                 with cols_inv[i % 4]:
-                    # Tampilkan Gambar (Thumbnail Kecil)
-                    url_f = row['Link Foto']
-                    f_id = ""
+                    # Tampilkan Gambar
+                    url_f = row['Link Foto']; f_id = ""
                     if url_f and '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
                     elif url_f and 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
                     
-                    if f_id:
-                        # Kita pake width=200 biar konsisten kecilnya
-                        st.image(f"https://drive.google.com/thumbnail?id={f_id}&sz=w300", use_container_width=False, width=150)
-                    else:
-                        # Placeholder kalau gak ada foto (ukurannya disamain)
-                        st.image("https://via.placeholder.com/150x100?text=No+Image", use_container_width=False, width=150)
+                    img_url = f"https://drive.google.com/thumbnail?id={f_id}&sz=w300" if f_id else "https://via.placeholder.com/150x100?text=No+Image"
+                    st.image(img_url, use_container_width=False, width=150)
                     
                     st.markdown(f"**{row['Nama Barang']}**")
-                    st.caption(f"📍 {row['Lokasi']}\n✅ {int(row['Jumlah'])} Unit")
+                    st.caption(f"📍 {row['Lokasi']}\n✅ Stok: {int(row['Jumlah'])} Unit")
                     
-                    # --- TOMBOL INPUT JUMLAH KE KERANJANG ---
-                    c1, c2 = st.columns([2, 1])
-                    qty_ambil = c1.number_input("Qty", min_value=0, step=1, key=f"qty_{i}")
+                    # --- INPUT QTY DENGAN LIMIT STOK ---
+                    # Kita tambahin reset_cnt di key supaya kalau di-reset, key-nya berubah total
+                    qty_key = f"qty_{i}_{st.session_state['reset_cnt']}"
+                    qty_ambil = st.number_input(
+                        "Qty", 
+                        min_value=0, 
+                        max_value=int(row['Jumlah']), # BIAR GAK BISA LEBIH DARI STOK
+                        step=1, 
+                        key=qty_key
+                    )
                     
                     if qty_ambil > 0:
                         st.session_state['cart'][i] = {'nama': row['Nama Barang'], 'lokasi': row['Lokasi'], 'jumlah': qty_ambil}
                     elif i in st.session_state['cart'] and qty_ambil == 0:
-                        del st.session_state['cart'][i] # Hapus dari keranjang kalau jadi 0
+                        del st.session_state['cart'][i]
 
-            # --- 3. GENERATE LAPORAN (GROUPING BY LOKASI & COPY BUTTON) ---
+            # --- 3. GENERATE LAPORAN ---
             if st.session_state['cart']:
                 st.divider()
                 st.markdown("### 📄 Draft Laporan Pengambilan")
                 
-                # Kita susun data agar dikelompokkan berdasarkan lokasi
                 laporan_dict = {}
                 for _, item in st.session_state['cart'].items():
                     lok = item['lokasi']
-                    if lok not in laporan_dict:
-                        laporan_dict[lok] = []
+                    if lok not in laporan_dict: laporan_dict[lok] = []
                     laporan_dict[lok].append(f"{item['nama']} ({item['jumlah']} Unit)")
 
-                # Susun teks string-nya
                 teks_laporan = f"📝 *LAPORAN PENGAMBILAN BARANG*\n"
                 teks_laporan += f"📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
                 teks_laporan += "-------------------------------------------\n"
-                
                 for lokasi, daftar_barang in laporan_dict.items():
                     teks_laporan += f"\n📍 *Lokasi: {lokasi}*\n"
-                    for b in daftar_barang:
-                        teks_laporan += f"  - {b}\n"
+                    for b in daftar_barang: teks_laporan += f"  - {b}\n"
                 
-                # Tampilkan Preview
                 st.info(teks_laporan)
-                
-                # Fitur Copy to Clipboard (Pakai st.code supaya ada tombol copy bawaan Streamlit)
-                st.write("Klik ikon salin di pojok kanan atas kotak di bawah ini:")
+                st.write("Salin laporan di bawah ini:")
                 st.code(teks_laporan, language=None)
                 
+                # --- TOMBOL KOSONGKAN YANG BENER ---
                 if st.button("🗑️ Kosongkan Keranjang"):
-                    # 1. Hapus data keranjang
                     st.session_state['cart'] = {}
-                    
-                    # 2. Trik Reset Widget: Ubah 'form_id' atau paksa rerun tanpa state widget
-                    # Cara paling simpel: bersihkan session_state yang spesifik ke qty
-                    for key in list(st.session_state.keys()):
-                        if key.startswith("qty_"):
-                            del st.session_state[key] 
-                    
+                    st.session_state['reset_cnt'] += 1 # Ganti identitas semua widget qty
                     st.rerun()
+        else:
+            st.info("Belum ada data aset.")
     with tab_add:
         if st.session_state['role'] == "admin":
             st.markdown("### ➕ Tambah Aset Baru")
