@@ -372,46 +372,56 @@ elif menu == "📦 Inventaris":
             if cari_inv:
                 df_display = df_display[df_display['Nama Barang'].str.contains(cari_inv, case=False)]
 
-            # --- 2. TAMPILKAN GRID BARANG ---
             cols_inv = st.columns(4) 
             
             for i, row in df_display.iterrows():
                 with cols_inv[i % 4]:
-                    # --- 1. TAMPILKAN GAMBAR ---
+                    # --- CSS UNTUK SERAGAMKAN UKURAN GAMBAR ---
+                    # Kita bungkus gambar di dalam div yang tingginya dikunci (misal 150px)
+                    st.markdown("""
+                        <style>
+                        .img-container {
+                            width: 100%;
+                            height: 150px; /* Kunci tinggi gambar bray */
+                            object-fit: cover; /* Biar gambar auto-crop dan gak gepeng */
+                            border-radius: 10px;
+                        }
+                        </style>
+                        """, unsafe_allow_html=True)
+
+                    # Tampilkan Gambar
                     url_f = row['Link Foto']; f_id = ""
                     if url_f and '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
                     elif url_f and 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
                     
-                    img_url = f"https://drive.google.com/thumbnail?id={f_id}&sz=w300" if f_id else "https://via.placeholder.com/150x100?text=No+Image"
-                    st.image(img_url, use_container_width=False, width=150)
+                    if f_id:
+                        img_src = f"https://drive.google.com/thumbnail?id={f_id}&sz=w400"
+                    else:
+                        img_src = "https://via.placeholder.com/400x300?text=No+Image"
                     
-                    # --- 2. INFO UTAMA ---
+                    # Kita pake HTML tag biar CSS-nya jalan
+                    st.markdown(f'<img src="{img_src}" class="img-container">', unsafe_allow_html=True)
+                    
+                    # --- INFO BARANG ---
                     st.markdown(f"**{row['Nama Barang']}**")
                     st.caption(f"📍 {row['Lokasi']}\n✅ Stok: {int(row['Jumlah'])} Unit")
                     
-                    # --- 3. SPEK (PAKAI EXPANDER BIAR RAPI) ---
-                    # Kita cek dulu, kalau speknya kosong gak usah munculin detail
+                    # Spek di dalam expander
                     val_spec = str(row['Spesifikasi']) if 'Spesifikasi' in row and pd.notna(row['Spesifikasi']) else "-"
                     if val_spec != "-":
                         with st.expander("Lihat Spek"):
                             st.write(val_spec)
                     
-                    # --- 4. INPUT QTY ---
+                    # Input Qty
                     qty_key = f"qty_{i}_{st.session_state['reset_cnt']}"
-                    qty_ambil = st.number_input(
-                        "Qty", 
-                        min_value=0, 
-                        max_value=int(row['Jumlah']), 
-                        step=1, 
-                        key=qty_key
-                    )
+                    qty_ambil = st.number_input("Qty", 0, int(row['Jumlah']), step=1, key=qty_key)
                     
                     if qty_ambil > 0:
                         st.session_state['cart'][i] = {
                             'nama': row['Nama Barang'], 
                             'lokasi': row['Lokasi'], 
                             'jumlah': qty_ambil,
-                            'spek': val_spec # Kita simpan juga speknya di keranjang
+                            'spek': val_spec
                         }
                     elif i in st.session_state['cart'] and qty_ambil == 0:
                         del st.session_state['cart'][i]
