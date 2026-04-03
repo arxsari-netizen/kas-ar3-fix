@@ -532,9 +532,9 @@ elif menu == "📦 Inventaris":
                 if st.form_submit_button("💾 Simpan Perubahan"):
                     if n_lokasi != "Pilih Lokasi":
                     # Kunci pencarian: Pake data ASLI dari database (curr)
-                    idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
+                        idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
                     
-                    if idx:
+                        if idx:
                             status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
                             
                             # Update baris tersebut dengan data baru
