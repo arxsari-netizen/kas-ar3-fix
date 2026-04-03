@@ -359,34 +359,58 @@ elif menu == "📦 Inventaris":
 
     with tab_view:
         if not df_inv.empty:
-            # Filter pencarian
-            cari_inv = st.text_input("🔍 Cari Aset...", placeholder="Ketik nama barang...")
-            df_display = df_inv.copy()
-            if cari_inv:
-                df_display = df_display[df_display['Nama Barang'].str.contains(cari_inv, case=False)]
+            st.markdown("### 📋 Pilih Barang untuk Laporan")
+            
+            # --- FITUR CEKLIS & EDIT JUMLAH ---
+            # Kita bikin df sementara untuk diedit (pilih & tentukan jumlah)
+            df_edit = df_inv.copy()
+            df_edit.insert(0, "Pilih", False) # Tambah kolom ceklis di awal
+            df_edit["Ambil_Jumlah"] = 0 # Tambah kolom jumlah yang mau diambil
+            
+            # Tampilkan editor (User bisa ceklis dan ketik jumlah)
+            edited_df = st.data_editor(
+                df_edit[["Pilih", "Nama Barang", "Lokasi", "Jumlah", "Ambil_Jumlah", "Spesifikasi", "Link Foto"]],
+                hide_index=True,
+                column_config={
+                    "Pilih": st.column_config.CheckboxColumn("Pilih", default=False),
+                    "Ambil_Jumlah": st.column_config.NumberColumn("Qty Ambil", min_value=0, step=1),
+                    "Link Foto": st.column_config.ImageColumn("Preview", help="Gambar Barang"), # Gambar jadi kecil di dlm tabel!
+                    "Jumlah": st.column_config.NumberColumn("Stok", disabled=True)
+                },
+                use_container_width=True
+            )
 
-            # Tampilan Grid 3 Kolom dengan Gambar
-            cols_inv = st.columns(3)
-            for i, (_, row) in enumerate(df_display.iterrows()):
-                with cols_inv[i % 3]:
-                    # Tampilkan Foto jika ada link-nya
-                    if 'Link Foto' in row and row['Link Foto']:
-                        f_id = ""
-                        url_f = row['Link Foto']
-                        if '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
-                        elif 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
-                        
-                        if f_id:
-                            st.image(f"https://drive.google.com/thumbnail?id={f_id}&sz=w400", use_container_width=True)
-                    else:
-                        st.info("📷 No Image") # Placeholder kalau nggak ada foto
+            # --- LOGIKA EXPORT LAPORAN ---
+            item_terpilih = edited_df[edited_df["Pilih"] == True]
+            
+            if not item_terpilih.empty:
+                st.divider()
+                st.markdown("### 📄 Draft Laporan Pengambilan")
+                
+                # Cek apakah jumlah yang diambil valid (nggak nol)
+                if (item_terpilih["Ambil_Jumlah"] <= 0).any():
+                    st.warning("⚠️ Ada barang terpilih tapi jumlah ambil masih 0. Tolong isi jumlahnya!")
+                else:
+                    # Bikin teks laporan buat di-copy atau di-print
+                    teks_laporan = f"📝 **LAPORAN PENGAMBILAN BARANG**\n"
+                    teks_laporan += f"📅 Tanggal: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+                    teks_laporan += "-------------------------------------------\n"
                     
-                    st.markdown(f"**{row['Nama Barang']}**")
-                    st.caption(f"📍 {row['Lokasi']} | ✅ {int(row['Jumlah'])-int(row['Dipinjam'])} Tersedia")
-                    with st.expander("Detail"):
-                        st.write(f"Spec: {row['Spesifikasi']}")
-                        st.write(f"Kondisi: {row['Kondisi']}")
-            st.divider()
+                    for _, r in item_terpilih.iterrows():
+                        teks_laporan += f"• **{r['Nama Barang']}** ({r['Ambil_Jumlah']} Unit)\n"
+                        teks_laporan += f"  📍 Lokasi: {r['Lokasi']}\n"
+                    
+                    st.info(teks_laporan)
+                    
+                    # Tombol buat download jadi text file simpel
+                    st.download_button(
+                        label="📥 Download Laporan (TXT)",
+                        data=teks_laporan,
+                        file_name=f"laporan_barang_{datetime.now().strftime('%Y%m%d')}.txt",
+                        mime="text/plain"
+                    )
+        else:
+            st.info("Belum ada data aset.")
     with tab_add:
         if st.session_state['role'] == "admin":
             st.markdown("### ➕ Tambah Aset Baru")
