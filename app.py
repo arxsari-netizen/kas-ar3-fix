@@ -359,60 +359,71 @@ elif menu == "📦 Inventaris":
 
     with tab_view:
         if not df_inv.empty:
-            st.markdown("### 📋 Pilih & Atur Jumlah Barang")
+            # --- 1. INISIALISASI KERANJANG LAPORAN ---
+            if 'cart' not in st.session_state:
+                st.session_state['cart'] = {} # Format: {index: jumlah}
+
+            st.markdown("### 📋 Pilih Barang untuk Laporan")
             
-            # 1. Penyiapan Data untuk Editor
-            df_edit = df_inv.copy()
-            df_edit.insert(0, "Pilih", False)
-            df_edit["Ambil_Jumlah"] = 0
+            # Filter pencarian
+            cari_inv = st.text_input("🔍 Cari Barang...", placeholder="Ketik nama barang...")
+            df_display = df_inv.copy()
+            if cari_inv:
+                df_display = df_display[df_display['Nama Barang'].str.contains(cari_inv, case=False)]
+
+            # --- 2. TAMPILKAN GRID BARANG (KARTU KECIL) ---
+            # Kita pake 4 kolom kesamping biar gambarnya jadi kecil-kecil
+            cols_inv = st.columns(4) 
             
-            # 2. Data Editor (Tabel Ceklis)
-            # Link Foto kita sembunyikan dari tabel biar gak menuh-menuhin, tapi tetep kita ambil datanya
-            edited_df = st.data_editor(
-                df_edit[["Pilih", "Nama Barang", "Lokasi", "Jumlah", "Ambil_Jumlah", "Spesifikasi", "Link Foto"]],
-                hide_index=True,
-                column_config={
-                    "Pilih": st.column_config.CheckboxColumn("Pilih", default=False),
-                    "Ambil_Jumlah": st.column_config.NumberColumn("Qty", min_value=0, step=1),
-                    "Jumlah": st.column_config.NumberColumn("Stok", disabled=True),
-                    "Link Foto": None # Sembunyikan kolom link di tabel agar rapi
-                },
-                use_container_width=True
-            )
-
-            # 3. Ambil data yang dicentang
-            item_terpilih = edited_df[edited_df["Pilih"] == True]
-
-            if not item_terpilih.empty:
-                st.divider()
-                # --- PREVIEW GAMBAR BARANG TERPILIH ---
-                st.markdown("### 🖼️ Preview Barang Terpilih")
-                p_cols = st.columns(4) # Bikin preview kecil-kecil kesamping
-                for idx, (_, r) in enumerate(item_terpilih.iterrows()):
-                    with p_cols[idx % 4]:
-                        url_f = r['Link Foto']
-                        f_id = ""
-                        if url_f and '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
-                        elif url_f and 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
-                        
-                        if f_id:
-                            st.image(f"https://drive.google.com/thumbnail?id={f_id}&sz=w300", caption=r['Nama Barang'], use_container_width=True)
-                        else:
-                            st.caption(f"🚫 No Image: {r['Nama Barang']}")
-
-                # --- LAPORAN TEKS ---
-                st.markdown("### 📄 Draft Laporan")
-                if (item_terpilih["Ambil_Jumlah"] <= 0).any():
-                    st.warning("⚠️ Isi kolom 'Qty' untuk barang yang dicentang!")
-                else:
-                    teks_laporan = f"📝 **LAPORAN PENGAMBILAN BARANG**\n"
-                    teks_laporan += f"📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
-                    teks_laporan += "-------------------------------------------\n"
-                    for _, r in item_terpilih.iterrows():
-                        teks_laporan += f"• {r['Nama Barang']} ({r['Ambil_Jumlah']} Unit)\n  📍 Lokasi: {r['Lokasi']}\n"
+            for i, row in df_display.iterrows():
+                with cols_inv[i % 4]:
+                    # Tampilkan Gambar (Thumbnail Kecil)
+                    url_f = row['Link Foto']
+                    f_id = ""
+                    if url_f and '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
+                    elif url_f and 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
                     
-                    st.code(teks_laporan, language=None) # Pake st.code biar gampang di-copy
-                    st.download_button("📥 Download TXT", teks_laporan, f"laporan_{datetime.now().strftime('%Y%m%d')}.txt")
+                    if f_id:
+                        # Kita pake width=200 biar konsisten kecilnya
+                        st.image(f"https://drive.google.com/thumbnail?id={f_id}&sz=w300", use_container_width=False, width=150)
+                    else:
+                        # Placeholder kalau gak ada foto (ukurannya disamain)
+                        st.image("https://via.placeholder.com/150x100?text=No+Image", use_container_width=False, width=150)
+                    
+                    st.markdown(f"**{row['Nama Barang']}**")
+                    st.caption(f"📍 {row['Lokasi']}\n✅ {int(row['Jumlah'])} Unit")
+                    
+                    # --- TOMBOL INPUT JUMLAH KE KERANJANG ---
+                    c1, c2 = st.columns([2, 1])
+                    qty_ambil = c1.number_input("Qty", min_value=0, step=1, key=f"qty_{i}")
+                    
+                    if qty_ambil > 0:
+                        st.session_state['cart'][i] = {'nama': row['Nama Barang'], 'lokasi': row['Lokasi'], 'jumlah': qty_ambil}
+                    elif i in st.session_state['cart'] and qty_ambil == 0:
+                        del st.session_state['cart'][i] # Hapus dari keranjang kalau jadi 0
+
+            # --- 3. GENERATE LAPORAN DARI KERANJANG ---
+            if st.session_state['cart']:
+                st.divider()
+                st.markdown("### 📄 Draft Laporan Pengambilan")
+                
+                cart_items = st.session_state['cart']
+                
+                teks_laporan = f"📝 **LAPORAN PENGAMBILAN BARANG**\n"
+                teks_laporan += f"📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+                teks_laporan += "-------------------------------------------\n"
+                
+                for _, item in cart_items.items():
+                    teks_laporan += f"• **{item['nama']}** ({item['jumlah']} Unit)\n"
+                    teks_laporan += f"  📍 Lokasi: {item['lokasi']}\n"
+                
+                st.info(teks_laporan)
+                st.download_button("📥 Download (TXT)", teks_laporan, f"laporan_{datetime.now().strftime('%Y%m%d')}.txt")
+                
+                if st.button("🗑️ Kosongkan Keranjang"):
+                    st.session_state['cart'] = {}
+                    st.rerun()
+
         else:
             st.info("Belum ada data aset.")
     with tab_add:
