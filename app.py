@@ -416,7 +416,7 @@ elif menu == "📦 Inventaris":
                     elif i in st.session_state['cart'] and qty_ambil == 0:
                         del st.session_state['cart'][i]
 
-            # --- 3. GENERATE LAPORAN ---
+            # --- 3. GENERATE LAPORAN (DENGAN SPEK) ---
             if st.session_state['cart']:
                 st.divider()
                 st.markdown("### 📄 Draft Laporan Pengambilan")
@@ -424,15 +424,24 @@ elif menu == "📦 Inventaris":
                 laporan_dict = {}
                 for _, item in st.session_state['cart'].items():
                     lok = item['lokasi']
-                    if lok not in laporan_dict: laporan_dict[lok] = []
-                    laporan_dict[lok].append(f"{item['nama']} ({item['jumlah']} Unit)")
+                    if lok not in laporan_dict: 
+                        laporan_dict[lok] = []
+                    
+                    # Ambil data spek, kalau strip atau kosong gak usah ditampilin biar gak panjang
+                    info_barang = f"{item['nama']} ({item['jumlah']} Unit)"
+                    if item.get('spek') and item['spek'] != "-":
+                        info_barang += f" - _{item['spek']}_" # Tambahin spek pake tulisan miring
+                    
+                    laporan_dict[lok].append(info_barang)
 
                 teks_laporan = f"📝 *LAPORAN PENGAMBILAN BARANG*\n"
                 teks_laporan += f"📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
                 teks_laporan += "-------------------------------------------\n"
+                
                 for lokasi, daftar_barang in laporan_dict.items():
                     teks_laporan += f"\n📍 *Lokasi: {lokasi}*\n"
-                    for b in daftar_barang: teks_laporan += f"  - {b}\n"
+                    for b in daftar_barang: 
+                        teks_laporan += f"  - {b}\n"
                 
                 st.info(teks_laporan)
                 st.write("Salin laporan di bawah ini:")
