@@ -432,9 +432,7 @@ elif menu == "📦 Inventaris":
                 teks_laporan += "-------------------------------------------\n"
                 for lokasi, daftar_barang in laporan_dict.items():
                     teks_laporan += f"\n📍 *Lokasi: {lokasi}*\n"
-                    for b in daftar_barang: 
-    # b di sini sekarang bisa kita tambah info spek kalau mau
-    teks_laporan += f"  - {b}\n"
+                    for b in daftar_barang: teks_laporan += f"  - {b}\n"
                 
                 st.info(teks_laporan)
                 st.write("Salin laporan di bawah ini:")
