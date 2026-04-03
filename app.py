@@ -377,7 +377,7 @@ elif menu == "📦 Inventaris":
             
             for i, row in df_display.iterrows():
                 with cols_inv[i % 4]:
-                    # Tampilkan Gambar
+                    # --- 1. TAMPILKAN GAMBAR ---
                     url_f = row['Link Foto']; f_id = ""
                     if url_f and '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
                     elif url_f and 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
@@ -385,22 +385,34 @@ elif menu == "📦 Inventaris":
                     img_url = f"https://drive.google.com/thumbnail?id={f_id}&sz=w300" if f_id else "https://via.placeholder.com/150x100?text=No+Image"
                     st.image(img_url, use_container_width=False, width=150)
                     
+                    # --- 2. INFO UTAMA ---
                     st.markdown(f"**{row['Nama Barang']}**")
                     st.caption(f"📍 {row['Lokasi']}\n✅ Stok: {int(row['Jumlah'])} Unit")
                     
-                    # --- INPUT QTY DENGAN LIMIT STOK ---
-                    # Kita tambahin reset_cnt di key supaya kalau di-reset, key-nya berubah total
+                    # --- 3. SPEK (PAKAI EXPANDER BIAR RAPI) ---
+                    # Kita cek dulu, kalau speknya kosong gak usah munculin detail
+                    val_spec = str(row['Spesifikasi']) if 'Spesifikasi' in row and pd.notna(row['Spesifikasi']) else "-"
+                    if val_spec != "-":
+                        with st.expander("Lihat Spek"):
+                            st.write(val_spec)
+                    
+                    # --- 4. INPUT QTY ---
                     qty_key = f"qty_{i}_{st.session_state['reset_cnt']}"
                     qty_ambil = st.number_input(
                         "Qty", 
                         min_value=0, 
-                        max_value=int(row['Jumlah']), # BIAR GAK BISA LEBIH DARI STOK
+                        max_value=int(row['Jumlah']), 
                         step=1, 
                         key=qty_key
                     )
                     
                     if qty_ambil > 0:
-                        st.session_state['cart'][i] = {'nama': row['Nama Barang'], 'lokasi': row['Lokasi'], 'jumlah': qty_ambil}
+                        st.session_state['cart'][i] = {
+                            'nama': row['Nama Barang'], 
+                            'lokasi': row['Lokasi'], 
+                            'jumlah': qty_ambil,
+                            'spek': val_spec # Kita simpan juga speknya di keranjang
+                        }
                     elif i in st.session_state['cart'] and qty_ambil == 0:
                         del st.session_state['cart'][i]
 
@@ -420,7 +432,9 @@ elif menu == "📦 Inventaris":
                 teks_laporan += "-------------------------------------------\n"
                 for lokasi, daftar_barang in laporan_dict.items():
                     teks_laporan += f"\n📍 *Lokasi: {lokasi}*\n"
-                    for b in daftar_barang: teks_laporan += f"  - {b}\n"
+                    for b in daftar_barang: 
+    # b di sini sekarang bisa kita tambah info spek kalau mau
+    teks_laporan += f"  - {b}\n"
                 
                 st.info(teks_laporan)
                 st.write("Salin laporan di bawah ini:")
