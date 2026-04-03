@@ -402,30 +402,39 @@ elif menu == "📦 Inventaris":
                     elif i in st.session_state['cart'] and qty_ambil == 0:
                         del st.session_state['cart'][i] # Hapus dari keranjang kalau jadi 0
 
-            # --- 3. GENERATE LAPORAN DARI KERANJANG ---
+            # --- 3. GENERATE LAPORAN (GROUPING BY LOKASI & COPY BUTTON) ---
             if st.session_state['cart']:
                 st.divider()
                 st.markdown("### 📄 Draft Laporan Pengambilan")
                 
-                cart_items = st.session_state['cart']
-                
-                teks_laporan = f"📝 **LAPORAN PENGAMBILAN BARANG**\n"
+                # Kita susun data agar dikelompokkan berdasarkan lokasi
+                laporan_dict = {}
+                for _, item in st.session_state['cart'].items():
+                    lok = item['lokasi']
+                    if lok not in laporan_dict:
+                        laporan_dict[lok] = []
+                    laporan_dict[lok].append(f"{item['nama']} ({item['jumlah']} Unit)")
+
+                # Susun teks string-nya
+                teks_laporan = f"📝 *LAPORAN PENGAMBILAN BARANG*\n"
                 teks_laporan += f"📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
                 teks_laporan += "-------------------------------------------\n"
                 
-                for _, item in cart_items.items():
-                    teks_laporan += f"• **{item['nama']}** ({item['jumlah']} Unit)\n"
-                    teks_laporan += f"  📍 Lokasi: {item['lokasi']}\n"
+                for lokasi, daftar_barang in laporan_dict.items():
+                    teks_laporan += f"\n📍 *Lokasi: {lokasi}*\n"
+                    for b in daftar_barang:
+                        teks_laporan += f"  - {b}\n"
                 
+                # Tampilkan Preview
                 st.info(teks_laporan)
-                st.download_button("📥 Download (TXT)", teks_laporan, f"laporan_{datetime.now().strftime('%Y%m%d')}.txt")
+                
+                # Fitur Copy to Clipboard (Pakai st.code supaya ada tombol copy bawaan Streamlit)
+                st.write("Klik ikon salin di pojok kanan atas kotak di bawah ini:")
+                st.code(teks_laporan, language=None)
                 
                 if st.button("🗑️ Kosongkan Keranjang"):
                     st.session_state['cart'] = {}
                     st.rerun()
-
-        else:
-            st.info("Belum ada data aset.")
     with tab_add:
         if st.session_state['role'] == "admin":
             st.markdown("### ➕ Tambah Aset Baru")
