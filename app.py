@@ -433,51 +433,44 @@ elif menu == "📦 Inventaris":
                     elif i in st.session_state['cart']:
                         del st.session_state['cart'][i]
 
-         # --- 3. GENERATE LAPORAN (VERSI PURE MARKDOWN - ANTI BOCOR) ---
+         # --- 3. GENERATE LAPORAN (DENGAN SPEK) ---
             if st.session_state['cart']:
                 st.divider()
-                st.subheader("📄 Draft Laporan")
+                st.markdown("### 📄 Draft Laporan Pengambilan")
                 
-                # A. Kelompokkan berdasarkan Lokasi
-                laporan_grup = {}
+                laporan_dict = {}
                 for _, item in st.session_state['cart'].items():
                     lok = item['lokasi']
-                    if lok not in laporan_grup:
-                        laporan_grup[lok] = []
-                    laporan_grup[lok].append(item)
+                    if lok not in laporan_dict: 
+                        laporan_dict[lok] = []
+                    
+                    # Ambil data spek, kalau strip atau kosong gak usah ditampilin biar gak panjang
+                    info_barang = f"{item['nama']} ({item['jumlah']} Unit)"
+                    if item.get('spek') and item['spek'] != "-":
+                        info_barang += f" - _{item['spek']}_" # Tambahin spek pake tulisan miring
+                    
+                    laporan_dict[lok].append(info_barang)
 
-                # B. Susun teks untuk Tampilan & WA
-                teks_visual = ""
-                teks_wa = f"📝 *LAPORAN PENGAMBILAN ASET*\n📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+                teks_laporan = f"📝 *LAPORAN PENGAMBILAN BARANG*\n"
+                teks_laporan += f"📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+                teks_laporan += "-------------------------------------------\n"
                 
-                for lokasi, daftar_barang in laporan_grup.items():
-                    # Judul Lokasi (Visual & WA)
-                    teks_visual += f"#### 📍 {lokasi}\n"
-                    teks_wa += f"\n📍 *{lokasi}*:\n"
-
-                    for b in daftar_barang:
-                        s = b['spek'] if b['spek'] != "-" else "No Spec"
-                        # Baris Barang (Visual Layar)
-                        teks_visual += f"- **{b['nama']}** \n &nbsp;&nbsp;&nbsp;&nbsp;*{s}* → `{b['jumlah']} Unit`\n"
-                        # Baris Barang (WA)
-                        teks_wa += f"- {b['nama']} ({s}) = {b['jumlah']} Unit\n"
-
-                # C. TAMPILKAN KE LAYAR
-                # Pake st.markdown biasa, hapus st.info yang bikin bocor itu
-                st.markdown(teks_visual)
+                for lokasi, daftar_barang in laporan_dict.items():
+                    teks_laporan += f"\n📍 *Lokasi: {lokasi}*\n"
+                    for b in daftar_barang: 
+                        teks_laporan += f"  - {b}\n"
                 
-                st.divider()
+                st.info(teks_laporan)
+                st.write("Salin laporan di bawah ini:")
+                st.code(teks_laporan, language=None)
                 
-                # D. KOTAK COPY & RESET
-                st.caption("👇 Klik tombol copy di pojok kanan kotak hitam ini")
-                col_btn1, col_btn2 = st.columns([4, 1])
-                with col_btn1:
-                    st.code(teks_wa, language=None)
-                with col_btn2:
-                    if st.button("🗑️ Reset", use_container_width=True):
-                        st.session_state['cart'] = {}
-                        st.session_state['reset_cnt'] += 1
-                        st.rerun()
+                # --- TOMBOL KOSONGKAN YANG BENER ---
+                if st.button("🗑️ Kosongkan Keranjang"):
+                    st.session_state['cart'] = {}
+                    st.session_state['reset_cnt'] += 1 # Ganti identitas semua widget qty
+                    st.rerun()
+        else:
+            st.info("Belum ada data aset.")
     with tab_add:
         if st.session_state['role'] == "admin":
             st.markdown("### ➕ Tambah Aset Baru")
