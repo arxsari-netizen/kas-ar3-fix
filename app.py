@@ -550,6 +550,9 @@ elif menu == "📦 Inventaris":
                         
                         if st.form_submit_button("💾 Simpan Perubahan"):
                             if n_lokasi != "Pilih Lokasi":
+                                # --- TAMBAHIN BARIS INI BRAY ---
+                                ws_inv = sh.worksheet("Inventaris") 
+                                # ------------------------------
                                 idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
                                 if idx:
                                     status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
