@@ -354,20 +354,9 @@ elif menu == "📊 Laporan":
 
 # --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
 elif menu == "📦 Inventaris":
-        st.cache_data.clear()
-        
-        # Ambil data pake fungsi engine kita
-        df_inv = get_data("Inventaris") 
-        
-        # Bikin Tab
-        tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
-        
-        # Proses sorting A-Z dilakukan sebelum masuk ke dalam tab
-        if not df_inv.empty:
-            # Urutkan berdasarkan Nama Barang (A-Z), lalu Lokasi
-            df_inv = df_inv.sort_values(by=['Nama Barang', 'Lokasi'], ascending=[True, True])
-            
-    # ---------------------------------------------
+    tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
+    ws_inv = sh.worksheet("Inventaris")
+
     with tab_view:
         if not df_inv.empty:
             # --- 1. INISIALISASI STATE BARU ---
@@ -414,30 +403,8 @@ elif menu == "📦 Inventaris":
                     st.markdown(f'<img src="{img_src}" class="img-container">', unsafe_allow_html=True)
                     
                     # --- INFO BARANG ---
-                    # 1. Cek jumlah tersedia (Stok asli dikurangi yang sedang dipinjam)
-                    stok_fisik = int(row['Jumlah'])
-                    sedang_pinjam = int(row['Dipinjam']) if pd.notna(row['Dipinjam']) else 0
-                    stok_ready = stok_fisik - sedang_pinjam
-                    
-                    # 2. Siapkan info peminjam kalau ada
-                    info_peminjam = ""
-                    if sedang_pinjam > 0:
-                        nama_peminjam = row['Keterangan'] if pd.notna(row['Keterangan']) and row['Keterangan'] != "-" else "Warga"
-                        info_peminjam = f"\n| 👤 Pinjam: {sedang_pinjam} ({nama_peminjam})"
-
-                    # 3. Tampilkan di Kartu
                     st.markdown(f"**{row['Nama Barang']}**")
-                    
-                    # Warna status: Merah kalau habis dipinjam, Hijau kalau ready
-                    warna_stok = "green" if stok_ready > 0 else "red"
-                    
-                    st.markdown(f"""
-                        <div style="font-size: 13px; line-height: 1.4;">
-                            📍 {row['Lokasi']}<br>
-                            ✅ Tersedia: <span style="color:{warna_stok}; font-weight:bold;">{stok_ready}</span> / Total: {stok_fisik}
-                            <span style="color: #d63031; font-weight: 500;">{info_peminjam}</span>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    st.caption(f"📍 {row['Lokasi']}\n✅ Stok: {int(row['Jumlah'])} Unit")
                     
                     # Spek di dalam expander
                     val_spec = str(row['Spesifikasi']) if 'Spesifikasi' in row and pd.notna(row['Spesifikasi']) else "-"
