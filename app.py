@@ -353,8 +353,7 @@ elif menu == "📊 Laporan":
 
 
 # --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
-e# --- 8. REFACTORED INVENTARIS ---
-elif menu == "📦 Inventaris":
+    elif menu == "📦 Inventaris":
     st.cache_data.clear()
     
     # PERBAIKAN DI SINI: Panggil fungsi get_data, jangan panggil sh.worksheet langsung
