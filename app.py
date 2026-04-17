@@ -372,60 +372,76 @@ elif menu == "📦 Inventaris":
             if cari_inv:
                 df_display = df_display[df_display['Nama Barang'].str.contains(cari_inv, case=False)]
 
-            cols_inv = st.columns(4) 
+            st.markdown("""
+            <style>
+            .main-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 15px;
+                justify-content: center;
+            }
+            .card {
+                background-color: white;
+                border-radius: 12px;
+                padding: 10px;
+                width: 160px; /* Lebar kartu diatur tetap */
+                box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+                border: 1px solid #eee;
+            }
+            .img-container {
+                width: 100%;
+                height: 120px;
+                object-fit: cover;
+                border-radius: 8px;
+            }
+            @media (max-width: 600px) {
+                .card {
+                    width: 45%; /* Di HP jadi 2 kolom (hampir separuh layar) */
+                }
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+        # Container Utama (Buka Tag)
+        st.write('<div class="main-container">', unsafe_allow_html=True)
+
+        for i, row in df_display.iterrows():
+            # Kita olah link fotonya dulu
+            url_f = row['Link Foto']; f_id = ""
+            if url_f and '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
+            elif url_f and 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
+            img_src = f"https://drive.google.com/thumbnail?id={f_id}&sz=w400" if f_id else "https://via.placeholder.com/400x300?text=No+Image"
+
+            # Render Kartu dalam HTML
+            card_html = f"""
+            <div class="card">
+                <img src="{img_src}" class="img-container">
+                <div style="margin-top:8px; font-weight:bold; font-size:14px;">{row['Nama Barang']}</div>
+                <div style="font-size:12px; color:gray;">📍 {row['Lokasi']}</div>
+                <div style="font-size:12px; color:green;">✅ Stok: {int(row['Jumlah'])}</div>
+            </div>
+            """
+            # Note: Untuk input Qty, Streamlit widget nggak bisa ditaruh di dalam HTML f-string.
+            # Jadi kita pake kolom Streamlit biasa tapi kita bungkus biar tetep rapi.
             
-            for i, row in df_display.iterrows():
-                with cols_inv[i % 4]:
-                    # --- CSS UNTUK SERAGAMKAN UKURAN GAMBAR ---
-                    # Kita bungkus gambar di dalam div yang tingginya dikunci (misal 150px)
-                    st.markdown("""
-                        <style>
-                        .img-container {
-                            width: 100%;
-                            height: 150px; /* Kunci tinggi gambar bray */
-                            object-fit: cover; /* Biar gambar auto-crop dan gak gepeng */
-                            border-radius: 10px;
-                        }
-                        </style>
-                        """, unsafe_allow_html=True)
+            with st.container():
+                st.write(card_html, unsafe_allow_html=True)
+                
+                # Expand & Input Qty ditaruh di bawah kartu HTML
+                val_spec = str(row['Spesifikasi']) if 'Spesifikasi' in row and pd.notna(row['Spesifikasi']) else "-"
+                with st.expander("Detail"):
+                    st.write(f"Spek: {val_spec}")
+                
+                qty_key = f"qty_{i}_{st.session_state['reset_cnt']}"
+                qty_ambil = st.number_input("Qty", 0, int(row['Jumlah']), step=1, key=qty_key, label_visibility="collapsed")
+                
+                # Logika Cart (Sama kayak sebelumnya)
+                if qty_ambil > 0:
+                    st.session_state['cart'][i] = {'nama': row['Nama Barang'], 'lokasi': row['Lokasi'], 'jumlah': qty_ambil, 'spek': val_spec}
+                elif i in st.session_state['cart'] and qty_ambil == 0:
+                    del st.session_state['cart'][i]
 
-                    # Tampilkan Gambar
-                    url_f = row['Link Foto']; f_id = ""
-                    if url_f and '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
-                    elif url_f and 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
-                    
-                    if f_id:
-                        img_src = f"https://drive.google.com/thumbnail?id={f_id}&sz=w400"
-                    else:
-                        img_src = "https://via.placeholder.com/400x300?text=No+Image"
-                    
-                    # Kita pake HTML tag biar CSS-nya jalan
-                    st.markdown(f'<img src="{img_src}" class="img-container">', unsafe_allow_html=True)
-                    
-                    # --- INFO BARANG ---
-                    st.markdown(f"**{row['Nama Barang']}**")
-                    st.caption(f"📍 {row['Lokasi']}\n✅ Stok: {int(row['Jumlah'])} Unit")
-                    
-                    # Spek di dalam expander
-                    val_spec = str(row['Spesifikasi']) if 'Spesifikasi' in row and pd.notna(row['Spesifikasi']) else "-"
-                    if val_spec != "-":
-                        with st.expander("Lihat Spek"):
-                            st.write(val_spec)
-                    
-                    # Input Qty
-                    qty_key = f"qty_{i}_{st.session_state['reset_cnt']}"
-                    qty_ambil = st.number_input("Qty", 0, int(row['Jumlah']), step=1, key=qty_key)
-                    
-                    if qty_ambil > 0:
-                        st.session_state['cart'][i] = {
-                            'nama': row['Nama Barang'], 
-                            'lokasi': row['Lokasi'], 
-                            'jumlah': qty_ambil,
-                            'spek': val_spec
-                        }
-                    elif i in st.session_state['cart'] and qty_ambil == 0:
-                        del st.session_state['cart'][i]
-
+        st.write('</div>', unsafe_allow_html=True) # Tutup Container Utama
             # --- 3. GENERATE LAPORAN (DENGAN SPEK) ---
             if st.session_state['cart']:
                 st.divider()
