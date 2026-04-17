@@ -367,11 +367,6 @@ elif menu == "📦 Inventaris":
             # Urutkan berdasarkan Nama Barang (A-Z), lalu Lokasi
             df_inv = df_inv.sort_values(by=['Nama Barang', 'Lokasi'], ascending=[True, True])
             
-        with tab_view:
-            # Sisa kode tab_view lo di sini...
-            if not df_inv.empty:
-                st.markdown("### 📋 Pilih Barang untuk Laporan")
-                # ... dan seterusnya
     # ---------------------------------------------
     with tab_view:
         if not df_inv.empty:
