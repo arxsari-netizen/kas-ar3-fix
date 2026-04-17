@@ -357,7 +357,11 @@ elif menu == "📦 Inventaris":
     st.cache_data.clear()
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
     ws_inv = sh.worksheet("Inventaris")
-
+# --- TAMBAHKAN BARIS INI UNTUK MENGURUTKAN ---
+    if not df_inv.empty:
+        # Urutkan berdasarkan Nama Barang (A-Z), lalu Lokasi
+        df_inv = df_inv.sort_values(by=['Nama Barang', 'Lokasi'], ascending=[True, True])
+    # ---------------------------------------------
     with tab_view:
         if not df_inv.empty:
             # --- 1. INISIALISASI STATE BARU ---
