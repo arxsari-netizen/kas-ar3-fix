@@ -450,30 +450,9 @@ elif menu == "📦 Inventaris":
                 tampilan_layar = ""
                 teks_copy_wa = f"📝 *LAPORAN PENGAMBILAN ASET*\n📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
 
-                for lokasi, items in grouped_cart.items():
-                    # Judul Lokasi di layar
-                    tampilan_layar += f"""
-                    <div style="background-color: #f1f3f4; padding: 5px 12px; border-radius: 5px; margin-top: 15px; border-left: 5px solid #D4AF37;">
-                        <b style="color: #2c3e50; font-size: 15px;">📍 {lokasi}</b>
-                    </div>
-                    """
                     teks_copy_wa += f"\n📍 *{lokasi}*:\n"
-
-                    for itm in items:
-                        # List barang di layar
-                        tampilan_layar += f"""
-                        <div style="padding: 8px 25px; border-bottom: 1px solid #eee;">
-                            <span style="font-weight: bold; color: #34495e;">• {itm['nama']}</span> 
-                            <span style="color: #7f8c8d; font-size: 12px;">({itm['spek']})</span>
-                            <b style="color: #27ae60; float: right;">{itm['jumlah']} Unit</b>
-                        </div>
-                        """
                         # List barang buat WA
                         teks_copy_wa += f"- {itm['nama']} ({itm['spek']}) = {itm['jumlah']} Unit\n"
-                
-                # Render Tampilan
-                st.markdown(tampilan_layar, unsafe_allow_html=True)
-                st.markdown("<br>", unsafe_allow_html=True)
 
                 # 3. Tombol Copy & Clear
                 st.info("💡 *Gunakan tombol di pojok kanan kotak bawah untuk COPY*")
