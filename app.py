@@ -433,12 +433,12 @@ elif menu == "📦 Inventaris":
                     elif i in st.session_state['cart']:
                         del st.session_state['cart'][i]
 
-           # --- 📄 BAGIAN LAPORAN (FINAL - GRUP LOKASI) ---
+          # --- 📄 BAGIAN LAPORAN (FINAL - NO LEAK) ---
             if st.session_state['cart']:
                 st.divider()
                 st.markdown("### 📄 Draft Laporan")
                 
-                # 1. Kelompokkan barang berdasarkan Lokasi (Biar gak boros baris)
+                # 1. Kelompokkan berdasarkan Lokasi
                 laporan_grup = {}
                 for _, item in st.session_state['cart'].items():
                     lok = item['lokasi']
@@ -446,41 +446,44 @@ elif menu == "📦 Inventaris":
                         laporan_grup[lok] = []
                     laporan_grup[lok].append(item)
 
-                # 2. Susun teks buat Tampilan Layar & Copy WA
-                html_view = ""
+                # 2. Susun teks buat Tampilan Layar (HTML) & Copy WA (Plain Text)
+                html_final = ""
                 teks_wa = f"📝 *LAPORAN PENGAMBILAN ASET*\n📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
 
                 for lokasi, daftar_barang in laporan_grup.items():
-                    # Header Lokasi (Muncul 1x aja per grup)
-                    html_view += f"""
-                    <div style="background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; margin-top: 10px; border-left: 5px solid #D4AF37;">
+                    # Header Lokasi
+                    html_final += f"""
+                    <div style="background-color: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 15px; border-left: 5px solid #D4AF37;">
                         <b style="color: #2c3e50;">📍 {lokasi}</b>
                     </div>
                     """
                     teks_wa += f"\n📍 *{lokasi}*:\n"
 
                     for b in daftar_barang:
-                        # Baris Barang (Nama + Spek + Jumlah)
-                        html_view += f"""
-                        <div style="padding: 5px 20px; border-bottom: 1px solid #f1f1f1; display: flex; justify-content: space-between; align-items: center;">
-                            <div style="flex-grow: 1;">
-                                <span style="font-weight: 500;">• {b['nama']}</span>
-                                <br><small style="color: #888; margin-left: 12px;">{b['spek']}</small>
+                        # Baris Barang
+                        html_final += f"""
+                        <div style="padding: 10px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                            <div>
+                                <span style="font-weight: 500;">• {b['nama']}</span><br>
+                                <small style="color: #888; margin-left: 15px;">{b['spek']}</small>
                             </div>
                             <b style="color: #27ae60;">{b['jumlah']} Unit</b>
                         </div>
                         """
                         teks_wa += f"- {b['nama']} ({b['spek']}) = {b['jumlah']} Unit\n"
                 
-                # Render tampilan rapi ke layar
-                st.markdown(html_view, unsafe_allow_html=True)
+                # TAMPILKAN HASILNYA
+                st.write("---")
+                # Gunakan container biar HTML gak lari-lari
+                with st.container():
+                    st.markdown(html_final, unsafe_allow_html=True)
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 
-                # 3. Tombol Copy & Reset
+                # 3. Bagian Tombol & Copy
+                st.caption("👇 Klik tombol copy di pojok kanan kotak ini untuk WA")
                 col_btn1, col_btn2 = st.columns([4, 1])
                 with col_btn1:
-                    # Kotak copy otomatis (User tinggal klik tombol copy di pojok kanan)
                     st.code(teks_wa, language=None)
                 with col_btn2:
                     if st.button("🗑️ Reset", use_container_width=True):
