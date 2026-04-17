@@ -353,11 +353,16 @@ elif menu == "📊 Laporan":
 
 
 # --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
+e# --- 8. REFACTORED INVENTARIS ---
 elif menu == "📦 Inventaris":
     st.cache_data.clear()
+    
+    # PERBAIKAN DI SINI: Panggil fungsi get_data, jangan panggil sh.worksheet langsung
+    df_inv = get_data("Inventaris") 
+    
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
-    df_inv = sh.worksheet("Inventaris")
-# --- TAMBAHKAN BARIS INI UNTUK MENGURUTKAN ---
+    
+    # Sekarang df_inv sudah jadi DataFrame, jadi fungsi .empty dan .sort_values bakal jalan
     if not df_inv.empty:
         # Urutkan berdasarkan Nama Barang (A-Z), lalu Lokasi
         df_inv = df_inv.sort_values(by=['Nama Barang', 'Lokasi'], ascending=[True, True])
@@ -408,7 +413,6 @@ elif menu == "📦 Inventaris":
                     st.markdown(f'<img src="{img_src}" class="img-container">', unsafe_allow_html=True)
                     
                     # --- INFO BARANG ---
-                    st.markdown(f"**{row['Nama Barang']}**")
                     # 1. Cek jumlah tersedia (Stok asli dikurangi yang sedang dipinjam)
                     stok_fisik = int(row['Jumlah'])
                     sedang_pinjam = int(row['Dipinjam']) if pd.notna(row['Dipinjam']) else 0
