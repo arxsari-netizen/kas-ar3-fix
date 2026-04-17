@@ -356,7 +356,7 @@ elif menu == "📦 Inventaris":
     
     # 1. Tarik data sebagai DataFrame (PENTING: Pake get_data)
     data_raw = sh.worksheet("Inventaris").get_all_records()
-    df_inv = pd.DataFrame(data_raw
+    df_inv = pd.DataFrame(data_raw)
     
     # 2. Urutkan secara Abjad (A-Z) sebelum masuk ke Tab
     if not df_inv.empty:
