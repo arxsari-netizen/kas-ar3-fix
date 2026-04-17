@@ -433,52 +433,43 @@ elif menu == "📦 Inventaris":
                     elif i in st.session_state['cart']:
                         del st.session_state['cart'][i]
 
-         # --- 3. GENERATE LAPORAN (VERSI FINAL ANTI BOCOR) ---
+         # --- 3. GENERATE LAPORAN (VERSI PURE MARKDOWN - ANTI BOCOR) ---
             if st.session_state['cart']:
                 st.divider()
-                st.markdown("### 📄 Draft Laporan")
+                st.subheader("📄 Draft Laporan")
                 
-                # Filter data berdasarkan index di cart (Biar rapi per lokasi)
+                # A. Kelompokkan berdasarkan Lokasi
                 laporan_grup = {}
-                for idx, item in st.session_state['cart'].items():
+                for _, item in st.session_state['cart'].items():
                     lok = item['lokasi']
                     if lok not in laporan_grup:
                         laporan_grup[lok] = []
                     laporan_grup[lok].append(item)
 
-                teks_visual = "" # Pake variabel baru biar gak ketuker
+                # B. Susun teks untuk Tampilan & WA
+                teks_visual = ""
                 teks_wa = f"📝 *LAPORAN PENGAMBILAN ASET*\n📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
                 
                 for lokasi, daftar_barang in laporan_grup.items():
-                    # Header Lokasi (Visual Layar)
-                    teks_visual += f"""
-                    <div style="background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; margin-top: 10px; border-left: 5px solid #D4AF37;">
-                        <b style="color: #2c3e50;">📍 {lokasi}</b>
-                    </div>
-                    """
+                    # Judul Lokasi (Visual & WA)
+                    teks_visual += f"#### 📍 {lokasi}\n"
                     teks_wa += f"\n📍 *{lokasi}*:\n"
 
                     for b in daftar_barang:
+                        s = b['spek'] if b['spek'] != "-" else "No Spec"
                         # Baris Barang (Visual Layar)
-                        teks_visual += f"""
-                        <div style="padding: 10px 20px; border-bottom: 1px solid #f1f1f1; display: flex; justify-content: space-between; align-items: center;">
-                            <div style="flex-grow: 1;">
-                                <span style="font-weight: 500;">• {b['nama']}</span>
-                                <br><small style="color: #888; margin-left: 12px;">{b['spek']}</small>
-                            </div>
-                            <b style="color: #27ae60;">{b['jumlah']} Unit</b>
-                        </div>
-                        """
-                        # Teks buat WA (Format teks polos)
-                        teks_wa += f"- {b['nama']} ({b['spek']}) = {b['jumlah']} Unit\n"
-                
-                # --- BAGIAN RENDER (KUNCINYA DI SINI) ---
-                # Ganti st.info(teks_laporan) di baris 385 jadi ini:
-                st.markdown(teks_visual, unsafe_allow_html=True) 
-                
-                st.markdown("<br>", unsafe_allow_html=True)
+                        teks_visual += f"- **{b['nama']}** \n &nbsp;&nbsp;&nbsp;&nbsp;*{s}* → `{b['jumlah']} Unit`\n"
+                        # Baris Barang (WA)
+                        teks_wa += f"- {b['nama']} ({s}) = {b['jumlah']} Unit\n"
 
-                # Tombol Copy (Pake st.code biar user gampang copy)
+                # C. TAMPILKAN KE LAYAR
+                # Pake st.markdown biasa, hapus st.info yang bikin bocor itu
+                st.markdown(teks_visual)
+                
+                st.divider()
+                
+                # D. KOTAK COPY & RESET
+                st.caption("👇 Klik tombol copy di pojok kanan kotak hitam ini")
                 col_btn1, col_btn2 = st.columns([4, 1])
                 with col_btn1:
                     st.code(teks_wa, language=None)
