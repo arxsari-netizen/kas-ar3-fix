@@ -501,30 +501,19 @@ elif menu == "📦 Inventaris":
         if not df_inv.empty:
             st.markdown("### 🔄 Update Status & Peminjaman")
 
-            # --- PERBAIKAN: SEARCH BAR & ABJAD ---
-            # 1. Kasih kolom pencarian teks
-            cari_edit = st.text_input("🔍 Cari Barang yang mau diupdate...", placeholder="Ketik nama barang...")
-            
-            # 2. Bikin Label (Nama + Lokasi + Kondisi)
+            # 1. Bikin Label (Nama + Lokasi + Kondisi)
             df_inv['label_edit'] = (
                 df_inv['Nama Barang'] + " [" + 
                 df_inv['Lokasi'].astype(str) + "] - (" + 
                 df_inv['Kondisi'] + ")"
             )
 
-            # 3. Filter data berdasarkan ketikan (kalo ada)
-            df_pilihan = df_inv.copy()
-            if cari_edit:
-                df_pilihan = df_pilihan[df_pilihan['label_edit'].str.contains(cari_edit, case=False)]
+            # 2. URUTKAN SESUAI ABJAD (A-Z)
+            # Kita urutkan berdasarkan label_edit biar rapi pas dibaca di dropdown
+            pilihan_urut = sorted(df_inv['label_edit'].tolist())
 
-            # 4. URUTKAN SESUAI ABJAD (Sort)
-            pilihan_urut = sorted(df_pilihan['label_edit'].tolist())
-
-            if not pilihan_urut:
-                st.warning("Barang tidak ditemukan.")
-                pilih_barang = None
-            else:
-                pilih_barang = st.selectbox("Pilih Barang dari daftar hasil pencarian:", pilihan_urut)
+            # 3. Langsung Selectbox (Tanpa kolom search teks)
+            pilih_barang = st.selectbox("Pilih Barang (Sudah Urut Abjad):", pilihan_urut)
             
             # Filter data asli untuk dapet baris 'curr'
             if pilih_barang:
@@ -565,6 +554,8 @@ elif menu == "📦 Inventaris":
                                     
                                     st.success(f"Data {curr['Nama Barang']} berhasil diupdate!")
                                     st.cache_data.clear(); time.sleep(1); st.rerun()
+                            else:
+                                st.error("Pilih lokasi dulu bray!")
             # 2. Fitur Pecah Stok (Terbuka untuk Umum)
             with st.expander("🛠️ Fitur Pecah Stok (Jika sebagian unit rusak/pindah)"):
                 if int(curr['Jumlah']) > 1:
