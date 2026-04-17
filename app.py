@@ -350,20 +350,18 @@ elif menu == "📊 Laporan":
         ck, ch = st.columns(2)
         ck.write("#### 📤 Pengeluaran KAS"); ck.dataframe(df_keluar[df_keluar['Kategori'] == 'Kas'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
         ch.write("#### 📤 Pengeluaran HADIAH"); ch.dataframe(df_keluar[df_keluar['Kategori'] == 'Hadiah'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
-
-
-# --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
 # --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
 elif menu == "📦 Inventaris":
     st.cache_data.clear()
     
     # 1. Tarik data sebagai DataFrame (PENTING: Pake get_data)
     data_raw = sh.worksheet("Inventaris").get_all_records()
-    df_inv = pd.DataFrame(data_raw)
+    df_inv = pd.DataFrame(data_raw
     
     # 2. Urutkan secara Abjad (A-Z) sebelum masuk ke Tab
     if not df_inv.empty:
         df_inv = df_inv.sort_values(by=['Nama Barang', 'Lokasi'], ascending=[True, True])
+        df_inv = df_inv.reset_index(drop=True) # <--- Tambahin baris ini bray!
     
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
 
