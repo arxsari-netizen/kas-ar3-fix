@@ -405,10 +405,30 @@ elif menu == "📦 Inventaris":
                     
                     # --- INFO BARANG ---
                     st.markdown(f"**{row['Nama Barang']}**")
-                    # Ganti baris st.caption di tab_view (sekitar baris 230) jadi ini:
-                    warna_status = "red" if row['Status'] == "Dipinjam" else "green"
-                    st.markdown(f"📍 {row['Lokasi']}")
-                    st.markdown(f"<span style='color:{warna_status}; font-weight:bold;'>{row['Status']}</span> | Stok: {int(row['Jumlah'])}", unsafe_allow_html=True)
+                    # 1. Cek jumlah tersedia (Stok asli dikurangi yang sedang dipinjam)
+                    stok_fisik = int(row['Jumlah'])
+                    sedang_pinjam = int(row['Dipinjam']) if pd.notna(row['Dipinjam']) else 0
+                    stok_ready = stok_fisik - sedang_pinjam
+                    
+                    # 2. Siapkan info peminjam kalau ada
+                    info_peminjam = ""
+                    if sedang_pinjam > 0:
+                        nama_peminjam = row['Keterangan'] if pd.notna(row['Keterangan']) and row['Keterangan'] != "-" else "Warga"
+                        info_peminjam = f"\n| 👤 Pinjam: {sedang_pinjam} ({nama_peminjam})"
+
+                    # 3. Tampilkan di Kartu
+                    st.markdown(f"**{row['Nama Barang']}**")
+                    
+                    # Warna status: Merah kalau habis dipinjam, Hijau kalau ready
+                    warna_stok = "green" if stok_ready > 0 else "red"
+                    
+                    st.markdown(f"""
+                        <div style="font-size: 13px; line-height: 1.4;">
+                            📍 {row['Lokasi']}<br>
+                            ✅ Tersedia: <span style="color:{warna_stok}; font-weight:bold;">{stok_ready}</span> / Total: {stok_fisik}
+                            <span style="color: #d63031; font-weight: 500;">{info_peminjam}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
                     
                     # Spek di dalam expander
                     val_spec = str(row['Spesifikasi']) if 'Spesifikasi' in row and pd.notna(row['Spesifikasi']) else "-"
