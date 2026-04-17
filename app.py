@@ -406,13 +406,14 @@ elif menu == "📦 Inventaris":
                         info_peminjam = f"<br><span style='color:#d63031;'>👤 Pinjam: {sedang_pinjam} ({peminjam})</span>"
 
                     warna_stok = "green" if stok_ready > 0 else "red"
-                    # AMANKAN SPEK: Cek apakah kolom 'Spesifikasi' ada, kalau nggak ada kasih strip (-)
+                    # AMANKAN SPEK
                     spek_barang = str(row.get('Spesifikasi', '-'))
+                    
                     st.markdown(f"**{row['Nama Barang']}**")
                     st.markdown(f"""
                         <div style="font-size: 13px; line-height: 1.2;">
                             📍 {row['Lokasi']}<br>
-                            ✅ Ready: <span style="color:{warna_stok}; font-weight:bold;">{stok_ready}</span> / {stok_fisik}
+                            📝 <i style="color: gray;">{spek_barang}</i><br>  ✅ Ready: <span style="color:{warna_stok}; font-weight:bold;">{stok_ready}</span> / {stok_fisik}
                             {info_peminjam}
                         </div>
                     """, unsafe_allow_html=True)
