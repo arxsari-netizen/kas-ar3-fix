@@ -354,6 +354,7 @@ elif menu == "📊 Laporan":
 
 # --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
 elif menu == "📦 Inventaris":
+    st.cache_data.clear()
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
     ws_inv = sh.worksheet("Inventaris")
 
@@ -404,7 +405,10 @@ elif menu == "📦 Inventaris":
                     
                     # --- INFO BARANG ---
                     st.markdown(f"**{row['Nama Barang']}**")
-                    st.caption(f"📍 {row['Lokasi']}\n✅ Stok: {int(row['Jumlah'])} Unit")
+                    # Ganti baris st.caption di tab_view (sekitar baris 230) jadi ini:
+                    warna_status = "red" if row['Status'] == "Dipinjam" else "green"
+                    st.markdown(f"📍 {row['Lokasi']}")
+                    st.markdown(f"<span style='color:{warna_status}; font-weight:bold;'>{row['Status']}</span> | Stok: {int(row['Jumlah'])}", unsafe_allow_html=True)
                     
                     # Spek di dalam expander
                     val_spec = str(row['Spesifikasi']) if 'Spesifikasi' in row and pd.notna(row['Spesifikasi']) else "-"
