@@ -352,16 +352,19 @@ elif menu == "📊 Laporan":
         ch.write("#### 📤 Pengeluaran HADIAH"); ch.dataframe(df_keluar[df_keluar['Kategori'] == 'Hadiah'][['Tanggal', 'Jumlah', 'Keterangan']], hide_index=True)
 # --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
 elif menu == "📦 Inventaris":
-    st.cache_data.clear()
     
-    # 1. Tarik data sebagai DataFrame (PENTING: Pake get_data)
-    data_raw = sh.worksheet("Inventaris").get_all_records()
-    df_inv = pd.DataFrame(data_raw)
+    try:
+        # Gunakan fungsi get_data supaya cache-nya jalan (TTL 600 detik / 10 menit)
+        # Kalau get_data error, kita pake cara manual tapi tetep di-cache sama Streamlit
+        df_inv = get_data("Inventaris")
+    except:
+        data_raw = sh.worksheet("Inventaris").get_all_records()
+        df_inv = pd.DataFrame(data_raw)
     
-    # 2. Urutkan secara Abjad (A-Z) sebelum masuk ke Tab
+    # 2. Urutkan secara Abjad (A-Z)
     if not df_inv.empty:
         df_inv = df_inv.sort_values(by=['Nama Barang', 'Lokasi'], ascending=[True, True])
-        df_inv = df_inv.reset_index(drop=True) # <--- Tambahin baris ini bray!
+        df_inv = df_inv.reset_index(drop=True)
     
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
 
