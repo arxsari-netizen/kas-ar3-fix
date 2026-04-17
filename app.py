@@ -446,9 +446,6 @@ elif menu == "📦 Inventaris":
 
             st.write('</div>', unsafe_allow_html=True) # Tutup Container Utama
 
-            # --- 3. GENERATE LAPORAN ---
-            if st.session_state['cart']:
-                # ... (kode laporan lo yang di bawah tetap sama)
             # --- 3. GENERATE LAPORAN (DENGAN SPEK) ---
             if st.session_state['cart']:
                 st.divider()
