@@ -433,12 +433,12 @@ elif menu == "📦 Inventaris":
                     elif i in st.session_state['cart']:
                         del st.session_state['cart'][i]
 
-          # --- 📄 BAGIAN LAPORAN (FINAL - NO LEAK) ---
+         # --- 3. GENERATE LAPORAN (GRUP LOKASI - NO LEAK) ---
             if st.session_state['cart']:
                 st.divider()
-                st.markdown("### 📄 Draft Laporan")
+                st.markdown("### 📄 Draft Laporan Pengambilan")
                 
-                # 1. Kelompokkan berdasarkan Lokasi
+                # A. Logika Pengelompokan (Grup by Lokasi)
                 laporan_grup = {}
                 for _, item in st.session_state['cart'].items():
                     lok = item['lokasi']
@@ -446,13 +446,13 @@ elif menu == "📦 Inventaris":
                         laporan_grup[lok] = []
                     laporan_grup[lok].append(item)
 
-                # 2. Susun teks buat Tampilan Layar (HTML) & Copy WA (Plain Text)
-                html_final = ""
+                # B. Susun HTML (buat layar) dan Teks (buat WA)
+                html_view = ""
                 teks_wa = f"📝 *LAPORAN PENGAMBILAN ASET*\n📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
-
+                
                 for lokasi, daftar_barang in laporan_grup.items():
-                    # Header Lokasi
-                    html_final += f"""
+                    # Header Lokasi di Layar
+                    html_view += f"""
                     <div style="background-color: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 15px; border-left: 5px solid #D4AF37;">
                         <b style="color: #2c3e50;">📍 {lokasi}</b>
                     </div>
@@ -460,28 +460,27 @@ elif menu == "📦 Inventaris":
                     teks_wa += f"\n📍 *{lokasi}*:\n"
 
                     for b in daftar_barang:
-                        # Baris Barang
-                        html_final += f"""
-                        <div style="padding: 10px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                        spek_text = b['spek'] if b['spek'] != "-" else "No Spec"
+                        # Baris Barang di Layar
+                        html_view += f"""
+                        <div style="padding: 10px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <span style="font-weight: 500;">• {b['nama']}</span><br>
-                                <small style="color: #888; margin-left: 15px;">{b['spek']}</small>
+                                <small style="color: #888; margin-left: 15px;">{spek_text}</small>
                             </div>
                             <b style="color: #27ae60;">{b['jumlah']} Unit</b>
                         </div>
                         """
-                        teks_wa += f"- {b['nama']} ({b['spek']}) = {b['jumlah']} Unit\n"
-                
-                # TAMPILKAN HASILNYA
-                st.write("---")
-                # Gunakan container biar HTML gak lari-lari
-                with st.container():
-                    st.markdown(html_final, unsafe_allow_html=True)
+                        # Teks buat WA
+                        teks_wa += f"- {b['nama']} ({spek_text}) = {b['jumlah']} Unit\n"
+
+                # C. RENDER KE LAYAR (Pake st.markdown, JANGAN st.info)
+                st.markdown(html_view, unsafe_allow_html=True)
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 
-                # 3. Bagian Tombol & Copy
-                st.caption("👇 Klik tombol copy di pojok kanan kotak ini untuk WA")
+                # D. Kotak Copy & Tombol Reset
+                st.caption("👇 Klik tombol copy di pojok kanan kotak ini")
                 col_btn1, col_btn2 = st.columns([4, 1])
                 with col_btn1:
                     st.code(teks_wa, language=None)
