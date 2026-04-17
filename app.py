@@ -433,44 +433,31 @@ elif menu == "📦 Inventaris":
                     elif i in st.session_state['cart']:
                         del st.session_state['cart'][i]
 
-            # --- 3. GENERATE LAPORAN (DENGAN SPEK) ---
+            # --- 📄 BAGIAN LAPORAN (VERSI SIMPEL & COPY-ABLE) ---
             if st.session_state['cart']:
                 st.divider()
-                st.markdown("### 📄 Draft Laporan Pengambilan")
+                st.markdown("### 📄 Draft Laporan")
                 
-                laporan_dict = {}
+                # Susun teks laporan
+                teks_wa = f"📝 *LAPORAN PENGAMBILAN ASET*\n📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
                 for _, item in st.session_state['cart'].items():
-                    lok = item['lokasi']
-                    if lok not in laporan_dict: 
-                        laporan_dict[lok] = []
-                    
-                    # Ambil data spek, kalau strip atau kosong gak usah ditampilin biar gak panjang
-                    info_barang = f"{item['nama']} ({item['jumlah']} Unit)"
-                    if item.get('spek') and item['spek'] != "-":
-                        info_barang += f" - _{item['spek']}_" # Tambahin spek pake tulisan miring
-                    
-                    laporan_dict[lok].append(info_barang)
+                    teks_wa += f"📍 {item['lokasi']} - {item['nama']} ({item['jumlah']} Unit)\n"
+                
+                # Tampilkan teks laporan yang rapi (Bukan di kotak biru)
+                st.info(teks_wa)
 
-                teks_laporan = f"📝 *LAPORAN PENGAMBILAN BARANG*\n"
-                teks_laporan += f"📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
-                teks_laporan += "-------------------------------------------\n"
+                # Tombol Copy & Clear
+                col_btn1, col_btn2 = st.columns(2)
+                with col_btn1:
+                    # Fitur copy bawaan Streamlit (teks_wa bakal ada tombol copy di pojok kanan)
+                    st.copy_to_clipboard(teks_wa)
+                    st.success("Teks laporan siap di-paste!")
                 
-                for lokasi, daftar_barang in laporan_dict.items():
-                    teks_laporan += f"\n📍 *Lokasi: {lokasi}*\n"
-                    for b in daftar_barang: 
-                        teks_laporan += f"  - {b}\n"
-                
-                st.info(teks_laporan)
-                st.write("Salin laporan di bawah ini:")
-                st.code(teks_laporan, language=None)
-                
-                # --- TOMBOL KOSONGKAN YANG BENER ---
-                if st.button("🗑️ Kosongkan Keranjang"):
-                    st.session_state['cart'] = {}
-                    st.session_state['reset_cnt'] += 1 # Ganti identitas semua widget qty
-                    st.rerun()
-        else:
-            st.info("Belum ada data aset.")
+                with col_btn2:
+                    if st.button("🗑️ Kosongkan Keranjang", use_container_width=True):
+                        st.session_state['cart'] = {}
+                        st.session_state['reset_cnt'] += 1
+                        st.rerun()
     with tab_add:
         if st.session_state['role'] == "admin":
             st.markdown("### ➕ Tambah Aset Baru")
