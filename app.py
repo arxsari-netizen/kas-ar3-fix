@@ -433,7 +433,7 @@ elif menu == "📦 Inventaris":
                     elif i in st.session_state['cart']:
                         del st.session_state['cart'][i]
 
-            # --- 📄 BAGIAN LAPORAN (VERSI SIMPEL & COPY-ABLE) ---
+            # --- 📄 BAGIAN LAPORAN (VERSI ANTI-ERROR) ---
             if st.session_state['cart']:
                 st.divider()
                 st.markdown("### 📄 Draft Laporan")
@@ -443,21 +443,15 @@ elif menu == "📦 Inventaris":
                 for _, item in st.session_state['cart'].items():
                     teks_wa += f"📍 {item['lokasi']} - {item['nama']} ({item['jumlah']} Unit)\n"
                 
-                # Tampilkan teks laporan yang rapi (Bukan di kotak biru)
-                st.info(teks_wa)
+                # Pake st.code lagi tapi bahasanya set ke None
+                # Ini otomatis ngasih tombol "Copy" di pojok kanan atas kotak
+                st.code(teks_wa, language=None)
 
-                # Tombol Copy & Clear
-                col_btn1, col_btn2 = st.columns(2)
-                with col_btn1:
-                    # Fitur copy bawaan Streamlit (teks_wa bakal ada tombol copy di pojok kanan)
-                    st.copy_to_clipboard(teks_wa)
-                    st.success("Teks laporan siap di-paste!")
-                
-                with col_btn2:
-                    if st.button("🗑️ Kosongkan Keranjang", use_container_width=True):
-                        st.session_state['cart'] = {}
-                        st.session_state['reset_cnt'] += 1
-                        st.rerun()
+                # Tombol Bersihkan aja di bawahnya
+                if st.button("🗑️ Kosongkan Keranjang", use_container_width=True):
+                    st.session_state['cart'] = {}
+                    st.session_state['reset_cnt'] += 1
+                    st.rerun()
     with tab_add:
         if st.session_state['role'] == "admin":
             st.markdown("### ➕ Tambah Aset Baru")
