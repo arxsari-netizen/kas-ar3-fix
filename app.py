@@ -353,7 +353,7 @@ elif menu == "📊 Laporan":
 
 
 # --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
-    elif menu == "📦 Inventaris":
+elif menu == "📦 Inventaris":
         st.cache_data.clear()
         
         # Ambil data pake fungsi engine kita
