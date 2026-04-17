@@ -353,13 +353,22 @@ elif menu == "📊 Laporan":
 
 
 # --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
+# --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
 elif menu == "📦 Inventaris":
+    st.cache_data.clear()
+    
+    # 1. Tarik data sebagai DataFrame (PENTING: Pake get_data)
+    df_inv = get_data("Inventaris")
+    
+    # 2. Urutkan secara Abjad (A-Z) sebelum masuk ke Tab
+    if not df_inv.empty:
+        df_inv = df_inv.sort_values(by=['Nama Barang', 'Lokasi'], ascending=[True, True])
+    
     tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
-    ws_inv = sh.worksheet("Inventaris")
 
     with tab_view:
         if not df_inv.empty:
-            # --- 1. INISIALISASI STATE BARU ---
+            # --- INISIALISASI STATE ---
             if 'cart' not in st.session_state:
                 st.session_state['cart'] = {}
             if 'reset_cnt' not in st.session_state:
@@ -376,54 +385,48 @@ elif menu == "📦 Inventaris":
             
             for i, row in df_display.iterrows():
                 with cols_inv[i % 4]:
-                    # --- CSS UNTUK SERAGAMKAN UKURAN GAMBAR ---
-                    # Kita bungkus gambar di dalam div yang tingginya dikunci (misal 150px)
-                    st.markdown("""
-                        <style>
-                        .img-container {
-                            width: 100%;
-                            height: 150px; /* Kunci tinggi gambar bray */
-                            object-fit: cover; /* Biar gambar auto-crop dan gak gepeng */
-                            border-radius: 10px;
-                        }
-                        </style>
-                        """, unsafe_allow_html=True)
+                    # CSS UNTUK GAMBAR SERAGAM
+                    st.markdown("""<style>.img-container {width:100%; height:150px; object-fit:cover; border-radius:10px;}</style>""", unsafe_allow_html=True)
 
-                    # Tampilkan Gambar
+                    # Logic Gambar
                     url_f = row['Link Foto']; f_id = ""
                     if url_f and '/d/' in url_f: f_id = url_f.split('/d/')[1].split('/')[0]
                     elif url_f and 'id=' in url_f: f_id = url_f.split('id=')[1].split('&')[0]
+                    img_src = f"https://drive.google.com/thumbnail?id={f_id}&sz=w400" if f_id else "https://via.placeholder.com/400x300?text=No+Image"
                     
-                    if f_id:
-                        img_src = f"https://drive.google.com/thumbnail?id={f_id}&sz=w400"
-                    else:
-                        img_src = "https://via.placeholder.com/400x300?text=No+Image"
-                    
-                    # Kita pake HTML tag biar CSS-nya jalan
                     st.markdown(f'<img src="{img_src}" class="img-container">', unsafe_allow_html=True)
                     
-                    # --- INFO BARANG ---
-                    st.markdown(f"**{row['Nama Barang']}**")
-                    st.caption(f"📍 {row['Lokasi']}\n✅ Stok: {int(row['Jumlah'])} Unit")
+                    # --- INFO STOK & PEMINJAM ---
+                    stok_fisik = int(row['Jumlah'])
+                    sedang_pinjam = int(row['Dipinjam']) if pd.notna(row['Dipinjam']) else 0
+                    stok_ready = stok_fisik - sedang_pinjam
                     
-                    # Spek di dalam expander
-                    val_spec = str(row['Spesifikasi']) if 'Spesifikasi' in row and pd.notna(row['Spesifikasi']) else "-"
-                    if val_spec != "-":
-                        with st.expander("Lihat Spek"):
-                            st.write(val_spec)
+                    info_peminjam = ""
+                    if sedang_pinjam > 0:
+                        peminjam = row['Keterangan'] if pd.notna(row['Keterangan']) and row['Keterangan'] != "-" else "Warga"
+                        info_peminjam = f"<br><span style='color:#d63031;'>👤 Pinjam: {sedang_pinjam} ({peminjam})</span>"
+
+                    warna_stok = "green" if stok_ready > 0 else "red"
+                    
+                    st.markdown(f"**{row['Nama Barang']}**")
+                    st.markdown(f"""
+                        <div style="font-size: 13px; line-height: 1.2;">
+                            📍 {row['Lokasi']}<br>
+                            ✅ Ready: <span style="color:{warna_stok}; font-weight:bold;">{stok_ready}</span> / {stok_fisik}
+                            {info_peminjam}
+                        </div>
+                    """, unsafe_allow_html=True)
                     
                     # Input Qty
                     qty_key = f"qty_{i}_{st.session_state['reset_cnt']}"
-                    qty_ambil = st.number_input("Qty", 0, int(row['Jumlah']), step=1, key=qty_key)
+                    qty_ambil = st.number_input("Ambil", 0, stok_fisik, step=1, key=qty_key)
                     
                     if qty_ambil > 0:
                         st.session_state['cart'][i] = {
-                            'nama': row['Nama Barang'], 
-                            'lokasi': row['Lokasi'], 
-                            'jumlah': qty_ambil,
-                            'spek': val_spec
+                            'nama': row['Nama Barang'], 'lokasi': row['Lokasi'], 
+                            'jumlah': qty_ambil, 'spek': str(row['Spesifikasi'])
                         }
-                    elif i in st.session_state['cart'] and qty_ambil == 0:
+                    elif i in st.session_state['cart']:
                         del st.session_state['cart'][i]
 
             # --- 3. GENERATE LAPORAN (DENGAN SPEK) ---
