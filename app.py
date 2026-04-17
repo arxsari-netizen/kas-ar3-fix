@@ -354,17 +354,24 @@ elif menu == "📊 Laporan":
 
 # --- 8. REFACTORED INVENTARIS (The Cleanest Version) ---
     elif menu == "📦 Inventaris":
-    st.cache_data.clear()
-    
-    # PERBAIKAN DI SINI: Panggil fungsi get_data, jangan panggil sh.worksheet langsung
-    df_inv = get_data("Inventaris") 
-    
-    tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
-    
-    # Sekarang df_inv sudah jadi DataFrame, jadi fungsi .empty dan .sort_values bakal jalan
-    if not df_inv.empty:
-        # Urutkan berdasarkan Nama Barang (A-Z), lalu Lokasi
-        df_inv = df_inv.sort_values(by=['Nama Barang', 'Lokasi'], ascending=[True, True])
+        st.cache_data.clear()
+        
+        # Ambil data pake fungsi engine kita
+        df_inv = get_data("Inventaris") 
+        
+        # Bikin Tab
+        tab_view, tab_add, tab_edit = st.tabs(["📋 Daftar Aset", "➕ Tambah Baru", "🔄 Update Status"])
+        
+        # Proses sorting A-Z dilakukan sebelum masuk ke dalam tab
+        if not df_inv.empty:
+            # Urutkan berdasarkan Nama Barang (A-Z), lalu Lokasi
+            df_inv = df_inv.sort_values(by=['Nama Barang', 'Lokasi'], ascending=[True, True])
+            
+        with tab_view:
+            # Sisa kode tab_view lo di sini...
+            if not df_inv.empty:
+                st.markdown("### 📋 Pilih Barang untuk Laporan")
+                # ... dan seterusnya
     # ---------------------------------------------
     with tab_view:
         if not df_inv.empty:
