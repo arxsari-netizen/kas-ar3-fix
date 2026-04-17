@@ -572,18 +572,41 @@ elif menu == "📦 Inventaris":
                         c_jml, c_aksi = st.columns(2)
                         j_potong = c_jml.number_input("Jumlah unit", 1, int(curr['Jumlah'])-1)
                         opsi = c_aksi.radio("Tindakan:", ["Pindah Lokasi", "Lapor Rusak"])
-                        tujuan_baru = st.text_input("Lokasi Baru / Info Kerusakan")
                         
+                        # --- PERBAIKAN 1: AMBIL DARI DATA WARGA ---
+                        list_warga = sorted(df_warga['Nama'].tolist()) if not df_warga.empty else []
+                        if opsi == "Pindah Lokasi":
+                            tujuan_baru = st.selectbox("Pindah ke Lokasi (Warga):", list_warga)
+                        else:
+                            tujuan_baru = st.text_input("Info Kerusakan", placeholder="Misal: Pecah/Mati total")
+
                         if st.form_submit_button("Konfirmasi Pecah"):
                             idx_asal = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
+                            
+                            # 1. Update stok di baris asal (dikurangi)
                             ws_inv.update_cell(idx_asal, 3, int(curr['Jumlah'] - j_potong))
+                            
+                            # --- PERBAIKAN 2: BAWA LINK FOTO KE BARIS BARU ---
                             n_lok = tujuan_baru if opsi == "Pindah Lokasi" else curr['Lokasi']
                             n_kon = curr['Kondisi'] if opsi == "Pindah Lokasi" else "Rusak Ringan"
-                            ws_inv.append_row([curr['Nama Barang'], curr['Spesifikasi'], int(j_potong), n_lok, n_kon, "Tersedia", 0, tujuan_baru])
+                            # Pastikan curr['Link Foto'] ikut dimasukkan ke kolom ke-9
+                            link_foto_lama = curr['Link Foto'] if 'Link Foto' in curr else "-"
+                            
+                            ws_inv.append_row([
+                                curr['Nama Barang'], 
+                                curr['Spesifikasi'], 
+                                int(j_potong), 
+                                n_lok, 
+                                n_kon, 
+                                "Tersedia", 
+                                0, 
+                                tujuan_baru, 
+                                link_foto_lama # <--- Ini kuncinya biar gambar gak ilang bray!
+                            ])
+                            
                             st.success("Berhasil dipecah!"); st.cache_data.clear(); time.sleep(1); st.rerun()
                 else:
                     st.caption("Unit hanya ada 1, gunakan form utama di atas.")
-
             # --- INI BAGIAN HAPUS ASET (CUMA ADMIN) ---
         with st.expander("🗑️ Zona Bahaya (Hapus Aset)"):
             if st.session_state.get('role') == "admin": # Cek apakah dia admin
