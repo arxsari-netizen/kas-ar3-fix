@@ -433,25 +433,44 @@ elif menu == "📦 Inventaris":
                     elif i in st.session_state['cart']:
                         del st.session_state['cart'][i]
 
-            # --- 📄 BAGIAN LAPORAN (VERSI ANTI-ERROR) ---
+            # --- 📄 BAGIAN LAPORAN (DESAIN RAPI & CLEAN) ---
             if st.session_state['cart']:
                 st.divider()
                 st.markdown("### 📄 Draft Laporan")
                 
-                # Susun teks laporan
-                teks_wa = f"📝 *LAPORAN PENGAMBILAN ASET*\n📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
-                for _, item in st.session_state['cart'].items():
-                    teks_wa += f"📍 {item['lokasi']} - {item['nama']} ({item['jumlah']} Unit)\n"
+                # 1. Susun teks untuk di-render ke layar (tampilan rapi)
+                # 2. Susun teks untuk di-copy ke WA (format teks biasa)
+                tampilan_layar = ""
+                teks_copy_wa = f"📝 *LAPORAN PENGAMBILAN ASET*\n📅 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
                 
-                # Pake st.code lagi tapi bahasanya set ke None
-                # Ini otomatis ngasih tombol "Copy" di pojok kanan atas kotak
-                st.code(teks_wa, language=None)
+                for _, item in st.session_state['cart'].items():
+                    # Format buat di layar (pake HTML biar cakep)
+                    tampilan_layar += f"""
+                    <div style="background-color: white; padding: 10px; border-left: 5px solid #D4AF37; border-radius: 5px; margin-bottom: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
+                        <b style="color: #2c3e50; font-size: 16px;">📍 {item['lokasi']} - {item['nama']}</b><br>
+                        <span style="color: #7f8c8d; font-size: 13px;">🔧 Spek: {item['spek']}</span><br>
+                        <span style="color: #27ae60; font-weight: bold;">🔢 Jumlah: {item['jumlah']} Unit</span>
+                    </div>
+                    """
+                    # Format buat di WA
+                    teks_copy_wa += f"📍 {item['lokasi']} - {item['nama']}\n🔧 Spek: {item['spek']}\n🔢 Jumlah: {item['jumlah']} Unit\n\n"
+                
+                # Tampilkan ke layar
+                st.markdown(tampilan_layar, unsafe_allow_html=True)
 
-                # Tombol Bersihkan aja di bawahnya
-                if st.button("🗑️ Kosongkan Keranjang", use_container_width=True):
-                    st.session_state['cart'] = {}
-                    st.session_state['reset_cnt'] += 1
-                    st.rerun()
+                # Tombol Aksi
+                st.info("💡 *Klik tombol di bawah untuk copy teks, lalu paste di WA*")
+                
+                col_btn1, col_btn2 = st.columns(2)
+                with col_btn1:
+                    # Kita pakai trik st.code kecil cuma buat ambil tombol copy-nya aja kalau copy_to_clipboard error
+                    st.code(teks_copy_wa, language=None)
+                
+                with col_btn2:
+                    if st.button("🗑️ Kosongkan Keranjang", use_container_width=True):
+                        st.session_state['cart'] = {}
+                        st.session_state['reset_cnt'] += 1
+                        st.rerun()
     with tab_add:
         if st.session_state['role'] == "admin":
             st.markdown("### ➕ Tambah Aset Baru")
