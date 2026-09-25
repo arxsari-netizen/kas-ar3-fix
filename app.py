@@ -212,7 +212,9 @@ if menu == "📚 Pustaka":
 if st.session_state['role'] == "admin":
     with st.expander("➕ Tambah Materi Baru"):
 
-        # Ambil daftar kegiatan yang sudah ada di Google Sheet
+        # =========================================================
+        # AMBIL DAFTAR KEGIATAN DARI KOLOM F / Kegiatan
+        # =========================================================
         if 'Kegiatan' in df_pus.columns and not df_pus.empty:
             list_kegiatan = (
                 df_pus['Kegiatan']
@@ -220,6 +222,7 @@ if st.session_state['role'] == "admin":
                 .astype(str)
                 .str.strip()
             )
+
             list_kegiatan = sorted([
                 x for x in list_kegiatan.unique().tolist()
                 if x
@@ -227,12 +230,40 @@ if st.session_state['role'] == "admin":
         else:
             list_kegiatan = []
 
+        # =========================================================
+        # PILIH KEGIATAN
+        # DI LUAR FORM AGAR UI LANGSUNG MERESPONS
+        # =========================================================
+        kegiatan_options = [
+            "-- Tidak ada kegiatan --"
+        ] + list_kegiatan + [
+            "➕ Tambah Kegiatan Baru"
+        ]
+
+        pilih_kegiatan = st.selectbox(
+            "Kegiatan",
+            kegiatan_options,
+            key="pilih_kegiatan_baru"
+        )
+
+        # Kalau pilih Tambah Kegiatan Baru,
+        # tampilkan input nama kegiatan
+        kegiatan_baru = ""
+
+        if pilih_kegiatan == "➕ Tambah Kegiatan Baru":
+            kegiatan_baru = st.text_input(
+                "Nama Kegiatan Baru",
+                placeholder="Contoh: Milad AR3 Tahun 2026",
+                key="nama_kegiatan_baru"
+            )
+
+        # =========================================================
+        # FORM MATERI
+        # =========================================================
         with st.form("f_add_pus", clear_on_submit=True):
 
-            # 1. Judul
             j_p = st.text_input("Judul Materi")
 
-            # 2. Kategori
             k_p = st.selectbox(
                 "Kategori",
                 [
@@ -244,7 +275,6 @@ if st.session_state['role'] == "admin":
                 ]
             )
 
-            # 3. Tipe File
             t_p = st.selectbox(
                 "Tipe File",
                 [
@@ -257,77 +287,65 @@ if st.session_state['role'] == "admin":
                 ]
             )
 
-            # 4. Kegiatan
-            # Foto/Video wajib memiliki kegiatan
-            kegiatan_options = ["-- Tidak ada kegiatan --"] + list_kegiatan + [
-                "➕ Tambah Kegiatan Baru"
-            ]
-
-            pilih_kegiatan = st.selectbox(
-                "Kegiatan",
-                kegiatan_options
-            )
-
-            kegiatan_baru = ""
-
-            if pilih_kegiatan == "➕ Tambah Kegiatan Baru":
-                kegiatan_baru = st.text_input(
-                    "Nama Kegiatan Baru",
-                    placeholder="Contoh: Milad AR3 Tahun 2026"
-                )
-
-            # 5. Link
             l_p = st.text_input("Link G-Drive/URL")
 
-            # 6. Deskripsi
             d_p = st.text_area("Deskripsi Singkat")
 
-            if st.form_submit_button("Simpan"):
+            simpan = st.form_submit_button("Simpan")
 
-                # Tentukan nilai Kegiatan
-                if pilih_kegiatan == "➕ Tambah Kegiatan Baru":
-                    kegiatan_final = kegiatan_baru.strip()
-                elif pilih_kegiatan == "-- Tidak ada kegiatan --":
-                    kegiatan_final = ""
-                else:
-                    kegiatan_final = pilih_kegiatan.strip()
+        # =========================================================
+        # PROSES SIMPAN
+        # =========================================================
+        if simpan:
 
-                # Validasi dasar
-                if not j_p.strip():
-                    st.error("Judul Materi wajib diisi.")
+            # Tentukan kegiatan final
+            if pilih_kegiatan == "➕ Tambah Kegiatan Baru":
+                kegiatan_final = kegiatan_baru.strip()
 
-                elif not l_p.strip():
-                    st.error("Link G-Drive/URL wajib diisi.")
+            elif pilih_kegiatan == "-- Tidak ada kegiatan --":
+                kegiatan_final = ""
 
-                # Foto dan Video WAJIB punya kegiatan
-                elif t_p in ["Foto", "Video"] and not kegiatan_final:
-                    st.error(
-                        "Foto/Video wajib memiliki Kegiatan. "
-                        "Silakan pilih kegiatan atau buat kegiatan baru."
-                    )
+            else:
+                kegiatan_final = pilih_kegiatan.strip()
 
-                else:
-                    # Urutan HARUS sesuai kolom Google Sheet:
-                    # A Judul
-                    # B Kategori
-                    # C Link
-                    # D Tipe
-                    # E Deskripsi
-                    # F Kegiatan
+            # Validasi
+            if not j_p.strip():
+                st.error("Judul Materi wajib diisi.")
 
-                    sh.worksheet("Pustaka").append_row([
-                        j_p.strip(),
-                        k_p,
-                        l_p.strip(),
-                        t_p,
-                        d_p.strip(),
-                        kegiatan_final
-                    ])
+            elif not l_p.strip():
+                st.error("Link G-Drive/URL wajib diisi.")
 
-                    st.success("Materi berhasil ditambahkan!")
-                    st.cache_data.clear()
-                    time.sleep(1)
-                    st.rerun()
+            elif t_p in ["Foto", "Video"] and not kegiatan_final:
+                st.error(
+                    "Foto/Video wajib memiliki Kegiatan. "
+                    "Silakan pilih kegiatan atau buat kegiatan baru."
+                )
+
+            else:
+
+                # URUTAN SESUAI GOOGLE SHEET:
+                #
+                # A = Judul
+                # B = Kategori
+                # C = Link
+                # D = Tipe
+                # E = Deskripsi
+                # F = Kegiatan
+
+                sh.worksheet("Pustaka").append_row([
+                    j_p.strip(),
+                    k_p,
+                    l_p.strip(),
+                    t_p,
+                    d_p.strip(),
+                    kegiatan_final
+                ])
+
+                st.success("Materi berhasil ditambahkan!")
+
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
 
     if not df_pus.empty:
         c_search, c_filter = st.columns([2, 1])
