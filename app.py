@@ -443,7 +443,7 @@ for i, (_, row) in enumerate(tampilan_foto.iterrows()):
         # JUDUL
         st.caption(row['Judul'])
            
-            st.divider()
+        st.divider()
 
         # 3. TAMPILKAN PUSTAKA (List)
         if not pustaka_df.empty:
