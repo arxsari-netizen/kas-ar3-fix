@@ -271,6 +271,11 @@ if menu == "📚 Pustaka":
             ["Semua"] + df_pus['Kategori'].dropna().astype(str).unique().tolist()
         )
         df_view = df_pus.copy()
+        # Normalisasi kolom agar spasi tersembunyi di Google Sheet tidak membuat Video/Fototidak terbaca
+        df_view['Tipe'] = df_view['Tipe'].fillna('').astype(str).str.strip()
+        df_view['Kategori'] = df_view['Kategori'].fillna('').astype(str).str.strip()
+        if 'Kegiatan' in df_view.columns:
+            df_view['Kegiatan'] = df_view['Kegiatan'].fillna('').astype(str).str.strip()
         if sel_k != "Semua":
             df_view = df_view[df_view['Kategori'] == sel_k]
         if cari:
@@ -282,7 +287,7 @@ if menu == "📚 Pustaka":
             df_view = df_view[mask]
 
         st.divider()
-        galeri_df = df_view[df_view['Tipe'].isin(["Foto", "Video"])].copy()
+        galeri_df = df_view[df_view['Tipe'].str.casefold().isin(["foto", "video"])].copy()
         pustaka_df = df_view[~df_view['Tipe'].isin(["Foto", "Video"])].copy()
 
         if not galeri_df.empty:
@@ -295,14 +300,14 @@ if menu == "📚 Pustaka":
             list_kegiatan_galeri = sorted([x for x in kegiatan_series.unique().tolist() if x])
             list_kegiatan_galeri = ["--Pilih--"] + list_kegiatan_galeri
             pilih_galeri = st.selectbox("Pilih Kegiatan", list_kegiatan_galeri, key="pilih_galeri")
-            tampilan_galeri = galeri_df[kegiatan_series == pilih_galeri]
+            tampilan_galeri = galeri_df[kegiatan_series == pilih_galeri].copy()
 
             if pilih_galeri != "--Pilih--" and not tampilan_galeri.empty:
                 cols = st.columns(3)
                 for i, (_, row) in enumerate(tampilan_galeri.iterrows()):
                     with cols[i % 3]:
                         url_g = str(row['Link']).strip()
-                        tipe_g = str(row['Tipe']).strip()
+                        tipe_g = str(row['Tipe']).strip().casefold()
                         file_id = ""
                         if '/d/' in url_g:
                             try:
@@ -315,12 +320,12 @@ if menu == "📚 Pustaka":
                             except Exception:
                                 file_id = ""
 
-                        if tipe_g == "Foto":
+                        if tipe_g == "foto":
                             if file_id:
                                 st.image(f"https://drive.google.com/thumbnail?id={file_id}&sz=w600", use_container_width=True)
                             else:
                                 st.warning("Link foto tidak valid.")
-                        elif tipe_g == "Video":
+                        elif tipe_g == "video":
                             if file_id:
                                 preview_url = f"https://drive.google.com/file/d/{file_id}/preview"
                                 st.markdown(
