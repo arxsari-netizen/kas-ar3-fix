@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import gspread
+from gspread.exceptions import WorksheetNotFound
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import time
@@ -33,6 +34,43 @@ scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis
 creds = Credentials.from_service_account_info(st.secrets["gspread_credentials"], scopes=scope)
 client = gspread.authorize(creds)
 sh = client.open_by_key("1i3OqFAeFYJ7aXy0QSS0IUF9r_yp3pwqNb7tJ8-CEXQE")
+
+# --- AUDIT LOG: simpan maksimal 100 aktivitas terbaru ---
+def log_activity(modul, aksi, detail):
+    try:
+        try:
+            ws_log = sh.worksheet("Log")
+        except WorksheetNotFound:
+            ws_log = sh.add_worksheet(title="Log", rows="101", cols="6")
+            ws_log.append_row(["Timestamp", "User", "Role", "Modul", "Aksi", "Detail"])
+
+        # Jika sheet Log sudah ada tetapi masih kosong, buat header.
+        values = ws_log.get_all_values()
+        if not values:
+            ws_log.append_row(["Timestamp", "User", "Role", "Modul", "Aksi", "Detail"])
+            values = ws_log.get_all_values()
+
+        role = st.session_state.get("role", "user")
+        user_map = {
+            "admin": "Admin",
+            "event_manager": "Event Manager",
+            "user": "Warga"
+        }
+        user_name = user_map.get(role, "User")
+        timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+        ws_log.append_row([timestamp, user_name, role, modul, aksi, str(detail)])
+
+        # Pertahankan header + maksimal 100 aktivitas terbaru.
+        total_rows = len(ws_log.get_all_values())
+        max_rows = 101
+        if total_rows > max_rows:
+            excess = total_rows - max_rows
+            ws_log.delete_rows(2, excess + 1)
+    except Exception:
+        # Kegagalan Log tidak boleh membatalkan transaksi utama.
+        pass
+
 
 @st.cache_data(ttl=30)
 def load_data(sheet_name):
@@ -257,6 +295,11 @@ if menu == "📚 Pustaka":
                     sh.worksheet("Pustaka").append_row([
                         j_p.strip(), k_p, l_p.strip(), t_p, d_p.strip(), kegiatan_final
                     ])
+                    log_activity(
+                        "Pustaka",
+                        "Tambah",
+                        f"{j_p.strip()} | {t_p} | Kegiatan: {kegiatan_final or '-'}"
+                    )
                     st.success("Materi berhasil ditambahkan!")
                     st.cache_data.clear()
                     time.sleep(1)
@@ -584,6 +627,7 @@ elif menu == "📦 Inventaris":
                     if nb and lok_warga != "Pilih Warga/Lokasi":
                         # Tambahkan kolom Link Foto di baris ke-9 Google Sheets
                         sh.worksheet("Inventaris").append_row([nb, sp, int(jml), lok_warga, "Baik", "Tersedia", 0, "-", img_link])
+                        log_activity("Inventaris", "Tambah", f"{nb} | {int(jml)} unit | Lokasi: {lok_warga} | Kondisi: Baik")
                         st.success("Barang berhasil ditambah!"); st.cache_data.clear(); time.sleep(1); st.rerun()
                     else: st.error("Nama Barang & Lokasi wajib diisi!")
         else: 
@@ -641,12 +685,20 @@ elif menu == "📦 Inventaris":
                                 idx = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
                                 if idx:
                                     status_txt = "Dipinjam" if n_dipinjam > 0 else "Tersedia"
+                                    old_lokasi = str(curr['Lokasi'])
+                                    old_kondisi = str(curr['Kondisi'])
+                                    old_dipinjam = int(curr['Dipinjam'])
+                                    old_peminjam = str(curr['Keterangan'])
                                     ws_inv.update_cell(idx, 4, n_lokasi)
                                     ws_inv.update_cell(idx, 5, n_kondisi)
                                     ws_inv.update_cell(idx, 6, status_txt)
                                     ws_inv.update_cell(idx, 7, int(n_dipinjam))
                                     ws_inv.update_cell(idx, 8, n_peminjam)
-                                    
+                                    log_activity(
+                                        "Inventaris",
+                                        "Ubah",
+                                        f"{curr['Nama Barang']} | Lokasi: {old_lokasi} -> {n_lokasi} | Kondisi: {old_kondisi} -> {n_kondisi} | Dipinjam: {old_dipinjam} -> {int(n_dipinjam)} | Peminjam: {old_peminjam or '-'} -> {n_peminjam or '-'}"
+                                    )
                                     st.success(f"Data {curr['Nama Barang']} berhasil diupdate!")
                                     st.cache_data.clear(); time.sleep(1); st.rerun()
                             else:
@@ -690,7 +742,11 @@ elif menu == "📦 Inventaris":
                                 tujuan_baru, 
                                 link_foto_lama # <--- Ini kuncinya biar gambar gak ilang bray!
                             ])
-                            
+                            log_activity(
+                                "Inventaris",
+                                "Pecah Stok",
+                                f"{curr['Nama Barang']} | {int(j_potong)} unit | {curr['Lokasi']} -> {n_lok} | Aksi: {opsi}"
+                            )
                             st.success("Berhasil dipecah!"); st.cache_data.clear(); time.sleep(1); st.rerun()
                 else:
                     st.caption("Unit hanya ada 1, gunakan form utama di atas.")
@@ -702,7 +758,10 @@ elif menu == "📦 Inventaris":
                     if st.form_submit_button("Hapus Permanen"):
                         idx_del = get_row_index(ws_inv, curr['Nama Barang'], curr['Lokasi'])
                         if idx_del:
+                            nama_aset = str(curr['Nama Barang'])
+                            lokasi_aset = str(curr['Lokasi'])
                             ws_inv.delete_rows(idx_del) # Hapus baris di Google Sheets
+                            log_activity("Inventaris", "Hapus", f"{nama_aset} | Lokasi: {lokasi_aset} | Alasan: {alasan.strip() or '-'}")
                             st.success("Aset berhasil dihapus!"); st.cache_data.clear(); time.sleep(1); st.rerun()
             else:
                 # Pesan kalau bukan admin
@@ -727,6 +786,7 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
             if st.form_submit_button("🚀 Proses Iuran"):
                 uang_sisa, bulan_idx, tahun_jalan = n, bln_list.index(b_input), t_input
                 input_log = []
+                total_tercatat = 0
                 
                 # Loop untuk alokasi bulanan
                 while uang_sisa > 0 and tahun_jalan <= (datetime.now().year + 1):
@@ -748,12 +808,19 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
                     pakai_hadiah = min(uang_sisa, j_hadiah); uang_sisa -= pakai_hadiah
                     
                     if (pakai_kas + pakai_hadiah) > 0:
-                        sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), w_pilih, tahun_jalan, curr_month, int(pakai_kas + pakai_hadiah), int(pakai_kas), int(pakai_hadiah), "LUNAS", "Iuran"])
+                        jumlah_baris = int(pakai_kas + pakai_hadiah)
+                        sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), w_pilih, tahun_jalan, curr_month, jumlah_baris, int(pakai_kas), int(pakai_hadiah), "LUNAS", "Iuran"])
+                        total_tercatat += jumlah_baris
                         input_log.append(f"{curr_month} {tahun_jalan}")
                     
                     bulan_idx += 1
                     if bulan_idx >= 12: bulan_idx = 0; tahun_jalan += 1
                 
+                log_activity(
+                    "Keuangan",
+                    "Tambah Pemasukan",
+                    f"Iuran {w_pilih} | Rp {int(total_tercatat):,} | Mode: {mode} | Periode: {', '.join(input_log) if input_log else '-'}"
+                )
                 st.success(f"✅ Input sukses: {', '.join(input_log)}")
                 st.cache_data.clear(); time.sleep(1); st.rerun()
 
@@ -764,6 +831,7 @@ elif menu == "📥 Kas Bulanan" and st.session_state['role'] == "admin":
             if st.form_submit_button("💰 Simpan Hibah ke Saldo"):
                 # Input dengan nama 'HIBAH' agar tidak dianggap iuran bulanan
                 sh.worksheet("Pemasukan").append_row([datetime.now().strftime("%d/%m/%Y"), "HIBAH", datetime.now().year, "-", int(nominal), int(nominal), 0, "HIBAH", keterangan])
+                log_activity("Keuangan", "Tambah Hibah", f"Rp {int(nominal):,} | {keterangan.strip() or '-'}")
                 st.success("Hibah berhasil ditambah ke saldo kas!")
                 st.cache_data.clear(); time.sleep(1); st.rerun()
 elif menu == "📤 Pengeluaran" and st.session_state['role'] in ["admin", "event_manager"]:
@@ -788,12 +856,14 @@ elif menu == "📤 Pengeluaran" and st.session_state['role'] in ["admin", "event
         if st.form_submit_button("Simpan"):
             # Validasi nominal biar gak 0
             if nom > 0:
+                detail_pengeluaran = f"[{ev_ref}] {ket}" if kat_pilih == "Event" else ket
                 sh.worksheet("Pengeluaran").append_row([
                     datetime.now().strftime("%d/%m/%Y"), 
                     kat_pilih, 
                     int(nom), 
-                    f"[{ev_ref}] {ket}" if kat_pilih == "Event" else ket
+                    detail_pengeluaran
                 ])
+                log_activity("Keuangan", "Tambah Pengeluaran", f"{kat_pilih} | Rp {int(nom):,} | {detail_pengeluaran.strip() or '-'}")
                 st.success("Tercatat!")
                 st.cache_data.clear()
                 time.sleep(1)
@@ -831,9 +901,17 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
                     idx_w = get_row_index(ws_w, pilih_nama, role=curr_warga['Role'])
                     
                     if idx_w:
+                        old_nama = str(curr_warga['Nama'])
+                        old_role = str(curr_warga['Role'])
+                        old_status = str(curr_warga['Status'])
                         ws_w.update_cell(idx_w, 1, nama_baru)
                         ws_w.update_cell(idx_w, 2, role_baru)
                         ws_w.update_cell(idx_w, 3, status_baru)
+                        log_activity(
+                            "Warga",
+                            "Ubah",
+                            f"{old_nama} | Nama: {old_nama} -> {nama_baru} | Role: {old_role} -> {role_baru} | Status: {old_status} -> {status_baru}"
+                        )
                         st.success(f"Berhasil update {nama_baru}!")
                         st.cache_data.clear(); time.sleep(1); st.rerun()
                 
@@ -842,6 +920,7 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
                     idx_w = get_row_index(ws_w, pilih_nama, role=curr_warga['Role'])
                     if idx_w:
                         ws_w.delete_rows(idx_w)
+                        log_activity("Warga", "Hapus", f"{pilih_nama} | Role: {curr_warga['Role']} | Status: {curr_warga['Status']}")
                         st.warning(f"Warga {pilih_nama} dihapus.")
                         st.cache_data.clear(); time.sleep(1); st.rerun()
 
@@ -853,6 +932,7 @@ elif menu == "👥 Kelola Warga" and st.session_state['role'] == "admin":
             if st.form_submit_button("Tambah Warga"):
                 if nw:
                     sh.worksheet("Warga").append_row([nw, nr, ns])
+                    log_activity("Warga", "Tambah", f"{nw} | Role: {nr} | Status: {ns}")
                     st.success("Warga berhasil ditambahkan!")
                     st.cache_data.clear(); time.sleep(1); st.rerun()
 
@@ -874,6 +954,7 @@ elif menu == "🎭 Event & Iuran":
             else:
                 # Baru eksekusi kalau valid
                 sh.worksheet("Event").append_row([datetime.now().strftime("%d/%m/%Y"), w_e, event_name, int(j_e)])
+                log_activity("Event", "Tambah", f"{event_name} | Warga: {w_e} | Rp {int(j_e):,}")
                 st.success("Data berhasil disimpan!")
                 st.cache_data.clear()
                 time.sleep(1)
@@ -896,6 +977,7 @@ elif menu == "💸 Dana Talangan" and st.session_state['role'] == "admin":
                     datetime.now().strftime("%d/%m/%Y"), 
                     nama_t, tipe_fix, int(nominal_t), ket_t
                 ])
+                log_activity("Dana Talangan", tipe_fix, f"{nama_t} | Rp {int(nominal_t):,} | {ket_t.strip() or '-'}")
                 st.success("Data Berhasil Disimpan!")
                 st.cache_data.clear(); time.sleep(1); st.rerun()
 
@@ -907,4 +989,17 @@ elif menu == "💸 Dana Talangan" and st.session_state['role'] == "admin":
         else:
             st.info("Tidak ada piutang aktif.")
 elif menu == "📜 Log":
-    st.dataframe(df_masuk.tail(20), hide_index=True, use_container_width=True)
+    st.subheader("📜 Riwayat Aktivitas")
+    try:
+        ws_log = sh.worksheet("Log")
+        df_log = pd.DataFrame(ws_log.get_all_records())
+        if df_log.empty:
+            st.info("Belum ada aktivitas yang tercatat.")
+        else:
+            # Tampilkan aktivitas terbaru di paling atas dan batasi 100 data.
+            df_log = df_log.tail(100).iloc[::-1].reset_index(drop=True)
+            st.dataframe(df_log, hide_index=True, use_container_width=True)
+    except WorksheetNotFound:
+        st.info("Sheet Log belum ada. Log akan dibuat otomatis saat ada perubahan data pertama.")
+    except Exception as e:
+        st.error(f"Gagal membaca Log: {e}")
