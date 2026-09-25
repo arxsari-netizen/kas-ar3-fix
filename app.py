@@ -375,75 +375,66 @@ if st.session_state['role'] == "admin":
             
             # Filter data berdasarkan pilihan
             tampilan_foto = galeri_df[galeri_df['Kegiatan'] == pilih_kegiatan]
+            
             # Tampilkan dalam grid 3 kolom
-cols = st.columns(3)
+            cols = st.columns(3)
 
-for i, (_, row) in enumerate(tampilan_foto.iterrows()):
-    with cols[i % 3]:
-        url_g = str(row['Link']).strip()
-        tipe_g = str(row['Tipe']).strip()
+            for i, (_, row) in enumerate(tampilan_foto.iterrows()):
+                with cols[i % 3]:
 
-        # Ambil File ID Google Drive
-        file_id = ""
+                    # Ambil link dan tipe file
+                    url_g = str(row['Link']).strip()
+                    tipe_g = str(row['Tipe']).strip()
 
-        if '/d/' in url_g:
-            try:
-                file_id = url_g.split('/d/')[1].split('/')[0]
-            except:
-                file_id = ""
+                    # Ambil File ID Google Drive
+                    file_id = ""
 
-        elif 'id=' in url_g:
-            try:
-                file_id = url_g.split('id=')[1].split('&')[0]
-            except:
-                file_id = ""
+                    if '/d/' in url_g:
+                        try:
+                            file_id = url_g.split('/d/')[1].split('/')[0]
+                        except Exception:
+                            file_id = ""
+                    elif 'id=' in url_g:
+                        try:
+                            file_id = url_g.split('id=')[1].split('&')[0]
+                        except Exception:
+                            file_id = ""
 
-        # FOTO
-        if tipe_g == "Foto":
-            if file_id:
-                thumbnail_url = (
-                    f"https://drive.google.com/thumbnail"
-                    f"?id={file_id}&sz=w600"
-                )
+                    # FOTO
+                    if tipe_g == "Foto":
+                        if file_id:
+                            st.image(
+                                f"https://drive.google.com/thumbnail?id={file_id}&sz=w600",
+                                use_container_width=True
+                            )
+                        else:
+                            st.warning("Link foto tidak valid.")
 
-                st.image(
-                    thumbnail_url,
-                    use_container_width=True
-                )
-            else:
-                st.warning("Link foto tidak valid.")
+                    # VIDEO
+                    elif tipe_g == "Video":
+                        if file_id:
+                            video_url = f"https://drive.google.com/file/d/{file_id}/preview"
 
-        # VIDEO
-        elif tipe_g == "Video":
-            if file_id:
-                video_url = (
-                    f"https://drive.google.com/file/d/"
-                    f"{file_id}/preview"
-                )
+                            iframe_html = f'''
+<iframe
+    src="{video_url}"
+    width="100%"
+    height="300"
+    allow="autoplay; fullscreen"
+    allowfullscreen
+    style="border:none; border-radius:10px;">
+</iframe>
+'''
 
-                st.markdown(
-                    f"""
-                    <iframe
-                        src="{video_url}"
-                        width="100%"
-                        height="300"
-                        allow="autoplay"
-                        allowfullscreen
-                        style="
-                            border:none;
-                            border-radius:10px;
-                        ">
-                    </iframe>
-                    """,
-                    unsafe_allow_html=True
-                )
-            else:
-                st.warning("Link video tidak valid.")
+                            st.markdown(
+                                iframe_html,
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.warning("Link video tidak valid.")
 
-        # JUDUL
-        st.caption(row['Judul'])
-           
-        st.divider()
+                    st.caption(row['Judul'])
+            st.divider()
 
         # 3. TAMPILKAN PUSTAKA (List)
         if not pustaka_df.empty:
