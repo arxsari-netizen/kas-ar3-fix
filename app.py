@@ -209,260 +209,260 @@ bln_list = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agu
 if menu == "📚 Pustaka":
     st.subheader("Selamat datang di Pustaka")
     st.markdown("Tempat Mencari serpihan ilmu dan kenangan")
-if st.session_state['role'] == "admin":
-    with st.expander("➕ Tambah Materi Baru"):
+    if st.session_state['role'] == "admin":
+        with st.expander("➕ Tambah Materi Baru"):
 
-        # =========================================================
-        # AMBIL DAFTAR KEGIATAN DARI KOLOM F / Kegiatan
-        # =========================================================
-        if 'Kegiatan' in df_pus.columns and not df_pus.empty:
-            list_kegiatan = (
-                df_pus['Kegiatan']
-                .dropna()
-                .astype(str)
-                .str.strip()
-            )
-
-            list_kegiatan = sorted([
-                x for x in list_kegiatan.unique().tolist()
-                if x
-            ])
-        else:
-            list_kegiatan = []
-
-        # =========================================================
-        # PILIH KEGIATAN
-        # DI LUAR FORM AGAR UI LANGSUNG MERESPONS
-        # =========================================================
-        kegiatan_options = [
-            "-- Tidak ada kegiatan --"
-        ] + list_kegiatan + [
-            "➕ Tambah Kegiatan Baru"
-        ]
-
-        pilih_kegiatan = st.selectbox(
-            "Kegiatan",
-            kegiatan_options,
-            key="pilih_kegiatan_baru"
-        )
-
-        # Kalau pilih Tambah Kegiatan Baru,
-        # tampilkan input nama kegiatan
-        kegiatan_baru = ""
-
-        if pilih_kegiatan == "➕ Tambah Kegiatan Baru":
-            kegiatan_baru = st.text_input(
-                "Nama Kegiatan Baru",
-                placeholder="Contoh: Milad AR3 Tahun 2026",
-                key="nama_kegiatan_baru"
-            )
-
-        # =========================================================
-        # FORM MATERI
-        # =========================================================
-        with st.form("f_add_pus", clear_on_submit=True):
-
-            j_p = st.text_input("Judul Materi")
-
-            k_p = st.selectbox(
-                "Kategori",
-                [
-                    "Kitab",
-                    "Rekaman Audio",
-                    "Video",
-                    "Foto Kegiatan",
-                    "Dokumen"
-                ]
-            )
-
-            t_p = st.selectbox(
-                "Tipe File",
-                [
-                    "PDF",
-                    "Gambar",
-                    "Foto",
-                    "Video",
-                    "Audio",
-                    "Link"
-                ]
-            )
-
-            l_p = st.text_input("Link G-Drive/URL")
-
-            d_p = st.text_area("Deskripsi Singkat")
-
-            simpan = st.form_submit_button("Simpan")
-
-        # =========================================================
-        # PROSES SIMPAN
-        # =========================================================
-        if simpan:
-
-            # Tentukan kegiatan final
-            if pilih_kegiatan == "➕ Tambah Kegiatan Baru":
-                kegiatan_final = kegiatan_baru.strip()
-
-            elif pilih_kegiatan == "-- Tidak ada kegiatan --":
-                kegiatan_final = ""
-
-            else:
-                kegiatan_final = pilih_kegiatan.strip()
-
-            # Validasi
-            if not j_p.strip():
-                st.error("Judul Materi wajib diisi.")
-
-            elif not l_p.strip():
-                st.error("Link G-Drive/URL wajib diisi.")
-
-            elif t_p in ["Foto", "Video"] and not kegiatan_final:
-                st.error(
-                    "Foto/Video wajib memiliki Kegiatan. "
-                    "Silakan pilih kegiatan atau buat kegiatan baru."
+            # =========================================================
+            # AMBIL DAFTAR KEGIATAN DARI KOLOM F / Kegiatan
+            # =========================================================
+            if 'Kegiatan' in df_pus.columns and not df_pus.empty:
+                list_kegiatan = (
+                    df_pus['Kegiatan']
+                    .dropna()
+                    .astype(str)
+                    .str.strip()
                 )
 
-            else:
-
-                # URUTAN SESUAI GOOGLE SHEET:
-                #
-                # A = Judul
-                # B = Kategori
-                # C = Link
-                # D = Tipe
-                # E = Deskripsi
-                # F = Kegiatan
-
-                sh.worksheet("Pustaka").append_row([
-                    j_p.strip(),
-                    k_p,
-                    l_p.strip(),
-                    t_p,
-                    d_p.strip(),
-                    kegiatan_final
+                list_kegiatan = sorted([
+                    x for x in list_kegiatan.unique().tolist()
+                    if x
                 ])
+            else:
+                list_kegiatan = []
 
-                st.success("Materi berhasil ditambahkan!")
+            # =========================================================
+            # PILIH KEGIATAN
+            # DI LUAR FORM AGAR UI LANGSUNG MERESPONS
+            # =========================================================
+            kegiatan_options = [
+                "-- Tidak ada kegiatan --"
+            ] + list_kegiatan + [
+                "➕ Tambah Kegiatan Baru"
+            ]
 
-                st.cache_data.clear()
-                time.sleep(1)
-                st.rerun()
+            pilih_kegiatan = st.selectbox(
+                "Kegiatan",
+                kegiatan_options,
+                key="pilih_kegiatan_baru"
+            )
 
-    if not df_pus.empty:
-        c_search, c_filter = st.columns([2, 1])
-        cari = c_search.text_input("🔍 Cari Materi", placeholder="Contoh: doa mandi")
-        sel_k = c_filter.selectbox("📂 Filter Kategori", ["Semua"] + df_pus['Kategori'].unique().tolist())
-        df_view = df_pus.copy()
-        if sel_k != "Semua": df_view = df_view[df_view['Kategori'] == sel_k]
-        if cari:
-            mask = df_view.apply(lambda row: cari.lower() in row['Judul'].lower() or cari.lower() in row['Deskripsi'].lower(), axis=1)
-            df_view = df_view[mask]
+            # Kalau pilih Tambah Kegiatan Baru,
+            # tampilkan input nama kegiatan
+            kegiatan_baru = ""
+
+            if pilih_kegiatan == "➕ Tambah Kegiatan Baru":
+                kegiatan_baru = st.text_input(
+                    "Nama Kegiatan Baru",
+                    placeholder="Contoh: Milad AR3 Tahun 2026",
+                    key="nama_kegiatan_baru"
+                )
+
+            # =========================================================
+            # FORM MATERI
+            # =========================================================
+            with st.form("f_add_pus", clear_on_submit=True):
+
+                j_p = st.text_input("Judul Materi")
+
+                k_p = st.selectbox(
+                    "Kategori",
+                    [
+                        "Kitab",
+                        "Rekaman Audio",
+                        "Video",
+                        "Foto Kegiatan",
+                        "Dokumen"
+                    ]
+                )
+
+                t_p = st.selectbox(
+                    "Tipe File",
+                    [
+                        "PDF",
+                        "Gambar",
+                        "Foto",
+                        "Video",
+                        "Audio",
+                        "Link"
+                    ]
+                )
+
+                l_p = st.text_input("Link G-Drive/URL")
+
+                d_p = st.text_area("Deskripsi Singkat")
+
+                simpan = st.form_submit_button("Simpan")
+
+            # =========================================================
+            # PROSES SIMPAN
+            # =========================================================
+            if simpan:
+
+                # Tentukan kegiatan final
+                if pilih_kegiatan == "➕ Tambah Kegiatan Baru":
+                    kegiatan_final = kegiatan_baru.strip()
+
+                elif pilih_kegiatan == "-- Tidak ada kegiatan --":
+                    kegiatan_final = ""
+
+                else:
+                    kegiatan_final = pilih_kegiatan.strip()
+
+                # Validasi
+                if not j_p.strip():
+                    st.error("Judul Materi wajib diisi.")
+
+                elif not l_p.strip():
+                    st.error("Link G-Drive/URL wajib diisi.")
+
+                elif t_p in ["Foto", "Video"] and not kegiatan_final:
+                    st.error(
+                        "Foto/Video wajib memiliki Kegiatan. "
+                        "Silakan pilih kegiatan atau buat kegiatan baru."
+                    )
+
+                else:
+
+                    # URUTAN SESUAI GOOGLE SHEET:
+                    #
+                    # A = Judul
+                    # B = Kategori
+                    # C = Link
+                    # D = Tipe
+                    # E = Deskripsi
+                    # F = Kegiatan
+
+                    sh.worksheet("Pustaka").append_row([
+                        j_p.strip(),
+                        k_p,
+                        l_p.strip(),
+                        t_p,
+                        d_p.strip(),
+                        kegiatan_final
+                    ])
+
+                    st.success("Materi berhasil ditambahkan!")
+
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+
+        if not df_pus.empty:
+            c_search, c_filter = st.columns([2, 1])
+            cari = c_search.text_input("🔍 Cari Materi", placeholder="Contoh: doa mandi")
+            sel_k = c_filter.selectbox("📂 Filter Kategori", ["Semua"] + df_pus['Kategori'].unique().tolist())
+            df_view = df_pus.copy()
+            if sel_k != "Semua": df_view = df_view[df_view['Kategori'] == sel_k]
+            if cari:
+                mask = df_view.apply(lambda row: cari.lower() in row['Judul'].lower() or cari.lower() in row['Deskripsi'].lower(), axis=1)
+                df_view = df_view[mask]
         
-        st.divider()
-        # 1. PISAH DATA: Galeri (Foto/Video) vs Pustaka (PDF/Audio/Lainnya)
-        # Sekarang Galeri fokus ke Tipe "Foto" atau "Video"
-        galeri_df = df_view[df_view['Tipe'].isin(["Foto", "Video"])]
-        pustaka_df = df_view[~df_view['Tipe'].isin(["Foto", "Video"])]
-
-        # 2. TAMPILKAN GALERI (Berbasis Selectbox Filter)
-        if not galeri_df.empty:
-            st.subheader("📸 Galeri Kegiatan")
-            
-            # Ambil daftar kegiatan unik
-            list_kegiatan = ["--Pilih--"] + galeri_df['Kegiatan'].unique().tolist()
-            
-            # Selectbox sebagai navigasi utama galeri
-            pilih_kegiatan = st.selectbox("Pilih Kegiatan", list_kegiatan)
-            
-            # Filter data berdasarkan pilihan
-            tampilan_foto = galeri_df[galeri_df['Kegiatan'] == pilih_kegiatan]
-            
-            # Tampilkan dalam grid 3 kolom
-            cols = st.columns(3)
-
-            for i, (_, row) in enumerate(tampilan_foto.iterrows()):
-                with cols[i % 3]:
-
-                    # Ambil link dan tipe file
-                    url_g = str(row['Link']).strip()
-                    tipe_g = str(row['Tipe']).strip()
-
-                    # Ambil File ID Google Drive
-                    file_id = ""
-
-                    if '/d/' in url_g:
-                        try:
-                            file_id = url_g.split('/d/')[1].split('/')[0]
-                        except Exception:
-                            file_id = ""
-                    elif 'id=' in url_g:
-                        try:
-                            file_id = url_g.split('id=')[1].split('&')[0]
-                        except Exception:
-                            file_id = ""
-
-                    # FOTO
-                    if tipe_g == "Foto":
-                        if file_id:
-                            st.image(
-                                f"https://drive.google.com/thumbnail?id={file_id}&sz=w600",
-                                use_container_width=True
-                            )
-                        else:
-                            st.warning("Link foto tidak valid.")
-
-                    # VIDEO
-                    elif tipe_g == "Video":
-                        if file_id:
-                            video_url = f"https://drive.google.com/file/d/{file_id}/preview"
-
-                            iframe_html = f'''
-<iframe
-    src="{video_url}"
-    width="100%"
-    height="300"
-    allow="autoplay; fullscreen"
-    allowfullscreen
-    style="border:none; border-radius:10px;">
-</iframe>
-'''
-
-                            st.markdown(
-                                iframe_html,
-                                unsafe_allow_html=True
-                            )
-                        else:
-                            st.warning("Link video tidak valid.")
-
-                    st.caption(row['Judul'])
             st.divider()
+            # 1. PISAH DATA: Galeri (Foto/Video) vs Pustaka (PDF/Audio/Lainnya)
+            # Sekarang Galeri fokus ke Tipe "Foto" atau "Video"
+            galeri_df = df_view[df_view['Tipe'].isin(["Foto", "Video"])]
+            pustaka_df = df_view[~df_view['Tipe'].isin(["Foto", "Video"])]
 
-        # 3. TAMPILKAN PUSTAKA (List)
-        if not pustaka_df.empty:
-            st.subheader("📚 Pustaka Digital")
-            for _, row in pustaka_df.iterrows():
-                with st.container():
-                    col1, col2 = st.columns([1, 4])
-                    # Icon sesuai Tipe
-                    icon = "📄" if row['Tipe'] == "PDF" else "🖼️" if row['Tipe'] == "Gambar" else "🔊" if row['Tipe'] == "Audio" else "🔗"
-                    col1.markdown(f"<h1 style='text-align: center;'>{icon}</h1>", unsafe_allow_html=True)
-                    col2.write(f"### {row['Judul']}")
-                    col2.caption(f"Kategori: {row['Kategori']} | Tipe: {row['Tipe']}")
-                    col2.write(row['Deskripsi'])
-                    with col2.expander("Lihat / Putar Materi"):
-                        # ... (isi expander biarkan sama seperti kode asli lo) ...
-                        if row['Tipe'] == "Audio":
-                            p_url = row['Link'].replace('/view', '/preview') if '/view' in row['Link'] else row['Link']
-                            st.markdown(f'<iframe src="{p_url}" width="100%" height="150" style="border:none; border-radius:10px;"></iframe>', unsafe_allow_html=True)
-                            st.link_button("🚀 Putar di G-Drive", row['Link'])
-                        elif row['Tipe'] == "PDF":
-                            st.markdown(f'<iframe src="{gdrive_fix(row["Link"])}" width="100%" height="500px"></iframe>', unsafe_allow_html=True)
-                        elif row['Tipe'] == "Gambar":
-                            # ... (logika gambar lo yang lama) ...
-                            url_g = row['Link']
-                            file_id = url_g.split('/d/')[1].split('/')[0] if '/d/' in url_g else (url_g.split('id=')[1].split('&')[0] if 'id=' in url_g else "")
-                            if file_id: st.image(f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000", use_container_width=True)
-                            st.link_button("📂 Buka Gambar Asli", row['Link'])
+            # 2. TAMPILKAN GALERI (Berbasis Selectbox Filter)
+            if not galeri_df.empty:
+                st.subheader("📸 Galeri Kegiatan")
+            
+                # Ambil daftar kegiatan unik
+                list_kegiatan = ["--Pilih--"] + galeri_df['Kegiatan'].unique().tolist()
+            
+                # Selectbox sebagai navigasi utama galeri
+                pilih_kegiatan = st.selectbox("Pilih Kegiatan", list_kegiatan)
+            
+                # Filter data berdasarkan pilihan
+                tampilan_foto = galeri_df[galeri_df['Kegiatan'] == pilih_kegiatan]
+            
+                # Tampilkan dalam grid 3 kolom
+                cols = st.columns(3)
+
+                for i, (_, row) in enumerate(tampilan_foto.iterrows()):
+                    with cols[i % 3]:
+
+                        # Ambil link dan tipe file
+                        url_g = str(row['Link']).strip()
+                        tipe_g = str(row['Tipe']).strip()
+
+                        # Ambil File ID Google Drive
+                        file_id = ""
+
+                        if '/d/' in url_g:
+                            try:
+                                file_id = url_g.split('/d/')[1].split('/')[0]
+                            except Exception:
+                                file_id = ""
+                        elif 'id=' in url_g:
+                            try:
+                                file_id = url_g.split('id=')[1].split('&')[0]
+                            except Exception:
+                                file_id = ""
+
+                        # FOTO
+                        if tipe_g == "Foto":
+                            if file_id:
+                                st.image(
+                                    f"https://drive.google.com/thumbnail?id={file_id}&sz=w600",
+                                    use_container_width=True
+                                )
+                            else:
+                                st.warning("Link foto tidak valid.")
+
+                        # VIDEO
+                        elif tipe_g == "Video":
+                            if file_id:
+                                video_url = f"https://drive.google.com/file/d/{file_id}/preview"
+
+                                iframe_html = f'''
+    <iframe
+        src="{video_url}"
+        width="100%"
+        height="300"
+        allow="autoplay; fullscreen"
+        allowfullscreen
+        style="border:none; border-radius:10px;">
+    </iframe>
+    '''
+
+                                st.markdown(
+                                    iframe_html,
+                                    unsafe_allow_html=True
+                                )
+                            else:
+                                st.warning("Link video tidak valid.")
+
+                        st.caption(row['Judul'])
                 st.divider()
+
+            # 3. TAMPILKAN PUSTAKA (List)
+            if not pustaka_df.empty:
+                st.subheader("📚 Pustaka Digital")
+                for _, row in pustaka_df.iterrows():
+                    with st.container():
+                        col1, col2 = st.columns([1, 4])
+                        # Icon sesuai Tipe
+                        icon = "📄" if row['Tipe'] == "PDF" else "🖼️" if row['Tipe'] == "Gambar" else "🔊" if row['Tipe'] == "Audio" else "🔗"
+                        col1.markdown(f"<h1 style='text-align: center;'>{icon}</h1>", unsafe_allow_html=True)
+                        col2.write(f"### {row['Judul']}")
+                        col2.caption(f"Kategori: {row['Kategori']} | Tipe: {row['Tipe']}")
+                        col2.write(row['Deskripsi'])
+                        with col2.expander("Lihat / Putar Materi"):
+                            # ... (isi expander biarkan sama seperti kode asli lo) ...
+                            if row['Tipe'] == "Audio":
+                                p_url = row['Link'].replace('/view', '/preview') if '/view' in row['Link'] else row['Link']
+                                st.markdown(f'<iframe src="{p_url}" width="100%" height="150" style="border:none; border-radius:10px;"></iframe>', unsafe_allow_html=True)
+                                st.link_button("🚀 Putar di G-Drive", row['Link'])
+                            elif row['Tipe'] == "PDF":
+                                st.markdown(f'<iframe src="{gdrive_fix(row["Link"])}" width="100%" height="500px"></iframe>', unsafe_allow_html=True)
+                            elif row['Tipe'] == "Gambar":
+                                # ... (logika gambar lo yang lama) ...
+                                url_g = row['Link']
+                                file_id = url_g.split('/d/')[1].split('/')[0] if '/d/' in url_g else (url_g.split('id=')[1].split('&')[0] if 'id=' in url_g else "")
+                                if file_id: st.image(f"https://drive.google.com/thumbnail?id={file_id}&sz=w1000", use_container_width=True)
+                                st.link_button("📂 Buka Gambar Asli", row['Link'])
+                    st.divider()
 elif menu == "📊 Laporan":
     t1, t2, t3 = st.tabs(["💰 Rekap Bulanan", "🎭 Detail Event", "📤 Riwayat Pengeluaran"])
     with t1:
