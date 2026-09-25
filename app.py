@@ -376,35 +376,30 @@ if st.session_state['role'] == "admin":
             # Filter data berdasarkan pilihan
             tampilan_foto = galeri_df[galeri_df['Kegiatan'] == pilih_kegiatan]
             # Tampilkan dalam grid 3 kolom
-            cols = st.columns(3)
+cols = st.columns(3)
 
-            for i, (_, row) in enumerate(tampilan_foto.iterrows()):
+for i, (_, row) in enumerate(tampilan_foto.iterrows()):
+    with cols[i % 3]:
+        url_g = str(row['Link']).strip()
+        tipe_g = str(row['Tipe']).strip()
 
-                with cols[i % 3]:
+        # Ambil File ID Google Drive
+        file_id = ""
 
-                url_g = str(row['Link']).strip()
-                tipe_g = str(row['Tipe']).strip()
-
-                # Ambil File ID Google Drive
+        if '/d/' in url_g:
+            try:
+                file_id = url_g.split('/d/')[1].split('/')[0]
+            except:
                 file_id = ""
 
-                if '/d/' in url_g:
-                    try:
-                        file_id = url_g.split('/d/')[1].split('/')[0]
-                    except:
-                        file_id = ""
+        elif 'id=' in url_g:
+            try:
+                file_id = url_g.split('id=')[1].split('&')[0]
+            except:
+                file_id = ""
 
-                elif 'id=' in url_g:
-                    try:
-                        file_id = url_g.split('id=')[1].split('&')[0]
-                    except:
-                        file_id = ""
-
-        # ==========================================
         # FOTO
-        # ==========================================
-                if tipe_g == "Foto":
-
+        if tipe_g == "Foto":
             if file_id:
                 thumbnail_url = (
                     f"https://drive.google.com/thumbnail"
@@ -415,17 +410,12 @@ if st.session_state['role'] == "admin":
                     thumbnail_url,
                     use_container_width=True
                 )
-
             else:
                 st.warning("Link foto tidak valid.")
 
-        # ==========================================
         # VIDEO
-        # ==========================================
         elif tipe_g == "Video":
-
             if file_id:
-
                 video_url = (
                     f"https://drive.google.com/file/d/"
                     f"{file_id}/preview"
@@ -447,13 +437,10 @@ if st.session_state['role'] == "admin":
                     """,
                     unsafe_allow_html=True
                 )
-
             else:
                 st.warning("Link video tidak valid.")
 
-        # ==========================================
         # JUDUL
-        # ==========================================
         st.caption(row['Judul'])
            
             st.divider()
